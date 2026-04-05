@@ -615,9 +615,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .ts-dot.idle{background:#d1d5db}
 
 /* ══════════ PRIVATE LINKS ══════════ */
-.links-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
-@media(max-width:900px){.links-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.links-grid{grid-template-columns:1fr}}
+.links-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
 .link-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;transition:box-shadow .2s,transform .15s}
 .link-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
 .link-card-top{display:flex;align-items:flex-start;gap:10px}
@@ -1028,16 +1026,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
     <div class="ff" style="margin-bottom:8px">
       <label class="ff-lbl">Category</label>
-      <input class="ff-inp" id="nl-cat" placeholder="e.g. Contract, Spreadsheet, Brief" list="nl-cat-list"/>
-      <datalist id="nl-cat-list">
-        <option value="Contract"/>
-        <option value="Spreadsheet"/>
-        <option value="Brief"/>
-        <option value="Analytics"/>
-        <option value="Finance"/>
-        <option value="Internal Doc"/>
-        <option value="Tool"/>
-      </datalist>
+      <div id="nl-cat-pills" style="margin-top:6px"></div>
+      <div id="nl-cat-addedit"></div>
+      <input type="hidden" id="nl-cat"/>
     </div>
     <div class="ff" style="margin-bottom:10px">
       <label class="ff-lbl">Notes</label>
@@ -3110,13 +3101,113 @@ function adminKpiCard(label,val,color,ico){
 var _adminLinks=[];
 var _editingLinkId=null;
 
+var _DEF_CATS=[
+  {name:'Contract',color:'#f59e0b'},{name:'Spreadsheet',color:'#10b981'},
+  {name:'Brief',color:'#3b7ef8'},{name:'Analytics',color:'#e879a0'},
+  {name:'Finance',color:'#f59e0b'},{name:'Internal Doc',color:'#8b5cf6'},
+  {name:'Tool',color:'#10b981'}
+];
+var _linkCats=null;
+var _catMode=null;
+
+function getLinkCats(){
+  if(!_linkCats){
+    try{var s=localStorage.getItem('dg_link_cats');_linkCats=s?JSON.parse(s):_DEF_CATS.slice();}
+    catch(e){_linkCats=_DEF_CATS.slice();}
+  }
+  return _linkCats;
+}
+function saveLinkCats(){localStorage.setItem('dg_link_cats',JSON.stringify(getLinkCats()));}
+
 function catColor(cat){
-  var map={'Contract':'var(--amber)','Spreadsheet':'var(--green)','Brief':'var(--primary)','Analytics':'var(--pink)','Finance':'var(--amber)','Internal Doc':'var(--purple)','Tool':'var(--green)'};
-  return map[cat]||'var(--primary)';
+  var c=getLinkCats().find(function(x){return x.name===cat;});
+  return c?c.color:'var(--primary)';
 }
 function catIcon(cat){
   var map={'Contract':'&#128196;','Spreadsheet':'&#128202;','Brief':'&#128203;','Analytics':'&#128200;','Finance':'&#128176;','Internal Doc':'&#128221;','Tool':'&#128295;'};
   return map[cat]||'&#128203;';
+}
+
+function renderCatPicker(){
+  var cats=getLinkCats();
+  var sel=document.getElementById('nl-cat')?document.getElementById('nl-cat').value:'';
+  var pillsEl=document.getElementById('nl-cat-pills');
+  var aeEl=document.getElementById('nl-cat-addedit');
+  if(!pillsEl) return;
+
+  pillsEl.innerHTML='<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
+    +cats.map(function(c,i){
+      var isSel=c.name===sel;
+      return '<button type="button" onclick="catSelect('+i+')" style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid '+(isSel?c.color:'var(--border)')+';background:'+(isSel?c.color+'22':'transparent')+';color:'+(isSel?c.color:'var(--text-s)')+'">'+escHtml(c.name)+'</button>';
+    }).join('')
+    +'<button type="button" onclick="catModeAdd()" style="padding:4px 9px;border-radius:20px;font-size:11px;cursor:pointer;border:1.5px dashed var(--border);background:transparent;color:var(--text-s)">+ New</button>'
+    +'</div>';
+
+  if(!aeEl) return;
+  if(_catMode===null){aeEl.innerHTML='';return;}
+  var AE_STYLE='display:flex;gap:6px;align-items:center;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border);margin-top:6px';
+  var INP='class="ff-inp" style="flex:1;font-size:12px;padding:5px 8px"';
+  var COL='type="color" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border);cursor:pointer;padding:1px"';
+  var SAVE='style="padding:5px 10px;border-radius:7px;background:var(--primary);color:#fff;font-size:11px;font-weight:600;cursor:pointer"';
+  var CANCEL='style="padding:5px 8px;border-radius:7px;border:1px solid var(--border);background:transparent;font-size:11px;cursor:pointer;color:var(--text-s)"';
+  var DEL='style="padding:5px 10px;border-radius:7px;border:1.5px solid #fca5a5;background:transparent;color:#dc2626;font-size:11px;cursor:pointer"';
+
+  if(_catMode==='add'){
+    aeEl.innerHTML='<div style="'+AE_STYLE+'">'
+      +'<input id="cat-new-name" '+INP+' placeholder="Category name"/>'
+      +'<input id="cat-new-color" '+COL+' value="#6366f1"/>'
+      +'<button onclick="catAddSave()" '+SAVE+'>Add</button>'
+      +'<button onclick="catModeReset()" '+CANCEL+'>✕</button>'
+    +'</div>';
+    setTimeout(function(){var e=document.getElementById('cat-new-name');if(e)e.focus();},50);
+  } else if(_catMode.edit!==undefined){
+    var ec=cats[_catMode.edit];
+    if(!ec){_catMode=null;renderCatPicker();return;}
+    aeEl.innerHTML='<div style="'+AE_STYLE+'">'
+      +'<input id="cat-edit-name" '+INP+' value="'+escHtml(ec.name)+'"/>'
+      +'<input id="cat-edit-color" '+COL+' value="'+ec.color+'"/>'
+      +'<button onclick="catEditSave()" '+SAVE+'>Save</button>'
+      +'<button onclick="catEditDelete()" '+DEL+'>Del</button>'
+      +'<button onclick="catModeReset()" '+CANCEL+'>✕</button>'
+    +'</div>';
+    setTimeout(function(){var e=document.getElementById('cat-edit-name');if(e)e.focus();},50);
+  }
+}
+function catSelect(i){
+  var cats=getLinkCats(); var c=cats[i]; if(!c) return;
+  var inp=document.getElementById('nl-cat');
+  var wasSel=inp.value===c.name;
+  inp.value=wasSel?'':c.name;
+  _catMode=wasSel?null:{edit:i};
+  renderCatPicker();
+}
+function catModeAdd(){_catMode='add';renderCatPicker();}
+function catModeReset(){_catMode=null;renderCatPicker();}
+function catAddSave(){
+  var name=(document.getElementById('cat-new-name').value||'').trim();
+  var color=document.getElementById('cat-new-color').value;
+  if(!name) return;
+  getLinkCats().push({name:name,color:color});
+  saveLinkCats();
+  document.getElementById('nl-cat').value=name;
+  _catMode=null; renderCatPicker();
+}
+function catEditSave(){
+  var idx=_catMode.edit; var cats=getLinkCats(); var old=cats[idx]?cats[idx].name:'';
+  var name=(document.getElementById('cat-edit-name').value||'').trim();
+  var color=document.getElementById('cat-edit-color').value;
+  if(!name) return;
+  cats[idx]={name:name,color:color}; saveLinkCats();
+  var inp=document.getElementById('nl-cat');
+  if(inp.value===old) inp.value=name;
+  _catMode=null; renderCatPicker();
+}
+function catEditDelete(){
+  var idx=_catMode.edit; var cats=getLinkCats(); var name=cats[idx]?cats[idx].name:'';
+  cats.splice(idx,1); saveLinkCats();
+  var inp=document.getElementById('nl-cat');
+  if(inp.value===name) inp.value='';
+  _catMode=null; renderCatPicker();
 }
 function escHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -3215,7 +3306,6 @@ function linkCardHTML(l){
         '<div class="link-card-title">'+escHtml(l.title)+'</div>'+
         (l.campaign?'<div style="font-size:10px;color:var(--text-m);margin-top:2px">'+escHtml(l.campaign)+'</div>':'')+
         (l.category?'<div style="font-size:9px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+escHtml(l.category)+'</div>':'')+
-        (l.url?'<div class="link-card-url" title="'+escHtml(l.url)+'">'+escHtml(shortUrl)+'</div>':'')+
       '</div>'+
     '</div>'+
     (qTags?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+qTags+'</div>':'')+
@@ -3242,6 +3332,7 @@ function openAddLink(){
   document.getElementById('nl-err').textContent='';
   var sel=document.getElementById('nl-brand');
   sel.innerHTML='<option value="">— General —</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'">'+escHtml(b.name)+'</option>';}).join('');
+  _catMode=null; renderCatPicker();
   openOv('ov-add-link');
   setTimeout(function(){document.getElementById('nl-title').focus();},100);
 }
@@ -3263,6 +3354,7 @@ function openEditLink(id){
   document.getElementById('nl-q2').checked=qs.indexOf('Q2')>-1;
   document.getElementById('nl-q3').checked=qs.indexOf('Q3')>-1;
   document.getElementById('nl-q4').checked=qs.indexOf('Q4')>-1;
+  _catMode=null; renderCatPicker();
   document.getElementById('nl-err').textContent='';
   var sel=document.getElementById('nl-brand');
   sel.innerHTML='<option value="">— General —</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'"'+(l.brand_id===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
