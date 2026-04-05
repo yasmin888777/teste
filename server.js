@@ -74,7 +74,7 @@ app.get('/api/state', async (req, res) => {
       campaignsGrouped[c.brand_id].push({ id: c.id, name: c.name, brandId: c.brand_id });
     });
 
-    res.json({ appName: settings.appName || 'DigitUly', brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, campaigns: campaignsGrouped, customAvatars: {} });
+    res.json({ appName: settings.appName || 'DigitUly', logoUrl: settings.logoUrl || '', brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, campaigns: campaignsGrouped, customAvatars: {} });
   } catch (err) {
     console.error('State error:', err.message);
     res.status(500).json({ error: 'Database error: ' + err.message });
