@@ -3118,9 +3118,12 @@ function renderLinks(){
             '<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(bname)+'</span>'+
           '</div>';
 
-        // Sort campaigns: named first (alphabetically), unnamed last
+        // Sort campaigns by most recent document (newest first), unnamed last
         var campKeys=Object.keys(grp.campaigns).sort(function(a,b){
-          if(!a&&b) return 1;if(a&&!b) return -1;return a.localeCompare(b);
+          if(!a&&b) return 1;if(a&&!b) return -1;
+          var aDate=(grp.campaigns[a][0]||{}).created_at||'';
+          var bDate=(grp.campaigns[b][0]||{}).created_at||'';
+          return bDate>aDate?1:bDate<aDate?-1:0;
         });
         campKeys.forEach(function(camp){
           if(camp){
