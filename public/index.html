@@ -630,7 +630,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 /* ══════════ ATTENDANCE WIDGET ══════════ */
 .attend-grid{display:flex;flex-wrap:wrap;gap:4px}
-.attend-dot{width:14px;height:14px;border-radius:4px;cursor:default;transition:transform .1s;flex-shrink:0}
+.attend-dot{width:13px;height:13px;border-radius:50%;cursor:default;transition:transform .1s;flex-shrink:0}
 .attend-dot:hover{transform:scale(1.3)}
 .attend-dot[title]:hover::after{content:attr(title);position:absolute;background:#1a1f2e;color:#fff;font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:100;margin-top:18px;margin-left:-20px}
 </style>
@@ -1751,7 +1751,7 @@ function renderMemberPage(mid){
         '</div>'+
       '</div>'+
       memberAttendWidget(mid)+
-      '<div class="mp-right" style="min-width:160px">'+
+      '<div class="mp-right">'+
         '<div class="mp-proj-lbl">Assigned projects</div>'+
         '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">'+brandListHTML+'</div>'+
       '</div>'+
@@ -1794,15 +1794,15 @@ function memberAttendWidget(mid){
     else{workDays++;if(hasLog){activeDays++;color='#fbbf24';}else{color='#fca5a5';}}
     dots+='<div class="attend-dot" style="background:'+color+(isFuture?';opacity:.35':'')+'" title="'+ds+(hasLog?' ✓':'')+'"></div>';
   }
-  return '<div style="background:linear-gradient(135deg,#1a1040 0%,#0d1526 100%);border:1px solid rgba(139,92,246,.18);border-radius:14px;padding:14px 16px;flex-shrink:0;box-shadow:0 4px 20px rgba(139,92,246,.12)">'+
-    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:10px">Working days — '+MONTHS_S[month]+'</div>'+
+  return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;flex-shrink:0;margin-left:auto">'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Working days</div>'+
     '<div class="attend-grid" style="max-width:168px">'+dots+'</div>'+
     '<div style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
-      '<span style="font-size:12px;color:#fbbf24;font-weight:800">'+activeDays+'x</span>'+
-      '<span style="font-size:10px;color:rgba(255,255,255,.3)">worked</span>'+
-      '<span style="width:1px;height:12px;background:rgba(255,255,255,.1);margin:0 4px"></span>'+
-      '<span style="font-size:12px;color:#f87171;font-weight:800">'+(workDays-activeDays)+'x</span>'+
-      '<span style="font-size:10px;color:rgba(255,255,255,.3)">off</span>'+
+      '<span style="font-size:12px;color:#d97706;font-weight:800">'+activeDays+'x</span>'+
+      '<span style="font-size:10px;color:var(--text-s)">worked</span>'+
+      '<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span>'+
+      '<span style="font-size:12px;color:#dc2626;font-weight:800">'+(workDays-activeDays)+'x</span>'+
+      '<span style="font-size:10px;color:var(--text-s)">off</span>'+
     '</div>'+
   '</div>';
 }
