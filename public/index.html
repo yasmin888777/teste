@@ -656,6 +656,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       </div>
     </div>
     <div class="tb-right">
+      <div id="tb-member-actions" style="display:none;gap:6px;align-items:center">
+        <button class="sec-btn" onclick="openAddMember()" style="padding:5px 12px;font-size:11px">+ Add Member</button>
+        <button id="tb-remove-btn" style="padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">&#128465; Remove</button>
+      </div>
       <div class="tb-time" id="tb-time"></div>
       <button class="tb-btn refresh" onclick="renderAll()">&#8635; Refresh</button>
       <button class="tb-btn export" onclick="window.print()">&#11015; Export</button>
@@ -1060,7 +1064,10 @@ let currentMemberId=null, memberChart=null;
 ══════════════════════════════════════════════ */
 function navTo(page,el){
   currentPage=page;
+  currentMemberId=null;
+  document.getElementById('tb-member-actions').style.display='none';
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.sb-member-pill').forEach(p=>p.classList.remove('sb-member-pill-active'));
   if(el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
@@ -1367,15 +1374,33 @@ function renderMemberPage(mid){
     '</div>';
   }).join('');
 
-  // per-brand KPI summary cards
+  // per-brand KPI summary cards (all-time totals)
   var brandCards=assignedBrands.map(function(b){
-    var days=getDateRange();
-    var logs=getLogsInRange(mid,b.id,days);
+    var allLogs=getLogs(mid).filter(function(l){return l.brandId===b.id;});
     var role=(m.roles&&m.roles[b.id])||'';
-    var contacted=logs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
-    var confirmed=logs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
-    var vids=logs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
-    var sourced=logs.reduce(function(s,l){return s+(+l.kols_sourced||0);},0);
+    var contacted=allLogs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
+    var confirmed=allLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
+    var vids=allLogs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
+    var sourced=allLogs.reduce(function(s,l){return s+(+l.kols_sourced||0);},0);
+    // first activity date
+    var dates=allLogs.map(function(l){return l.date;}).filter(Boolean).sort();
+    var firstDate=dates[0]||null;
+    var sinceHTML='';
+    if(firstDate){
+      var fd=new Date(firstDate+'T00:00:00');
+      var today2=new Date();today2.setHours(0,0,0,0);
+      var diffDays=Math.round((today2-fd)/(1000*60*60*24));
+      var pct=Math.min(100,Math.round((diffDays/90)*100));
+      sinceHTML='<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">'+
+        '<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-s);margin-bottom:4px">'+
+          '<span>Active since '+fd.toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'})+'</span>'+
+          '<span>'+diffDays+' days</span>'+
+        '</div>'+
+        '<div style="height:4px;background:var(--border);border-radius:4px;overflow:hidden">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+b.color+';border-radius:4px;transition:width .4s"></div>'+
+        '</div>'+
+      '</div>';
+    }
     return '<div class="mp-brand-kpi-card">'+
       '<div class="mp-brand-kpi-head">'+
         '<div style="width:10px;height:10px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>'+
@@ -1386,8 +1411,9 @@ function renderMemberPage(mid){
         '<div class="mp-kpi-item"><div class="mp-kpi-item-val">'+sourced+'</div><div class="mp-kpi-item-lbl">KOLs Sourced</div></div>'+
         '<div class="mp-kpi-item"><div class="mp-kpi-item-val">'+contacted+'</div><div class="mp-kpi-item-lbl">Contacted</div></div>'+
         '<div class="mp-kpi-item"><div class="mp-kpi-item-val" style="color:var(--green)">'+confirmed+'</div><div class="mp-kpi-item-lbl">Confirmed</div></div>'+
-        '<div class="mp-kpi-item"><div class="mp-kpi-item-val" style="color:var(--purple)">'+vids+'</div><div class="mp-kpi-item-lbl">Videos Published</div></div>'+
+        '<div class="mp-kpi-item"><div class="mp-kpi-item-val" style="color:var(--purple)">'+vids+'</div><div class="mp-kpi-item-lbl">Videos</div></div>'+
       '</div>'+
+      sinceHTML+
     '</div>';
   }).join('');
 
@@ -1410,8 +1436,6 @@ function renderMemberPage(mid){
         (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
         '<div class="mp-cfg-btns">'+
           '<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>'+
-          '<button class="sec-btn" onclick="openAddMember()" style="background:var(--green-d);color:var(--green);border-color:rgba(16,185,129,.15)">+ Add Member</button>'+
-          '<button style="padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" onclick="deleteMember(\''+mid+'\')">&#128465; Remove</button>'+
         '</div>'+
       '</div>'+
       '<div class="mp-right">'+
@@ -1422,7 +1446,10 @@ function renderMemberPage(mid){
 
     '<div class="mp-chart-card mb16">'+
       '<div class="sec" style="margin-bottom:12px">'+
-        '<div class="sec-t" style="font-size:13px">Monthly Activity <span class="sec-s">last 30 days</span></div>'+
+        '<div class="sec-t" style="font-size:13px">Activity History</div>'+
+        '<select id="mp-month-sel" onchange="drawMemberChart(currentMemberId)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;background:#fff;cursor:pointer;color:var(--text)">'+
+          buildMonthOptions()+
+        '</select>'+
       '</div>'+
       '<div class="mp-chart-wrap"><canvas id="mp-chart"></canvas></div>'+
     '</div>'+
@@ -1432,6 +1459,18 @@ function renderMemberPage(mid){
 
   document.getElementById('mp-content').innerHTML=html;
   setTimeout(function(){drawMemberChart(mid);},50);
+}
+
+function buildMonthOptions(){
+  var opts='<option value="">Last 30 days</option>';
+  var now=new Date();
+  for(var i=0;i<12;i++){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    var val=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+    var lbl=d.toLocaleDateString('en',{month:'long',year:'numeric'});
+    opts+='<option value="'+val+'">'+lbl+'</option>';
+  }
+  return opts;
 }
 
 function startEditMpName(mid,el){
@@ -1550,10 +1589,25 @@ function drawMemberChart(mid){
 
   var days=[];
   var labels=[];
-  for(var i=29;i>=0;i--){
-    var d=new Date();d.setDate(d.getDate()-i);
-    days.push(d.toISOString().split('T')[0]);
-    labels.push(i===0?'Today':d.toLocaleDateString('en',{month:'short',day:'numeric'}));
+  var sel=document.getElementById('mp-month-sel');
+  var selVal=sel?sel.value:'';
+  if(selVal){
+    // specific month selected
+    var parts=selVal.split('-');
+    var yr=+parts[0],mo=+parts[1]-1;
+    var daysInMonth=new Date(yr,mo+1,0).getDate();
+    for(var i=1;i<=daysInMonth;i++){
+      var dd=new Date(yr,mo,i);
+      days.push(dd.toISOString().split('T')[0]);
+      labels.push(i===1||i===daysInMonth||i%5===0?dd.toLocaleDateString('en',{month:'short',day:'numeric'}):'');
+    }
+  } else {
+    // last 30 days
+    for(var i=29;i>=0;i--){
+      var d=new Date();d.setDate(d.getDate()-i);
+      days.push(d.toISOString().split('T')[0]);
+      labels.push(i===0?'Today':i%5===0?d.toLocaleDateString('en',{month:'short',day:'numeric'}):'');
+    }
   }
 
   var memberBrands=m.brands.map(function(bid){return getBrand(bid);}).filter(Boolean);
@@ -1844,15 +1898,16 @@ function doDelLog(date,bid){
 function openMemberDetail(mid){
   const m=getMember(mid);if(!m)return;
   currentMemberId=mid;
-  // deactivate nav items
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
-  // highlight selected member pill
   document.querySelectorAll('.sb-member-pill').forEach(function(pill){
     pill.classList.toggle('sb-member-pill-active', pill.getAttribute('data-mid')===mid);
   });
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-member').classList.add('active');
   document.getElementById('tb-title').textContent=m.name;
+  var ma=document.getElementById('tb-member-actions');
+  ma.style.display='flex';
+  document.getElementById('tb-remove-btn').onclick=function(){deleteMember(mid);};
   renderMemberPage(mid);
 }
 
