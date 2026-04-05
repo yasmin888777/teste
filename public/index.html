@@ -1689,11 +1689,34 @@ function renderMemberPage(mid){
     '</div>';
   }).join('');
 
+  // Member user account info
+  var userAcc=_allUsers.find(function(u){return u.member_id===mid;});
+  var userRole=userAcc?userAcc.role:'member';
+  var isAdminMember=userRole==='admin'||userRole==='member+admin';
+  var roleLabel=userRole==='member+admin'?'Member + Admin':userRole==='admin'?'Admin':'Member';
+  var ownerCount=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])==='owner';}).length;
+  var supportCount=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])==='support';}).length;
+  var totalProjects=assignedBrands.length;
+
   var periodLabel=timeView==='daily'?'today':timeView==='weekly'?'this week':'last 30 days';
   var weekHTML=renderMemberWeekly(mid);
 
+  // Right side: all brands as color chips (admins can toggle assignment)
+  var brandListHTML=ST.brands.map(function(b){
+    var on=m.brands.includes(b.id);
+    var role=(m.roles&&m.roles[b.id])||'';
+    return '<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;'+
+      'background:'+(on?b.color+'18':'#f8f9fb')+';border:1.5px solid '+(on?b.color+'55':'#e5e7eb')+';'+
+      (isAdmin()?'cursor:pointer':'')+'" '+
+      (isAdmin()?'onclick="mpToggleBrand(\''+mid+'\',\''+b.id+'\')" title="'+(on?'Remove':'Add')+' '+b.name+'"':'')+'>'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>'+
+      '<span style="font-size:11px;font-weight:700;color:'+(on?b.color:'var(--text-s)')+';flex:1">'+b.name+'</span>'+
+      (role&&on?'<span style="font-size:8px;font-weight:700;padding:1px 6px;border-radius:10px;background:'+b.color+'22;color:'+b.color+'">'+role+'</span>':'')+
+    '</div>';
+  }).join('');
+
   var html=
-    '<div class="mp-hero">'+
+    '<div class="mp-hero" style="align-items:flex-start;flex-wrap:wrap;gap:16px">'+
       '<div class="mp-av-wrap">'+
         '<div class="mp-av" onclick="triggerAvatarUpload(\'member\',\''+mid+'\')" title="Trocar foto">'+
           (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:20px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:20px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
@@ -1701,18 +1724,30 @@ function renderMemberPage(mid){
         '</div>'+
         '<div class="mp-av-hint">click to<br>change photo</div>'+
       '</div>'+
-      '<div class="mp-mid">'+
-        '<div class="mp-name-row">'+
+      '<div class="mp-mid" style="flex:1;min-width:160px">'+
+        '<div class="mp-name-row" style="display:flex;align-items:center;gap:6px">'+
           '<div class="mp-name" onclick="startEditMpName(\''+mid+'\',this)" title="Click to rename">'+m.name+'</div>'+
+          (isAdminMember?'<span style="font-size:13px;color:var(--amber)" title="Admin">★</span>':'')+
         '</div>'+
+        '<div style="font-size:10px;color:var(--text-s);margin-bottom:5px">'+roleLabel+'</div>'+
         (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
-        '<div class="mp-cfg-btns">'+
-          (canEdit(mid)?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
+        '<div style="font-size:11px;color:var(--text-m);margin:7px 0 4px">'+
+          '<strong style="color:var(--text)">'+totalProjects+'</strong> total project'+(totalProjects!==1?'s':'')+
+        '</div>'+
+        (ownerCount||supportCount?
+          '<div style="font-size:11px;color:var(--text-s)">'+
+            (ownerCount?'<span style="color:var(--primary);font-weight:600">'+ownerCount+'</span> owning':'') +
+            (ownerCount&&supportCount?' &amp; ':'')+
+            (supportCount?'<span style="color:var(--amber);font-weight:600">'+supportCount+'</span> support':'')+
+          '</div>':'')+
+        '<div class="mp-cfg-btns" style="margin-top:8px">'+
+          (isAdmin()?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
         '</div>'+
       '</div>'+
-      '<div class="mp-right">'+
+      memberAttendWidget(mid)+
+      '<div class="mp-right" style="min-width:160px">'+
         '<div class="mp-proj-lbl">Assigned projects</div>'+
-        '<div class="mp-brand-chips">'+chipsHTML+'</div>'+
+        '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">'+brandListHTML+'</div>'+
       '</div>'+
     '</div>'+
 
@@ -1731,6 +1766,38 @@ function renderMemberPage(mid){
 
   document.getElementById('mp-content').innerHTML=html;
   setTimeout(function(){drawMemberChart(mid);},50);
+}
+
+function memberAttendWidget(mid){
+  var now=new Date();
+  var year=now.getFullYear();
+  var month=now.getMonth();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var todayD=now.getDate();
+  var monthStr=(month+1<10?'0'+(month+1):''+(month+1));
+  var workDays=0,activeDays=0,dots='';
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=year+'-'+monthStr+'-'+(d<10?'0'+d:''+d);
+    var dow=new Date(ds).getDay();
+    var isWeekend=dow===0||dow===6;
+    var isFuture=d>todayD;
+    var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
+    var color;
+    if(isFuture){color='#e5e7eb';}
+    else if(isWeekend){color='#f3f4f6';}
+    else{workDays++;if(hasLog){activeDays++;color='#fbbf24';}else{color='#fca5a5';}}
+    dots+='<div class="attend-dot" style="background:'+color+(isFuture?';opacity:.35':'')+'" title="'+ds+(hasLog?' ✓':'')+'"></div>';
+  }
+  return '<div style="background:#1e2d4f;border-radius:12px;padding:12px 14px;flex-shrink:0">'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:8px">Working days — '+MONTHS_S[month]+'</div>'+
+    '<div class="attend-grid" style="max-width:160px">'+dots+'</div>'+
+    '<div style="display:flex;gap:6px;margin-top:8px;align-items:center">'+
+      '<span style="font-size:11px;color:#fbbf24;font-weight:700">'+activeDays+'x</span>'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.35)">worked</span>'+
+      '<span style="font-size:11px;color:#f87171;font-weight:700;margin-left:8px">'+(workDays-activeDays)+'x</span>'+
+      '<span style="font-size:10px;color:rgba(255,255,255,.35)">off</span>'+
+    '</div>'+
+  '</div>';
 }
 
 function isAdmin(){ return currentUser&&(currentUser.role==='admin'||currentUser.role==='member+admin'); }
