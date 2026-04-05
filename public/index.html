@@ -776,7 +776,16 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="page" id="page-links">
       <div class="sec">
         <div><span class="sec-t">Documents &amp; Spreadsheets</span><span class="sec-s">admin-only notes &amp; links</span></div>
-        <button class="sec-btn" onclick="openAddLink()">+ Add Note</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="links-year-filter" onchange="renderLinks()" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;cursor:pointer;outline:none">
+            <option value="">All years</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+          </select>
+          <button class="sec-btn" onclick="openAddLink()">+ Add Note</button>
+        </div>
       </div>
       <div id="links-content"></div>
     </div>
@@ -984,15 +993,28 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         </select>
       </div>
       <div class="ff">
-        <label class="ff-lbl">Quarter</label>
-        <select class="ff-inp" id="nl-quarter" style="cursor:pointer">
-          <option value="">— All —</option>
-          <option value="Q1">Q1 (Jan–Mar)</option>
-          <option value="Q2">Q2 (Apr–Jun)</option>
-          <option value="Q3">Q3 (Jul–Sep)</option>
-          <option value="Q4">Q4 (Oct–Dec)</option>
+        <label class="ff-lbl">Year</label>
+        <select class="ff-inp" id="nl-year" style="cursor:pointer">
+          <option value="">— Any —</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+          <option value="2027">2027</option>
         </select>
       </div>
+    </div>
+    <div class="ff" style="margin-bottom:8px">
+      <label class="ff-lbl">Quarter</label>
+      <div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="nl-q1"/> Q1</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="nl-q2"/> Q2</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="nl-q3"/> Q3</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text);cursor:pointer"><input type="checkbox" id="nl-q4"/> Q4</label>
+      </div>
+    </div>
+    <div class="ff" style="margin-bottom:8px">
+      <label class="ff-lbl">Campaign (optional)</label>
+      <input class="ff-inp" id="nl-campaign" placeholder="e.g. HONOR X7c, MYWLK Y1"/>
     </div>
     <div class="ff" style="margin-bottom:8px">
       <label class="ff-lbl">Category</label>
@@ -3019,14 +3041,22 @@ function renderLinks(){
     .then(function(d){
       if(!d.ok){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading</div>';return;}
       _adminLinks=d.links||[];
-      if(!_adminLinks.length){
-        el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">No notes yet. Click "+ Add Note" to save your first document or link!</div>';
+
+      // Apply year filter
+      var yearFilter=document.getElementById('links-year-filter');
+      var selectedYear=yearFilter?yearFilter.value:'';
+      var filtered=selectedYear
+        ? _adminLinks.filter(function(l){return String(l.year||'')===selectedYear;})
+        : _adminLinks;
+
+      if(!filtered.length){
+        el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">'+(selectedYear?'No notes for '+selectedYear+'.':'No notes yet. Click "+ Add Note" to save your first document or link!')+'</div>';
         return;
       }
 
       // Group by brand first, then by quarter within each brand
       var groups={}; // key: brandName or 'General'
-      _adminLinks.forEach(function(l){
+      filtered.forEach(function(l){
         var bname='General';
         if(l.brand_id){var b=getBrand(l.brand_id);if(b)bname=b.name;}
         if(!groups[bname])groups[bname]={color:'var(--text-s)',links:[]};
@@ -3071,18 +3101,23 @@ function linkCardHTML(l){
   var icon=catIcon(l.category);
   var shortUrl=l.url?(l.url.replace(/^https?:\/\/(www\.)?/,'')):'';
   if(shortUrl.length>45) shortUrl=shortUrl.slice(0,45)+'...';
-  return '<div class="link-card">'+
+  var qTags=(l.quarter||'').split(',').filter(Boolean).map(function(q){
+    return '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--primary)18;color:var(--primary)">'+q+'</span>';
+  }).join('');
+  return '<div class="link-card" style="cursor:pointer" onclick="openEditLink('+l.id+')">'+
     '<div class="link-card-top">'+
       '<div class="link-card-ico" style="background:'+color+'22;color:'+color+'">'+icon+'</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div class="link-card-title">'+escHtml(l.title)+'</div>'+
-        (l.category?'<div style="font-size:9px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-top:1px">'+escHtml(l.category)+'</div>':'')+
+        (l.campaign?'<div style="font-size:10px;color:var(--text-m);margin-top:2px">'+escHtml(l.campaign)+'</div>':'')+
+        (l.category?'<div style="font-size:9px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+escHtml(l.category)+'</div>':'')+
         (l.url?'<div class="link-card-url" title="'+escHtml(l.url)+'">'+escHtml(shortUrl)+'</div>':'')+
       '</div>'+
     '</div>'+
+    (qTags?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+qTags+'</div>':'')+
     (l.notes?'<div class="link-card-notes" style="white-space:pre-line">'+escHtml(l.notes)+'</div>':'')+
-    '<div class="link-card-actions">'+
-      (l.url?'<a href="'+escHtml(l.url)+'" target="_blank" rel="noopener noreferrer" class="link-btn-open">Open &#8599;</a>':'<span style="flex:1"></span>')+
+    '<div class="link-card-actions" onclick="event.stopPropagation()">'+
+      (l.url?'<a href="'+escHtml(l.url)+'" target="_blank" rel="noopener noreferrer" class="link-btn-open" onclick="event.stopPropagation()">Open &#8599;</a>':'<span style="flex:1"></span>')+
       '<button class="link-btn-del" onclick="openEditLink('+l.id+')" style="background:rgba(59,126,248,.1);color:var(--primary);border-color:rgba(59,126,248,.2)" title="Edit">&#9998;</button>'+
       '<button class="link-btn-del" onclick="deleteLink('+l.id+')" title="Remove">&#128465;</button>'+
     '</div>'+
@@ -3097,9 +3132,10 @@ function openAddLink(){
   document.getElementById('nl-url').value='';
   document.getElementById('nl-cat').value='';
   document.getElementById('nl-notes').value='';
-  document.getElementById('nl-quarter').value='';
+  document.getElementById('nl-campaign').value='';
+  document.getElementById('nl-year').value=String(new Date().getFullYear());
+  ['nl-q1','nl-q2','nl-q3','nl-q4'].forEach(function(id){document.getElementById(id).checked=false;});
   document.getElementById('nl-err').textContent='';
-  // Populate brand select
   var sel=document.getElementById('nl-brand');
   sel.innerHTML='<option value="">— General —</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'">'+escHtml(b.name)+'</option>';}).join('');
   openOv('ov-add-link');
@@ -3116,7 +3152,13 @@ function openEditLink(id){
   document.getElementById('nl-url').value=l.url||'';
   document.getElementById('nl-cat').value=l.category||'';
   document.getElementById('nl-notes').value=l.notes||'';
-  document.getElementById('nl-quarter').value=l.quarter||'';
+  document.getElementById('nl-campaign').value=l.campaign||'';
+  document.getElementById('nl-year').value=l.year?String(l.year):'';
+  var qs=(l.quarter||'').split(',').filter(Boolean);
+  document.getElementById('nl-q1').checked=qs.indexOf('Q1')>-1;
+  document.getElementById('nl-q2').checked=qs.indexOf('Q2')>-1;
+  document.getElementById('nl-q3').checked=qs.indexOf('Q3')>-1;
+  document.getElementById('nl-q4').checked=qs.indexOf('Q4')>-1;
   document.getElementById('nl-err').textContent='';
   var sel=document.getElementById('nl-brand');
   sel.innerHTML='<option value="">— General —</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'"'+(l.brand_id===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
@@ -3129,12 +3171,15 @@ function saveLink(){
   var url=document.getElementById('nl-url').value.trim();
   var cat=document.getElementById('nl-cat').value.trim()||'';
   var notes=document.getElementById('nl-notes').value.trim();
+  var campaign=document.getElementById('nl-campaign').value.trim();
   var brandId=document.getElementById('nl-brand').value||null;
-  var quarter=document.getElementById('nl-quarter').value||null;
+  var year=document.getElementById('nl-year').value||null;
+  var qs=['Q1','Q2','Q3','Q4'].filter(function(q){return document.getElementById('nl-'+q.toLowerCase()).checked;});
+  var quarter=qs.length?qs.join(','):null;
   var errEl=document.getElementById('nl-err');
   if(!title){errEl.textContent='Title is required';return;}
   if(url&&!/^https?:\/\//.test(url)) url='https://'+url;
-  var body={title:title,url:url||null,category:cat,notes:notes,brandId:brandId,quarter:quarter};
+  var body={title:title,url:url||null,category:cat,notes:notes,brandId:brandId,quarter:quarter,year:year?parseInt(year):null,campaign:campaign};
   var method=_editingLinkId?'PUT':'POST';
   var endpoint=_editingLinkId?'/api/admin/links/'+_editingLinkId:'/api/admin/links';
   fetch(endpoint,{method:method,headers:authHeaders(),body:JSON.stringify(body)})

@@ -399,9 +399,9 @@ app.get('/api/admin/links', requireAuth, requireAdmin, async (req, res) => {
 
 app.post('/api/admin/links', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { title, url, category, notes, brandId, quarter } = req.body;
+    const { title, url, category, notes, brandId, quarter, year, campaign } = req.body;
     if (!title) return res.json({ ok: false, error: 'Title is required' });
-    const rows = await sql`INSERT INTO links (title, url, category, notes, brand_id, quarter) VALUES (${title}, ${url||null}, ${category||'General'}, ${notes||''}, ${brandId||null}, ${quarter||null}) RETURNING id`;
+    const rows = await sql`INSERT INTO links (title, url, category, notes, brand_id, quarter, year, campaign) VALUES (${title}, ${url||null}, ${category||''}, ${notes||''}, ${brandId||null}, ${quarter||null}, ${year||null}, ${campaign||''}) RETURNING id`;
     res.json({ ok: true, id: rows[0].id });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -415,9 +415,9 @@ app.delete('/api/admin/links/:id', requireAuth, requireAdmin, async (req, res) =
 
 app.put('/api/admin/links/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { title, url, category, notes, brandId, quarter } = req.body;
+    const { title, url, category, notes, brandId, quarter, year, campaign } = req.body;
     if (!title) return res.json({ ok: false, error: 'Title is required' });
-    await sql`UPDATE links SET title=${title}, url=${url||null}, category=${category||'General'}, notes=${notes||''}, brand_id=${brandId||null}, quarter=${quarter||null} WHERE id=${req.params.id}`;
+    await sql`UPDATE links SET title=${title}, url=${url||null}, category=${category||''}, notes=${notes||''}, brand_id=${brandId||null}, quarter=${quarter||null}, year=${year||null}, campaign=${campaign||''} WHERE id=${req.params.id}`;
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
