@@ -214,6 +214,25 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
   res.json({ ok: true, user: req.user });
 });
 
+// ── Public: member picker (no auth required) ────
+app.get('/api/public/members', async (req, res) => {
+  try {
+    const rows = await sql`
+      SELECT u.email, u.role, u.member_id, m.name, m.avatar_url
+      FROM users u
+      LEFT JOIN members m ON m.id = u.member_id
+      ORDER BY COALESCE(m.name, u.email)
+    `;
+    res.json({ ok: true, members: rows.map(r => ({
+      email: r.email,
+      role: r.role,
+      memberId: r.member_id,
+      name: r.name || r.email.split('@')[0],
+      avatarUrl: r.avatar_url || ''
+    }))});
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Logs ────────────────────────────────────────
 app.post('/api/logs', requireAuth, async (req, res) => {
   try {
