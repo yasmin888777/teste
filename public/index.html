@@ -101,6 +101,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   font-size:11px;color:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;margin-bottom:2px;
 }
 .sb-pill:hover{background:rgba(255,255,255,.07);color:#fff}
+.sb-pill-active{background:rgba(59,126,248,.18)!important;color:#fff!important}
 .sb-dot2{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
 .sb-member-pill{
@@ -357,6 +358,30 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .camp-funnel-title{font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px}
 .camp-funnel-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
 .camp-funnel-row:last-child{border-bottom:none}
+
+/* ══════════ BRAND DETAIL ══════════ */
+.brand-detail-header{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:20px 22px;margin-bottom:16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)}
+.brand-detail-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.brand-detail-name{font-size:20px;font-weight:700;color:var(--text)}
+.brand-detail-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.bd-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.bd-kpi{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;box-shadow:var(--shadow)}
+.bd-kpi-lbl{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px}
+.bd-kpi-val{font-size:22px;font-weight:700;color:var(--text)}
+.bd-kpi-sub{font-size:10px;color:var(--text-s);margin-top:2px}
+.bd-chart-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.bd-camp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:16px}
+.bd-camp-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.bd-camp-card-head{display:flex;align-items:flex-start;gap:10px}
+.bd-camp-name{font-size:14px;font-weight:700;color:var(--text)}
+.bd-camp-period{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.05em}
+.bd-camp-meta{display:flex;gap:14px;flex-wrap:wrap}
+.bd-camp-meta-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-m)}
+.bd-prog-row{display:flex;flex-direction:column;gap:4px}
+.bd-prog-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-m)}
+.bd-prog-bar{height:7px;border-radius:4px;background:var(--border);overflow:hidden}
+.bd-prog-fill{height:100%;border-radius:4px;transition:width .4s}
+.bd-camp-actions{display:flex;gap:7px;padding-top:4px;border-top:1px solid var(--border)}
 
 /* ══════════ MODAL ══════════ */
 .overlay{
@@ -615,18 +640,18 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .ts-dot.idle{background:#d1d5db}
 
 /* ══════════ PRIVATE LINKS ══════════ */
-.links-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-.link-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:5px;transition:box-shadow .2s,transform .15s}
+.links-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.link-card{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;transition:box-shadow .2s,transform .15s;aspect-ratio:1;overflow:hidden;min-width:0}
 .link-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
-.link-card-top{display:flex;align-items:flex-start;gap:10px}
-.link-card-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.link-card-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
-.link-card-url{font-size:10px;color:var(--text-s);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
-.link-card-notes{font-size:11px;color:var(--text-m);line-height:1.4}
-.link-card-actions{display:flex;gap:6px;margin-top:4px}
-.link-btn-open{flex:1;padding:7px;border-radius:7px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;transition:opacity .2s;text-align:center;text-decoration:none;display:block}
+.link-card-top{display:flex;align-items:flex-start;gap:7px}
+.link-card-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.link-card-title{font-size:11px;font-weight:700;color:var(--text);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.link-card-url{font-size:9px;color:var(--text-s);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.link-card-notes{font-size:10px;color:var(--text-m);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.link-card-actions{display:flex;gap:4px;margin-top:auto;padding-top:4px}
+.link-btn-open{flex:1;padding:4px 6px;border-radius:6px;font-size:9px;font-weight:600;background:var(--primary);color:#fff;transition:opacity .2s;text-align:center;text-decoration:none;display:block}
 .link-btn-open:hover{opacity:.85}
-.link-btn-del{padding:7px 11px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);transition:background .2s;cursor:pointer}
+.link-btn-del{padding:4px 7px;border-radius:6px;font-size:10px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);transition:background .2s;cursor:pointer}
 .link-btn-del:hover{background:rgba(248,113,113,.2)}
 
 /* ══════════ WEEK COMPARISON BADGE ══════════ */
@@ -772,6 +797,11 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         </div>
       </div>
       <div class="g2" id="campaign-cards"></div>
+    </div>
+
+    <!-- ── BRAND DETAIL ── -->
+    <div class="page" id="page-brand">
+      <div id="brand-detail-content"></div>
     </div>
 
     <!-- ── ADMIN HOME ── -->
@@ -1041,17 +1071,69 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 <!-- ══════════════════ MODAL: ADD CAMPAIGN ══════════════════ -->
 <div class="overlay" id="ov-add-campaign" onclick="ovBg('ov-add-campaign',event)">
-  <div class="modal goals-modal">
+  <div class="modal goals-modal" style="max-width:420px">
     <div class="modal-hd">
       <div style="font-size:22px">&#127919;</div>
       <div><div class="modal-title">New Campaign</div><div class="modal-sub" id="add-camp-sub">Create a campaign for this brand</div></div>
       <button class="modal-x" onclick="closeOv('ov-add-campaign')">&#10005;</button>
     </div>
     <div class="ff" style="margin-bottom:10px">
-      <label class="ff-lbl">Campaign Name</label>
-      <input class="ff-inp" id="nc-name" placeholder="e.g. Modelo MYWLK Y1"/>
+      <label class="ff-lbl">Campaign Name *</label>
+      <input class="ff-inp" id="nc-name" placeholder="e.g. MYWLK Summer Y1"/>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Period (optional)</label>
+      <input class="ff-inp" id="nc-period" placeholder="e.g. Q1 2026, H1 2026"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Start Date</label>
+        <input class="ff-inp" id="nc-start" type="date"/>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">End Date</label>
+        <input class="ff-inp" id="nc-end" type="date"/>
+      </div>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">&#128230; Samples Quantity</label>
+      <input class="ff-inp" id="nc-samples" type="number" min="0" placeholder="0"/>
     </div>
     <button class="save-btn" onclick="saveNewCampaign()">Create Campaign</button>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: EDIT CAMPAIGN ══════════════════ -->
+<div class="overlay" id="ov-edit-campaign" onclick="ovBg('ov-edit-campaign',event)">
+  <div class="modal goals-modal" style="max-width:420px">
+    <div class="modal-hd">
+      <div style="font-size:22px">&#9998;</div>
+      <div><div class="modal-title">Edit Campaign</div><div class="modal-sub" id="edit-camp-sub"></div></div>
+      <button class="modal-x" onclick="closeOv('ov-edit-campaign')">&#10005;</button>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Campaign Name *</label>
+      <input class="ff-inp" id="ec-name" placeholder="e.g. MYWLK Summer Y1"/>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Period (optional)</label>
+      <input class="ff-inp" id="ec-period" placeholder="e.g. Q1 2026"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Start Date</label>
+        <input class="ff-inp" id="ec-start" type="date"/>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">End Date</label>
+        <input class="ff-inp" id="ec-end" type="date"/>
+      </div>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">&#128230; Samples Quantity</label>
+      <input class="ff-inp" id="ec-samples" type="number" min="0" placeholder="0"/>
+    </div>
+    <button class="save-btn" onclick="saveEditCampaign()">Save Changes</button>
   </div>
 </div>
 
@@ -1324,24 +1406,38 @@ function loadAdminData(){
 /* ══════════════════════════════════════════════
    NAVIGATION
 ══════════════════════════════════════════════ */
-function navTo(page,el){
+var _activeBrandId=null;
+function navTo(page,el,brandId){
   currentPage=page;
   currentMemberId=null;
+  if(brandId) _activeBrandId=brandId;
   document.getElementById('tb-member-actions').style.display='none';
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   document.querySelectorAll('.sb-member-pill').forEach(p=>p.classList.remove('sb-member-pill-active'));
+  document.querySelectorAll('.sb-pill').forEach(p=>p.classList.remove('sb-pill-active'));
   if(el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','links':'Documents & Spreadsheets'};
-  document.getElementById('tb-title').textContent=T[page]||page;
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail'};
+  if(page==='brand'&&_activeBrandId){const b=getBrand(_activeBrandId);document.getElementById('tb-title').textContent=b?b.name:'Brand Detail';}
+  else document.getElementById('tb-title').textContent=T[page]||page;
   if(page==='overview') drawTrend();
   if(page==='digest') renderDigest();
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
   if(page==='admin-home') renderAdminHome();
   if(page==='links') renderLinks();
+  if(page==='brand') renderBrandDetail(_activeBrandId);
+}
+function openBrandDetail(brandId){
+  _activeBrandId=brandId;
+  // highlight the sidebar pill
+  document.querySelectorAll('.sb-pill').forEach(p=>p.classList.remove('sb-pill-active'));
+  var pill=document.querySelector('.sb-pill[data-bid="'+brandId+'"]');
+  if(pill) pill.classList.add('sb-pill-active');
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  navTo('brand',null,brandId);
 }
 function setTimeView(v,el){
   timeView=v;
@@ -1367,6 +1463,7 @@ function renderAll(){
   if(currentPage==='overview') drawTrend();
   if(currentPage==='digest') renderDigest();
   if(currentMemberId && document.getElementById('page-member').classList.contains('active')) renderMemberPage(currentMemberId);
+  if(currentPage==='brand'&&_activeBrandId) renderBrandDetail(_activeBrandId);
   document.getElementById('tb-time').textContent=
     'Updated '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('app-name-label').textContent=ST.appName||'DigitUly';
@@ -1381,7 +1478,7 @@ function renderAll(){
 /* SIDEBAR */
 function renderSidebar(){
   document.getElementById('sb-brands-list').innerHTML=ST.brands.map(b=>
-    '<div class="sb-pill" onclick="navTo(\'campaigns\',null)">'+
+    '<div class="sb-pill'+(b.id===_activeBrandId?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
       '<div class="sb-dot2" style="background:'+b.color+'"></div>'+
       '<span>'+b.name+'</span>'+
     '</div>').join('');
@@ -2905,7 +3002,8 @@ function openAddCampaign(brandId){
   _addCampBrandId=brandId;
   const b=getBrand(brandId);
   document.getElementById('add-camp-sub').textContent=b?'Campaign for '+b.name:'Create a campaign for this brand';
-  document.getElementById('nc-name').value='';
+  ['nc-name','nc-period','nc-start','nc-end'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('nc-samples').value='';
   openOv('ov-add-campaign');
 }
 function saveNewCampaign(){
@@ -2913,12 +3011,48 @@ function saveNewCampaign(){
   if(!name){alert('Please enter a campaign name');return;}
   if(!_addCampBrandId) return;
   const id='camp_'+Date.now();
+  const period=document.getElementById('nc-period').value.trim();
+  const startDate=document.getElementById('nc-start').value||null;
+  const endDate=document.getElementById('nc-end').value||null;
+  const samples=+(document.getElementById('nc-samples').value)||0;
   if(!ST.campaigns) ST.campaigns={};
   if(!ST.campaigns[_addCampBrandId]) ST.campaigns[_addCampBrandId]=[];
-  ST.campaigns[_addCampBrandId].push({id:id,name:name,brandId:_addCampBrandId});
-  apiPost('/api/campaigns',{id:id,brandId:_addCampBrandId,name:name});
+  ST.campaigns[_addCampBrandId].push({id:id,name:name,brandId:_addCampBrandId,period:period,startDate:startDate,endDate:endDate,samples:samples});
+  apiPost('/api/campaigns',{id:id,brandId:_addCampBrandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples});
   renderAll();
+  if(_activeBrandId===_addCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-add-campaign');
+}
+var _editCampId=null,_editCampBrandId=null;
+function openEditCampaign(campId,brandId){
+  _editCampId=campId;_editCampBrandId=brandId;
+  const camps=(ST.campaigns&&ST.campaigns[brandId])||[];
+  const c=camps.find(function(x){return x.id===campId;});
+  if(!c) return;
+  const b=getBrand(brandId);
+  document.getElementById('edit-camp-sub').textContent=b?b.name:'Edit Campaign';
+  document.getElementById('ec-name').value=c.name||'';
+  document.getElementById('ec-period').value=c.period||'';
+  document.getElementById('ec-start').value=c.startDate||'';
+  document.getElementById('ec-end').value=c.endDate||'';
+  document.getElementById('ec-samples').value=c.samples||0;
+  openOv('ov-edit-campaign');
+}
+function saveEditCampaign(){
+  if(!_editCampId||!_editCampBrandId) return;
+  const name=document.getElementById('ec-name').value.trim();
+  if(!name){alert('Please enter a campaign name');return;}
+  const period=document.getElementById('ec-period').value.trim();
+  const startDate=document.getElementById('ec-start').value||null;
+  const endDate=document.getElementById('ec-end').value||null;
+  const samples=+(document.getElementById('ec-samples').value)||0;
+  const camps=(ST.campaigns&&ST.campaigns[_editCampBrandId])||[];
+  const c=camps.find(function(x){return x.id===_editCampId;});
+  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;}
+  apiPut('/api/campaigns/'+_editCampId,{name:name,period:period,startDate:startDate,endDate:endDate,samples:samples});
+  renderAll();
+  if(_activeBrandId===_editCampBrandId) renderBrandDetail(_activeBrandId);
+  closeOv('ov-edit-campaign');
 }
 function deleteCampaign(campId,brandId){
   if(!confirm('Delete this campaign?')) return;
@@ -2927,6 +3061,171 @@ function deleteCampaign(campId,brandId){
   }
   apiDel('/api/campaigns/'+campId);
   renderCampaigns();
+  if(_activeBrandId===brandId) renderBrandDetail(_activeBrandId);
+}
+
+/* ══════════════════════════════════════════════
+   BRAND DETAIL PAGE
+══════════════════════════════════════════════ */
+var _bdChartInstance=null;
+function renderBrandDetail(brandId){
+  var el=document.getElementById('brand-detail-content');
+  if(!el) return;
+  var b=getBrand(brandId);
+  if(!b){el.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--text-s)">Brand not found.</div>';return;}
+
+  var camps=(ST.campaigns&&ST.campaigns[b.id])||[];
+  var admin=isAdmin();
+  var bColor=b.color||'var(--primary)';
+  var bStatus=b.status||'ongoing';
+  var isOngoing=bStatus==='ongoing';
+
+  // ── KPI totals for this brand ──────────────────
+  var totSourced=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'kols_sourced');},0);
+  var totContacted=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'kols_contacted');},0);
+  var totConfirmed=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+  var totVidsLogs=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'vids_published');},0);
+  var totVidsCamp=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.videos||0);},0);
+  var totVids=totVidsLogs+totVidsCamp;
+  var totShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
+  var convRate=totContacted>0?((totConfirmed/totContacted)*100).toFixed(1)+'%':'—';
+  var gCo=b.goals&&b.goals.confirmed||0;
+  var gV=b.goals&&b.goals.videos||0;
+
+  // ── Assigned members ──────────────────────────
+  var assigned=ST.members.filter(function(m){return m.brands&&m.brands.includes(b.id);});
+  var avatarsHtml=assigned.map(function(m){
+    var role=(m.roles&&m.roles[b.id])||'';
+    return '<div style="position:relative;margin-left:-6px;z-index:1" title="'+m.name+(role?' ('+role+')':'')+'">'+
+      '<div class="mem-av-img av-sm" style="border:2px solid white">'+
+        (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
+      '</div>'+
+      (role?'<span style="position:absolute;bottom:-3px;right:-3px;font-size:7px;font-weight:700;padding:1px 3px;border-radius:3px;background:'+(role==='owner'?'var(--primary)':'var(--amber)')+';color:#fff;text-transform:uppercase">'+role[0]+'</span>':'')+
+    '</div>';
+  }).join('');
+
+  // ── Status badge ──────────────────────────────
+  var statusBadge='<span onclick="toggleBrandStatus(\''+b.id+'\',\''+bStatus+'\')" title="Click to toggle status" style="cursor:pointer;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;'+(isOngoing?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
+    (isOngoing?'● Ongoing':'○ Finished')+'</span>';
+
+  // ── Header ────────────────────────────────────
+  var headerHtml='<div class="brand-detail-header">'+
+    '<div class="brand-detail-dot" style="background:'+bColor+'"></div>'+
+    '<div>'+
+      '<div class="brand-detail-name">'+escHtml(b.name)+'</div>'+
+      (camps.length?'<div style="font-size:11px;color:var(--text-s);margin-top:2px">'+camps.length+' campaign'+(camps.length>1?'s':'')+'</div>':'<div style="font-size:11px;color:var(--text-s);margin-top:2px">No campaigns yet</div>')+
+    '</div>'+
+    '<div style="display:flex;align-items:center;margin-left:12px">'+avatarsHtml+'</div>'+
+    statusBadge+
+    '<div class="brand-detail-actions">'+
+      (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
+      (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">&#9998; Edit Brand</button>':'') +
+    '</div>'+
+  '</div>';
+
+  // ── KPI row ───────────────────────────────────
+  var kpiHtml='<div class="bd-kpi-row">'+
+    ['<div class="bd-kpi-lbl">KOLs Contacted</div><div class="bd-kpi-val">'+totContacted+'</div><div class="bd-kpi-sub">sourced: '+totSourced+'</div>',
+     '<div class="bd-kpi-lbl">KOLs Confirmed</div><div class="bd-kpi-val">'+totConfirmed+'</div><div class="bd-kpi-sub">goal: '+(gCo||'—')+'</div>',
+     '<div class="bd-kpi-lbl">Videos Published</div><div class="bd-kpi-val">'+totVids+'</div><div class="bd-kpi-sub">goal: '+(gV||'—')+'</div>',
+     '<div class="bd-kpi-lbl">Conversion Rate</div><div class="bd-kpi-val" style="font-size:20px">'+convRate+'</div><div class="bd-kpi-sub">contacted → confirmed</div>',
+    ].map(function(inner){return '<div class="bd-kpi">'+inner+'</div>';}).join('')+
+  '</div>';
+
+  // ── Chart card ────────────────────────────────
+  var chartHtml='';
+  if(camps.length){
+    chartHtml='<div class="bd-chart-card">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:12px">Campaign Overview</div>'+
+      '<div style="position:relative;height:180px"><canvas id="bd-chart-'+b.id+'"></canvas></div>'+
+    '</div>';
+  }
+
+  // ── Campaign cards ────────────────────────────
+  var campHtml='<div class="bd-camp-grid">';
+  if(!camps.length){
+    campHtml+='<div class="bd-camp-card" style="grid-column:1/-1;text-align:center;color:var(--text-s);padding:40px">No campaigns yet.'+(admin?' Click <strong>+ Campaign</strong> to create one.':'')+'</div>';
+  } else {
+    camps.forEach(function(c){
+      // Per-campaign stats (from logs tagged with this campaignId)
+      var campConfirmed=0,campVids=0;
+      ST.members.forEach(function(m){
+        var mLogs=getLogs(m.id).filter(function(l){return l.brandId===b.id&&l.campaignId===c.id;});
+        campConfirmed+=mLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
+        campVids+=mLogs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
+      });
+      var campSamples=c.samples||0;
+      var pCo=gCo>0?Math.min((totConfirmed/gCo)*100,100):0; // brand-level goal
+      var pV=gV>0?Math.min((totVids/gV)*100,100):0;
+
+      // Date range display
+      var dateRange='';
+      if(c.startDate||c.endDate){
+        var fmt=function(d){if(!d)return '?';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);};
+        dateRange='<div class="bd-camp-meta-item">&#128197; '+fmt(c.startDate)+' → '+fmt(c.endDate)+'</div>';
+      }
+      var periodTag=c.period?'<span class="bd-camp-period" style="background:'+bColor+'18;color:'+bColor+'">'+escHtml(c.period)+'</span>':'';
+      var samplesHtml=campSamples?'<div class="bd-camp-meta-item">&#128230; '+campSamples+' samples</div>':'';
+
+      campHtml+='<div class="bd-camp-card">'+
+        '<div class="bd-camp-card-head">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'+
+              '<div class="bd-camp-name">'+escHtml(c.name)+'</div>'+
+              periodTag+
+            '</div>'+
+            '<div class="bd-camp-meta">'+dateRange+samplesHtml+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="bd-prog-row">'+
+          '<div class="bd-prog-label"><span>&#129309; Confirmed KOLs</span><span>'+campConfirmed+(gCo?' / '+gCo:'')+'</span></div>'+
+          '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pCo.toFixed(0)+'%;background:'+bColor+'"></div></div>'+
+        '</div>'+
+        '<div class="bd-prog-row">'+
+          '<div class="bd-prog-label"><span>&#127909; Published Videos</span><span>'+campVids+(gV?' / '+gV:'')+'</span></div>'+
+          '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pV.toFixed(0)+'%;background:'+bColor+'88"></div></div>'+
+        '</div>'+
+        (admin?
+          '<div class="bd-camp-actions">'+
+            '<button onclick="openEditCampaign(\''+c.id+'\',\''+b.id+'\')" style="flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">&#9998; Edit</button>'+
+            '<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="padding:6px 10px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" title="Delete">&#128465;</button>'+
+          '</div>':'')+
+      '</div>';
+    });
+  }
+  campHtml+='</div>';
+
+  el.innerHTML=headerHtml+kpiHtml+chartHtml+campHtml;
+
+  // ── Draw chart ────────────────────────────────
+  if(camps.length){
+    var ctx=document.getElementById('bd-chart-'+b.id);
+    if(ctx){
+      if(_bdChartInstance) _bdChartInstance.destroy();
+      _bdChartInstance=new Chart(ctx,{
+        type:'bar',
+        data:{
+          labels:camps.map(function(c){return c.name;}),
+          datasets:[
+            {label:'Confirmed KOLs',data:camps.map(function(c){
+              var v=0;ST.members.forEach(function(m){var ls=getLogs(m.id).filter(function(l){return l.brandId===b.id&&l.campaignId===c.id;});v+=ls.reduce(function(s,l){return s+(+l.confirmed||0);},0);});return v;
+            }),backgroundColor:bColor+'cc',borderRadius:4},
+            {label:'Published Videos',data:camps.map(function(c){
+              var v=0;ST.members.forEach(function(m){var ls=getLogs(m.id).filter(function(l){return l.brandId===b.id&&l.campaignId===c.id;});v+=ls.reduce(function(s,l){return s+(+l.vids_published||0);},0);});return v;
+            }),backgroundColor:bColor+'55',borderRadius:4},
+          ]
+        },
+        options:{
+          responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
+          scales:{
+            x:{grid:{display:false},ticks:{font:{size:10}}},
+            y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},stepSize:1}}
+          }
+        }
+      });
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -3297,15 +3596,15 @@ function linkCardHTML(l){
   var shortUrl=l.url?(l.url.replace(/^https?:\/\/(www\.)?/,'')):'';
   if(shortUrl.length>45) shortUrl=shortUrl.slice(0,45)+'...';
   var qTags=(l.quarter||'').split(',').filter(Boolean).map(function(q){
-    return '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--primary)18;color:var(--primary)">'+q+'</span>';
+    return '<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--primary)18;color:var(--primary)">'+q+'</span>';
   }).join('');
   return '<div class="link-card" style="cursor:pointer" onclick="openEditLink('+l.id+')">'+
     '<div class="link-card-top">'+
       '<div class="link-card-ico" style="background:'+color+'22;color:'+color+'">'+icon+'</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div class="link-card-title">'+escHtml(l.title)+'</div>'+
-        (l.campaign?'<div style="font-size:10px;color:var(--text-m);margin-top:2px">'+escHtml(l.campaign)+'</div>':'')+
-        (l.category?'<div style="font-size:9px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+escHtml(l.category)+'</div>':'')+
+        (l.campaign?'<div style="font-size:9px;color:var(--text-m);margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+escHtml(l.campaign)+'</div>':'')+
+        (l.category?'<div style="font-size:8px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-top:1px">'+escHtml(l.category)+'</div>':'')+
       '</div>'+
     '</div>'+
     (qTags?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">'+qTags+'</div>':'')+

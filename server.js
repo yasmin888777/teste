@@ -94,7 +94,12 @@ app.get('/api/state', async (req, res) => {
     const campaignsGrouped = {};
     campaigns.forEach(c => {
       if (!campaignsGrouped[c.brand_id]) campaignsGrouped[c.brand_id] = [];
-      campaignsGrouped[c.brand_id].push({ id: c.id, name: c.name, brandId: c.brand_id });
+      campaignsGrouped[c.brand_id].push({
+        id: c.id, name: c.name, brandId: c.brand_id,
+        period: c.period || '', samples: c.samples || 0,
+        startDate: c.start_date ? c.start_date.toISOString().split('T')[0] : null,
+        endDate: c.end_date ? c.end_date.toISOString().split('T')[0] : null,
+      });
     });
 
     res.json({ appName: settings.appName || 'DigitUly', logoUrl: settings.logoUrl || '', brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, campaigns: campaignsGrouped, customAvatars: {} });
@@ -348,8 +353,17 @@ app.delete('/api/members/:id', requireAuth, requireAdmin, async (req, res) => {
 // ── Campaigns (admin only) ───────────────────────
 app.post('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { id, brandId, name } = req.body;
-    await sql`INSERT INTO campaigns (id, brand_id, name) VALUES (${id}, ${brandId}, ${name})`;
+    const { id, brandId, name, period, startDate, endDate, samples } = req.body;
+    await sql`INSERT INTO campaigns (id, brand_id, name, period, start_date, end_date, samples)
+      VALUES (${id}, ${brandId}, ${name}, ${period||''}, ${startDate||null}, ${endDate||null}, ${samples||0})`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/campaigns/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { name, period, startDate, endDate, samples } = req.body;
+    await sql`UPDATE campaigns SET name=${name}, period=${period||''}, start_date=${startDate||null}, end_date=${endDate||null}, samples=${samples||0} WHERE id=${req.params.id}`;
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
