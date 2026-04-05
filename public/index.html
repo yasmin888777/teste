@@ -1035,16 +1035,21 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <button class="save-btn" onclick="saveProfile()">Save Profile</button>
     <!-- Admin: manage this member's login account -->
     <div id="prof-user-section" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Login Account</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s)">Login Account</div>
+        <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--amber-d);color:var(--amber);font-weight:600">&#128274; Admin only</span>
+      </div>
       <div id="prof-user-info" style="font-size:11px;color:var(--text-m);margin-bottom:10px"></div>
       <input class="goal-inp" type="email" id="prof-user-email" placeholder="Email address"/>
       <input class="goal-inp" type="password" id="prof-user-pwd" placeholder="New password (leave blank to keep)" style="margin-top:6px"/>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <select id="prof-user-role" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:11px;background:#fff">
-          <option value="member">Member</option>
-          <option value="admin">Admin</option>
+      <div style="margin-top:8px">
+        <label style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-s);display:block;margin-bottom:5px">Account Type</label>
+        <select id="prof-user-role" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:11px;background:#fff;margin-bottom:8px">
+          <option value="member">Member — regular access, own profile only</option>
+          <option value="member+admin">Member + Admin — counted as team member + full admin access</option>
+          <option value="admin">Admin only — manager, not counted as team member</option>
         </select>
-        <button class="save-btn" onclick="saveProfileUser()" style="flex:2;margin-top:0">Save Account</button>
+        <button class="save-btn" onclick="saveProfileUser()" style="width:100%;margin-top:0">Save Account</button>
       </div>
       <div id="prof-user-msg" style="font-size:11px;margin-top:6px"></div>
     </div>
@@ -1338,7 +1343,7 @@ function renderSidebar(){
 
   document.getElementById('sb-team-list').innerHTML=ST.members.map(m=>{
     var uRole=_allUsers.find(function(u){return u.member_id===m.id;});
-    var isAdminMember=uRole&&uRole.role==='admin';
+    var isAdminMember=uRole&&(uRole.role==='admin'||uRole.role==='member+admin');
     return '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')" style="justify-content:space-between">'+
       '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+
         '<div class="sb-mem-av">'+
@@ -1723,7 +1728,7 @@ function renderMemberPage(mid){
   setTimeout(function(){drawMemberChart(mid);},50);
 }
 
-function isAdmin(){ return currentUser&&currentUser.role==='admin'; }
+function isAdmin(){ return currentUser&&(currentUser.role==='admin'||currentUser.role==='member+admin'); }
 function isOwnMember(mid){ return currentUser&&currentUser.memberId===mid; }
 function canEdit(mid){ return isAdmin()||isOwnMember(mid); }
 
@@ -2482,7 +2487,7 @@ function updateAccountUI(){
   var avEl=document.getElementById('sb-account-av');
   var nmEl=document.getElementById('sb-account-name');
   if(avEl) avEl.textContent=ini;
-  if(nmEl) nmEl.textContent=name+(currentUser.role==='admin'?' ★':'');
+  if(nmEl) nmEl.textContent=name+(isAdmin()?' ★':'');
 }
 
 function openAccount(){
@@ -2673,7 +2678,7 @@ function renderAdminHome(){
   // Only count non-admin members in team status
   var teamMembers=ST.members.filter(function(m){
     var u=_allUsers.find(function(u){return u.member_id===m.id;});
-    return !u||(u.role!=='admin');
+    return !u||(u.role!=='admin'); // 'member+admin' passes through (counts as team member)
   });
 
   var membersStatus=teamMembers.map(function(m){

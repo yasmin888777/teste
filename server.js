@@ -38,7 +38,8 @@ function requireAuth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+  const r = req.user?.role;
+  if (r !== 'admin' && r !== 'member+admin') return res.status(403).json({ error: 'Admin access required' });
   next();
 }
 
@@ -217,8 +218,9 @@ app.get('/api/auth/me', requireAuth, async (req, res) => {
 app.post('/api/logs', requireAuth, async (req, res) => {
   try {
     const { memberId, brandId, date, kols_sourced, kols_contacted, kols_replied, kols_followedup, prelim_agree, confirmed, vids_published, note, campaignId } = req.body;
-    // Members can only log for themselves
-    if (req.user.role !== 'admin' && req.user.memberId !== memberId)
+    // Members can only log for themselves; admins can log for anyone
+    const callerIsAdmin = req.user.role === 'admin' || req.user.role === 'member+admin';
+    if (!callerIsAdmin && req.user.memberId !== memberId)
       return res.status(403).json({ error: 'You can only log activities for yourself' });
 
     await sql`
@@ -237,7 +239,7 @@ app.post('/api/logs', requireAuth, async (req, res) => {
 
 app.delete('/api/logs/:memberId/:brandId/:date', requireAuth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.memberId !== req.params.memberId)
+    if (req.user.role !== 'admin' && req.user.role !== 'member+admin' && req.user.memberId !== req.params.memberId)
       return res.status(403).json({ error: 'You can only delete your own logs' });
     await sql`DELETE FROM logs WHERE member_id=${req.params.memberId} AND brand_id=${req.params.brandId} AND date=${req.params.date}`;
     res.json({ ok: true });
@@ -277,7 +279,7 @@ app.put('/api/members/:id', requireAuth, async (req, res) => {
   try {
     // Members can only update their own profile (name + avatar)
     // Admins can update anyone + brands/roles
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'member+admin';
     const isOwn = req.user.memberId === req.params.id;
 
     if (!isAdmin && !isOwn) return res.status(403).json({ error: 'You can only edit your own profile' });
