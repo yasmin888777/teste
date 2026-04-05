@@ -615,7 +615,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .ts-dot.idle{background:#d1d5db}
 
 /* ══════════ PRIVATE LINKS ══════════ */
-.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px}
+.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:16px}
 .link-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;transition:box-shadow .2s,transform .15s}
 .link-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
 .link-card-top{display:flex;align-items:flex-start;gap:10px}
@@ -916,12 +916,12 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </div>
 </div>
 
-<!-- ══════════════════ MODAL: ADD BRAND ══════════════════ -->
+<!-- ══════════════════ MODAL: ADD/EDIT BRAND ══════════════════ -->
 <div class="overlay" id="ov-brand" onclick="ovBg('ov-brand',event)">
   <div class="modal goals-modal">
     <div class="modal-hd">
       <div style="font-size:22px">&#127991;</div>
-      <div><div class="modal-title">Add Brand</div><div class="modal-sub">Create a new brand / campaign</div></div>
+      <div><div class="modal-title" id="nb-modal-title">Add Brand</div><div class="modal-sub" id="nb-modal-sub">Create a new brand / campaign</div></div>
       <button class="modal-x" onclick="closeOv('ov-brand')">&#10005;</button>
     </div>
     <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Brand Name</label><input class="ff-inp" id="nb-name" placeholder="e.g. MYWLK"/></div>
@@ -939,7 +939,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
     <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Confirmed Partnerships Goal</label><input class="ff-inp goal-inp" id="nb-goal-conf" type="number" placeholder="e.g. 20"/></div>
     <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Published Videos Goal</label><input class="ff-inp goal-inp" id="nb-goal-vid" type="number" placeholder="e.g. 15"/></div>
-    <button class="save-btn" onclick="saveBrand()">Create Brand</button>
+    <button class="save-btn" id="nb-save-btn" onclick="saveBrand()">Create Brand</button>
+    <button id="nb-delete-btn" style="display:none;width:100%;margin-top:8px;padding:10px;border-radius:10px;background:transparent;border:1.5px solid #fca5a5;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer" onclick="deleteBrand()">🗑 Delete Brand</button>
   </div>
 </div>
 
@@ -2211,7 +2212,8 @@ function campaignCardHTML(b,i){
       statusBadge+
       '<div style="display:flex;margin-left:8px">'+avatars+'</div>'+
       '<button style="margin-left:auto;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--primary);background:var(--primary-d);border:1px solid rgba(59,126,248,.15);cursor:pointer;margin-right:6px" onclick="openAddCampaign(\''+b.id+'\')">+ Campaign</button>'+
-      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openGoals(\''+b.id+'\')">Edit Goals</button>'+
+      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer;margin-right:4px" onclick="openGoals(\''+b.id+'\')">Goals</button>'+
+      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openEditBrand(\''+b.id+'\')">&#9998; Edit</button>'+
     '</div>'+
     '<div class="camp-card-body">'+
       campListHTML+
@@ -2395,7 +2397,38 @@ function saveGoals(){
 /* ══════════════════════════════════════════════
    ADD BRAND
 ══════════════════════════════════════════════ */
-function openAddBrand(){newBrandColor='#3b7ef8';openOv('ov-brand');}
+var _editingBrandId=null;
+function openAddBrand(){
+  _editingBrandId=null;
+  newBrandColor='#3b7ef8';
+  document.getElementById('nb-modal-title').textContent='Add Brand';
+  document.getElementById('nb-modal-sub').textContent='Create a new brand / campaign';
+  document.getElementById('nb-save-btn').textContent='Create Brand';
+  document.getElementById('nb-delete-btn').style.display='none';
+  document.getElementById('nb-name').value='';
+  document.getElementById('nb-goal-conf').value='';
+  document.getElementById('nb-goal-vid').value='';
+  document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.c==='#3b7ef8');});
+  openOv('ov-brand');
+  setTimeout(function(){document.getElementById('nb-name').focus();},100);
+}
+function openEditBrand(brandId){
+  var b=getBrand(brandId);if(!b)return;
+  _editingBrandId=brandId;
+  newBrandColor=b.color||'#3b7ef8';
+  document.getElementById('nb-modal-title').textContent='Edit Brand';
+  document.getElementById('nb-modal-sub').textContent='Update name, color or goals';
+  document.getElementById('nb-save-btn').textContent='Save Changes';
+  document.getElementById('nb-delete-btn').style.display='';
+  document.getElementById('nb-name').value=b.name||'';
+  document.getElementById('nb-goal-conf').value=b.goals?.confirmed||'';
+  document.getElementById('nb-goal-vid').value=b.goals?.videos||'';
+  // Select matching swatch or none
+  document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.c===b.color);});
+  document.getElementById('nb-custom-color').value=b.color||'#3b7ef8';
+  openOv('ov-brand');
+  setTimeout(function(){document.getElementById('nb-name').focus();},100);
+}
 function pickColor(el){
   document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.remove('active');});
   el.classList.add('active');newBrandColor=el.dataset.c;
@@ -2407,12 +2440,32 @@ function pickCustomColor(inp){
 function saveBrand(){
   const name=document.getElementById('nb-name').value.trim();
   if(!name){alert('Please enter a brand name');return;}
-  const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
   const goals={confirmed:+document.getElementById('nb-goal-conf').value||0,videos:+document.getElementById('nb-goal-vid').value||0};
-  ST.brands.push({id:id,name:name,color:newBrandColor,goals:goals});
-  apiPost('/api/brands',{id:id,name:name,color:newBrandColor,goals:goals});
-  renderAll();closeOv('ov-brand');
-  document.getElementById('nb-name').value='';
+  if(_editingBrandId){
+    var b=getBrand(_editingBrandId);
+    if(b){b.name=name;b.color=newBrandColor;b.goals=goals;}
+    apiPut('/api/brands/'+_editingBrandId,{name:name,color:newBrandColor,goals:goals});
+    renderAll();closeOv('ov-brand');
+  } else {
+    const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
+    ST.brands.push({id:id,name:name,color:newBrandColor,goals:goals,status:'ongoing'});
+    apiPost('/api/brands',{id:id,name:name,color:newBrandColor,goals:goals});
+    renderAll();closeOv('ov-brand');
+    document.getElementById('nb-name').value='';
+  }
+}
+function deleteBrand(){
+  var b=getBrand(_editingBrandId);
+  if(!b||!confirm('Delete "'+b.name+'"? This will also remove all logs and documents for this brand. This cannot be undone.')) return;
+  fetch('/api/brands/'+_editingBrandId,{method:'DELETE',headers:authHeaders()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        ST.brands=ST.brands.filter(function(x){return x.id!==_editingBrandId;});
+        closeOv('ov-brand');
+        renderAll();
+      } else { alert(d.error||'Error deleting brand'); }
+    });
 }
 
 /* ══════════════════════════════════════════════
@@ -3091,21 +3144,23 @@ function renderLinks(){
 
       // Group by brand → campaign
       var groups={}; // key: brandId or 'General'
-      var brandOrder=[];
       filtered.forEach(function(l){
         var key=l.brand_id||'__general__';
-        if(!groups[key]){
-          groups[key]={brandId:l.brand_id,campaigns:{}};
-          brandOrder.push(key);
-        }
+        if(!groups[key]) groups[key]={brandId:l.brand_id,campaigns:{},maxYear:0};
+        if(l.year&&l.year>groups[key].maxYear) groups[key].maxYear=l.year;
         var camp=l.campaign||'';
         if(!groups[key].campaigns[camp]) groups[key].campaigns[camp]=[];
         groups[key].campaigns[camp].push(l);
       });
 
+      var brandOrder=Object.keys(groups);
       var html='';
-      // Sort: General last, others in original order
-      brandOrder.sort(function(a,b){if(a==='__general__')return 1;if(b==='__general__')return-1;return 0;});
+      // Sort: by most recent year desc, General last
+      brandOrder.sort(function(a,b){
+        if(a==='__general__') return 1;
+        if(b==='__general__') return -1;
+        return (groups[b].maxYear||0)-(groups[a].maxYear||0);
+      });
       brandOrder.forEach(function(key){
         var grp=groups[key];
         var b=grp.brandId?getBrand(grp.brandId):null;

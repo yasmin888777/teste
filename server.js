@@ -282,6 +282,17 @@ app.put('/api/brands/:id', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.delete('/api/brands/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await sql`DELETE FROM member_brands WHERE brand_id=${req.params.id}`;
+    await sql`DELETE FROM logs WHERE brand_id=${req.params.id}`;
+    await sql`DELETE FROM camp_logs WHERE brand_id=${req.params.id}`;
+    await sql`DELETE FROM links WHERE brand_id=${req.params.id}`;
+    await sql`DELETE FROM brands WHERE id=${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.patch('/api/brands/:id/status', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
