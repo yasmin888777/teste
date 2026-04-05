@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { neon } = require('@neondatabase/serverless');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -74,11 +75,34 @@ app.get('/api/state', async (req, res) => {
       campaignsGrouped[c.brand_id].push({ id: c.id, name: c.name, brandId: c.brand_id });
     });
 
-    res.json({ appName: settings.appName || 'DigitUly', logoUrl: settings.logoUrl || '', brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, campaigns: campaignsGrouped, customAvatars: {} });
+    res.json({ appName: settings.appName || 'DigitUly', logoUrl: settings.logoUrl || '', hasAuth: !!settings.accessPwdHash, brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, campaigns: campaignsGrouped, customAvatars: {} });
   } catch (err) {
     console.error('State error:', err.message);
     res.status(500).json({ error: 'Database error: ' + err.message });
   }
+});
+
+// ── Auth ────────────────────────────────────────
+app.post('/api/auth/verify', async (req, res) => {
+  try {
+    const rows = await sql`SELECT value FROM settings WHERE key='accessPwdHash'`;
+    if (!rows.length) return res.json({ ok: true }); // no password set
+    const match = await bcrypt.compare(req.body.password || '', rows[0].value);
+    res.json({ ok: match });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/auth/set-password', async (req, res) => {
+  try {
+    const pwd = req.body.password || '';
+    if (!pwd) {
+      await sql`DELETE FROM settings WHERE key='accessPwdHash'`;
+    } else {
+      const hash = await bcrypt.hash(pwd, 10);
+      await sql`INSERT INTO settings (key,value) VALUES ('accessPwdHash',${hash}) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`;
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── Logs ────────────────────────────────────────

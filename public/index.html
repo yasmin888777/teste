@@ -521,6 +521,38 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   .modal{border-radius:14px;padding:18px}
   .form-g{grid-template-columns:1fr!important}
 }
+
+/* ══════════ LOGIN ══════════ */
+.login-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:var(--sidebar);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-box{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;padding:36px 36px 28px;width:100%;max-width:340px;text-align:center;
+}
+.login-logo{
+  width:56px;height:56px;border-radius:14px;background:var(--primary);
+  margin:0 auto 14px;display:flex;align-items:center;justify-content:center;
+  font-size:24px;font-weight:800;color:#fff;overflow:hidden;
+}
+.login-title{color:#fff;font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{color:rgba(255,255,255,.35);font-size:12px;margin-bottom:22px}
+.login-inp{
+  width:100%;padding:12px 16px;background:rgba(255,255,255,.08);
+  border:1.5px solid rgba(255,255,255,.15);border-radius:10px;
+  color:#fff;font-size:16px;outline:none;letter-spacing:3px;text-align:center;
+  transition:border-color .2s;font-family:inherit;
+}
+.login-inp::placeholder{letter-spacing:0;font-size:13px;color:rgba(255,255,255,.3)}
+.login-inp:focus{border-color:var(--primary)}
+.login-btn{
+  width:100%;margin-top:10px;padding:12px;background:var(--primary);
+  color:#fff;border-radius:10px;font-size:13px;font-weight:600;transition:opacity .2s;
+}
+.login-btn:hover{opacity:.85}
+.login-err{color:#f87171;font-size:11px;margin-top:8px;min-height:16px}
 </style>
 </head>
 <body>
@@ -546,6 +578,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="sb-item" onclick="navTo('members',this)">
       <div class="sb-dot" style="background:var(--pink)"></div> Team Activity
     </div>
+    <div class="sb-item" onclick="navTo('team',this)">
+      <div class="sb-dot" style="background:var(--purple)"></div> Team
+    </div>
     <div class="sb-item" onclick="navTo('campaigns',this)">
       <div class="sb-dot" style="background:var(--green)"></div> Campaigns
     </div>
@@ -559,6 +594,13 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div class="sb-sep">Team</div>
   <div class="sb-list" id="sb-team-list"></div>
+
+  <div style="flex:1"></div>
+  <div style="padding:8px;border-top:1px solid rgba(255,255,255,.07)">
+    <div class="sb-item" style="font-size:10px;color:rgba(255,255,255,.3);gap:7px" onclick="openSetPassword()">
+      &#128274; Access Password
+    </div>
+  </div>
 </aside>
 
 <!-- ══════════════════ MAIN ══════════════════ -->
@@ -610,6 +652,15 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div class="mem-cards-grid" id="member-cards"></div>
     </div>
 
+    <!-- ── TEAM MANAGEMENT ── -->
+    <div class="page" id="page-team">
+      <div class="sec">
+        <div><span class="sec-t">Team</span><span class="sec-s">members &amp; roles</span></div>
+        <button class="sec-btn" onclick="openAddMember()">+ Add Member</button>
+      </div>
+      <div class="mem-cards-grid" id="team-cards"></div>
+    </div>
+
     <!-- ── CAMPAIGNS ── -->
     <div class="page" id="page-campaigns">
       <div class="sec">
@@ -631,6 +682,38 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   </div>
 </div>
+</div>
+
+<!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
+<div class="login-overlay" id="login-overlay" style="display:none">
+  <div class="login-box">
+    <div class="login-logo" id="login-logo">D</div>
+    <div class="login-title" id="login-title">DigitUly</div>
+    <div class="login-sub">Digite a senha para continuar</div>
+    <input class="login-inp" type="password" id="login-pwd" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: SET PASSWORD ══════════════════ -->
+<div class="overlay" id="ov-set-pwd" onclick="ovBg('ov-set-pwd',event)">
+  <div class="modal goals-modal">
+    <div class="modal-hd">
+      <div style="font-size:22px">&#128274;</div>
+      <div><div class="modal-title">Access Password</div><div class="modal-sub">Define a password to protect the app</div></div>
+      <button class="modal-x" onclick="closeOv('ov-set-pwd')">&#10005;</button>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">New Password (leave blank to disable)</label>
+      <input class="ff-inp" type="password" id="set-pwd-inp" placeholder="Enter new password"/>
+    </div>
+    <div class="ff" style="margin-bottom:14px">
+      <label class="ff-lbl">Confirm Password</label>
+      <input class="ff-inp" type="password" id="set-pwd-conf" placeholder="Repeat password"/>
+    </div>
+    <button class="save-btn" onclick="saveNewPassword()">Save Password</button>
+  </div>
 </div>
 
 <!-- ══════════════════ MODAL: LOG ══════════════════ -->
@@ -823,6 +906,7 @@ function authHeaders(){ return { 'Content-Type':'application/json' }; }
 let ST = {
   appName:'DigitUly',
   logoUrl:'',
+  hasAuth:false,
   brands:JSON.parse(JSON.stringify(DEFAULT_BRANDS)),
   members:JSON.parse(JSON.stringify(DEFAULT_MEMBERS)),
   logs:{},
@@ -840,6 +924,7 @@ async function loadState(){
     if(!ST.campaigns) ST.campaigns={};
     if(!ST.logoUrl) ST.logoUrl='';
     updateSiteLogo();
+    showLoginIfNeeded();
     document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
     renderAll();
   }catch(err){
@@ -944,12 +1029,13 @@ function navTo(page,el){
   if(el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest'};
+  const T={overview:'Overview',members:'Team Activity',team:'Team',campaigns:'Campaign Progress',digest:'Weekly Digest'};
   document.getElementById('tb-title').textContent=T[page]||page;
   if(page==='overview') drawTrend();
   if(page==='digest') renderDigest();
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
+  if(page==='team') renderTeam();
 }
 function setTimeView(v,el){
   timeView=v;
@@ -963,6 +1049,7 @@ function setTimeView(v,el){
 ══════════════════════════════════════════════ */
 function renderAll(){
   renderSidebar();
+  renderTeam();
   renderKPIs();
   renderConvTable();
   renderBrandProgress();
@@ -1192,14 +1279,12 @@ function memberCardHTML(m,i){
         (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:14px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'">':'<span style="font-size:14px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
       '</div>'+
       '<div class="mc-head-info">'+
-        '<div class="mc-head-name" onclick="startEditName(\''+m.id+'\',this)" title="Click to rename">'+m.name+'</div>'+
+        '<div style="font-size:15px;font-weight:700;color:#fff">'+m.name+'</div>'+
         (streak>0?'<div class="mc-streak">&#128293; '+streak+' day streak</div>':'')+
       '</div>'+
-      '<button style="padding:5px 8px;border-radius:6px;font-size:10px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.1);margin-right:6px" onclick="openProfile(\''+m.id+'\')" title="Edit Profile">&#9881;</button>'+
       '<button class="mc-log-btn" onclick="openLog(\''+m.id+'\')">+ Log</button>'+
     '</div>'+
-    '<div class="mc-brands-bar">'+tagsHTML+'</div>'+
-    '<div class="mc-body">'+(blocksHTML||'<div style="padding:14px 18px;font-size:11px;color:var(--text-s)">No brands assigned. Click a tag above to assign.</div>')+'</div>'+
+    '<div class="mc-body">'+(blocksHTML||'<div style="padding:14px 18px;font-size:11px;color:var(--text-s)">No brands assigned.</div>')+'</div>'+
   '</div>';
 }
 
@@ -1221,6 +1306,42 @@ function toggleBrand(mid,bid){
   m.brands.includes(bid)?m.brands=m.brands.filter(function(x){return x!==bid;}):m.brands.push(bid);
   apiPut('/api/members/'+mid,{brands:m.brands,roles:m.roles||{}});
   renderAll();
+}
+
+/* ══════════════════════════════════════════════
+   TEAM MANAGEMENT PAGE
+══════════════════════════════════════════════ */
+function renderTeam(){
+  var el=document.getElementById('team-cards');if(!el)return;
+  el.innerHTML=ST.members.map(function(m,i){return teamMemberCardHTML(m,i);}).join('');
+}
+
+function teamMemberCardHTML(m,i){
+  var avUrl=avatarUrl(m);
+  var streak=calcStreak(m.id);
+  var tagsHTML=ST.brands.map(function(b){
+    return '<div class="mc-brand-tag '+(m.brands.includes(b.id)?'on':'off')+'"'+
+      ' style="border-color:'+b.color+';color:'+b.color+';background:'+(m.brands.includes(b.id)?b.color+'18':'transparent')+'"'+
+      ' onclick="toggleBrand(\''+m.id+'\',\''+b.id+'\')"'+
+      ' title="'+(m.brands.includes(b.id)?'Remove':'Add')+' '+b.name+'">'+b.name+'</div>';
+  }).join('');
+
+  return '<div class="mc" style="animation-delay:'+i*70+'ms">'+
+    '<div class="mc-head">'+
+      '<div class="mem-av-img av-md" onclick="triggerAvatarUpload(\'member\',\''+m.id+'\')" title="Trocar foto"'+
+           ' style="border-color:rgba(255,255,255,.3);flex-shrink:0;cursor:pointer;position:relative">'+
+        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:14px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'">':'<span style="font-size:14px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
+        '<div style="position:absolute;bottom:0;right:-2px;width:16px;height:16px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:8px;border:2px solid rgba(21,30,53,1)">&#128247;</div>'+
+      '</div>'+
+      '<div class="mc-head-info">'+
+        '<div class="mc-head-name" onclick="startEditName(\''+m.id+'\',this)" title="Click to rename">'+m.name+'</div>'+
+        (streak>0?'<div class="mc-streak">&#128293; '+streak+' day streak</div>':'')+
+      '</div>'+
+      '<button style="padding:5px 8px;border-radius:6px;font-size:10px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.1);margin-right:5px" onclick="openProfile(\''+m.id+'\')" title="Edit Roles">&#9881;</button>'+
+      '<button style="padding:5px 8px;border-radius:6px;font-size:10px;color:#f87171;background:rgba(248,113,113,.15);border:none;cursor:pointer" onclick="deleteMember(\''+m.id+'\')" title="Delete">&#128465;</button>'+
+    '</div>'+
+    '<div class="mc-brands-bar">'+tagsHTML+'</div>'+
+  '</div>';
 }
 
 /* ADD MEMBER */
@@ -1651,6 +1772,73 @@ function showDayDigest(date){
 }
 
 /* ══════════════════════════════════════════════
+   AUTH (ACCESS PASSWORD)
+══════════════════════════════════════════════ */
+function showLoginIfNeeded(){
+  if(!ST.hasAuth) return;
+  var s=JSON.parse(localStorage.getItem('dg_auth')||'{}');
+  if(s.expiry && s.expiry>Date.now()) return; // valid session
+  // show login
+  var ov=document.getElementById('login-overlay');
+  if(ov){
+    // update logo in login screen
+    var ll=document.getElementById('login-logo');
+    if(ll){
+      if(ST.logoUrl) ll.innerHTML='<img src="'+ST.logoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>';
+      else ll.textContent=(ST.appName||'D')[0].toUpperCase();
+    }
+    var lt=document.getElementById('login-title');
+    if(lt) lt.textContent=ST.appName||'DigitUly';
+    ov.style.display='flex';
+  }
+}
+
+function doLogin(){
+  var pwd=document.getElementById('login-pwd').value;
+  var errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!pwd){errEl.textContent='Digite a senha';return;}
+  fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        localStorage.setItem('dg_auth',JSON.stringify({expiry:Date.now()+30*24*60*60*1000}));
+        document.getElementById('login-overlay').style.display='none';
+      } else {
+        errEl.textContent='Senha incorreta';
+        document.getElementById('login-pwd').value='';
+      }
+    })
+    .catch(function(){errEl.textContent='Erro de conexão';});
+}
+
+function openSetPassword(){
+  document.getElementById('set-pwd-inp').value='';
+  document.getElementById('set-pwd-conf').value='';
+  openOv('ov-set-pwd');
+}
+
+function saveNewPassword(){
+  var p=document.getElementById('set-pwd-inp').value;
+  var c=document.getElementById('set-pwd-conf').value;
+  if(p && p!==c){alert('As senhas não coincidem');return;}
+  fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        ST.hasAuth=!!p;
+        // persist our own session so we don't get locked out
+        if(p) localStorage.setItem('dg_auth',JSON.stringify({expiry:Date.now()+30*24*60*60*1000}));
+        else localStorage.removeItem('dg_auth');
+        closeOv('ov-set-pwd');
+        alert(p?'Senha definida com sucesso!':'Senha removida. App agora é público.');
+      } else {
+        alert('Erro ao salvar senha');
+      }
+    });
+}
+
+/* ══════════════════════════════════════════════
    AVATAR UPLOAD
 ══════════════════════════════════════════════ */
 var _avatarTarget = null;
@@ -1729,13 +1917,14 @@ function closeSidebar(){
 /* ══════════════════════════════════════════════
    DELETE MEMBER
 ══════════════════════════════════════════════ */
-function deleteMember(){
-  if(!profileMember) return;
-  if(!confirm('Remove "'+profileMember.name+'"? This will also delete all their activity logs.')) return;
-  ST.members=ST.members.filter(function(m){return m.id!==profileMember.id;});
-  delete ST.logs[profileMember.id];
-  apiDel('/api/members/'+profileMember.id);
-  closeOv('ov-profile');
+function deleteMember(mid){
+  var target=mid?getMember(mid):profileMember;
+  if(!target)return;
+  if(!confirm('Remove "'+target.name+'"? This will also delete all their activity logs.'))return;
+  ST.members=ST.members.filter(function(m){return m.id!==target.id;});
+  delete ST.logs[target.id];
+  apiDel('/api/members/'+target.id);
+  if(!mid)closeOv('ov-profile');
   renderAll();
 }
 
