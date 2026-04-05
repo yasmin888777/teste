@@ -621,6 +621,18 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .link-btn-open:hover{opacity:.85}
 .link-btn-del{padding:7px 11px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);transition:background .2s;cursor:pointer}
 .link-btn-del:hover{background:rgba(248,113,113,.2)}
+
+/* ══════════ WEEK COMPARISON BADGE ══════════ */
+.kpi-badge{display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:5px}
+.kpi-badge.up{background:#dcfce7;color:#16a34a}
+.kpi-badge.down{background:#fee2e2;color:#dc2626}
+.kpi-badge.neutral{background:#f3f4f6;color:#6b7280}
+
+/* ══════════ ATTENDANCE WIDGET ══════════ */
+.attend-grid{display:flex;flex-wrap:wrap;gap:4px}
+.attend-dot{width:14px;height:14px;border-radius:4px;cursor:default;transition:transform .1s;flex-shrink:0}
+.attend-dot:hover{transform:scale(1.3)}
+.attend-dot[title]:hover::after{content:attr(title);position:absolute;background:#1a1f2e;color:#fff;font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:100;margin-top:18px;margin-left:-20px}
 </style>
 </head>
 <body>
@@ -645,7 +657,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <div class="sb-dot" style="background:var(--green)"></div> Home
       </div>
       <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
-        <div class="sb-dot" style="background:var(--purple)"></div> Private Links
+        <div class="sb-dot" style="background:var(--purple)"></div> Documents
       </div>
     </nav>
   </div>
@@ -753,11 +765,11 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div id="admin-home-content"></div>
     </div>
 
-    <!-- ── PRIVATE LINKS ── -->
+    <!-- ── DOCUMENTS & SPREADSHEETS ── -->
     <div class="page" id="page-links">
       <div class="sec">
-        <div><span class="sec-t">Private Links</span><span class="sec-s">admin-only bookmarks</span></div>
-        <button class="sec-btn" onclick="openAddLink()">+ Add Link</button>
+        <div><span class="sec-t">Documents &amp; Spreadsheets</span><span class="sec-s">admin-only notes &amp; links</span></div>
+        <button class="sec-btn" onclick="openAddLink()">+ Add Note</button>
       </div>
       <div id="links-content"></div>
     </div>
@@ -933,40 +945,59 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </div>
 </div>
 
-<!-- ══════════════════ MODAL: ADD LINK ══════════════════ -->
+<!-- ══════════════════ MODAL: ADD / EDIT NOTE ══════════════════ -->
 <div class="overlay" id="ov-add-link" onclick="ovBg('ov-add-link',event)">
   <div class="modal goals-modal">
     <div class="modal-hd">
-      <div style="font-size:22px">&#128279;</div>
-      <div><div class="modal-title">Add Link</div><div class="modal-sub">Save a private bookmark</div></div>
+      <div style="font-size:22px">&#128203;</div>
+      <div><div class="modal-title" id="nl-modal-title">Add Note</div><div class="modal-sub">Save a document, link or note</div></div>
       <button class="modal-x" onclick="closeOv('ov-add-link')">&#10005;</button>
     </div>
     <div class="ff" style="margin-bottom:8px">
       <label class="ff-lbl">Title</label>
-      <input class="ff-inp" id="nl-title" placeholder="e.g. Brand Portal"/>
+      <input class="ff-inp" id="nl-title" placeholder="e.g. MYWLK Q1 Contract"/>
     </div>
     <div class="ff" style="margin-bottom:8px">
-      <label class="ff-lbl">URL</label>
+      <label class="ff-lbl">URL (optional)</label>
       <input class="ff-inp" id="nl-url" placeholder="https://" type="url"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="ff">
+        <label class="ff-lbl">Brand</label>
+        <select class="ff-inp" id="nl-brand" style="cursor:pointer">
+          <option value="">— General —</option>
+        </select>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Quarter</label>
+        <select class="ff-inp" id="nl-quarter" style="cursor:pointer">
+          <option value="">— All —</option>
+          <option value="Q1">Q1 (Jan–Mar)</option>
+          <option value="Q2">Q2 (Apr–Jun)</option>
+          <option value="Q3">Q3 (Jul–Sep)</option>
+          <option value="Q4">Q4 (Oct–Dec)</option>
+        </select>
+      </div>
     </div>
     <div class="ff" style="margin-bottom:8px">
       <label class="ff-lbl">Category</label>
-      <input class="ff-inp" id="nl-cat" placeholder="e.g. Brand, Tool, Contract" list="nl-cat-list"/>
+      <input class="ff-inp" id="nl-cat" placeholder="e.g. Contract, Spreadsheet, Brief" list="nl-cat-list"/>
       <datalist id="nl-cat-list">
-        <option value="Brand Portal"/>
-        <option value="Tool"/>
         <option value="Contract"/>
-        <option value="Internal Doc"/>
+        <option value="Spreadsheet"/>
+        <option value="Brief"/>
         <option value="Analytics"/>
         <option value="Finance"/>
+        <option value="Internal Doc"/>
+        <option value="Tool"/>
       </datalist>
     </div>
     <div class="ff" style="margin-bottom:10px">
-      <label class="ff-lbl">Notes (optional)</label>
-      <input class="ff-inp" id="nl-notes" placeholder="Brief description..."/>
+      <label class="ff-lbl">Notes</label>
+      <textarea class="ff-inp" id="nl-notes" placeholder="Description, context, or any notes..." rows="3" style="resize:vertical;line-height:1.5"></textarea>
     </div>
     <div id="nl-err" style="font-size:11px;color:#f87171;margin-bottom:8px;min-height:14px"></div>
-    <button class="save-btn" onclick="saveLink()">Save Link</button>
+    <button class="save-btn" id="nl-save-btn" onclick="saveLink()">Save Note</button>
   </div>
 </div>
 
@@ -1135,6 +1166,7 @@ async function loadState(){
     updateSiteLogo();
     document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
     renderAll();
+    loadAdminData();
     if(isAdmin()) navTo('admin-home', document.getElementById('sbi-admin-home'));
   }catch(err){
     console.error('Failed to load state:', err);
@@ -1230,6 +1262,14 @@ let newBrandColor='#3b7ef8';
 let profileMember=null;
 let currentMemberId=null, memberChart=null;
 let currentUser=null; // { id, email, role, memberId }
+var _allUsers=[]; // populated for admins: [{id, email, role, member_id, has_password}]
+
+function loadAdminData(){
+  if(!isAdmin()) return;
+  fetch('/api/admin/users',{headers:authHeaders()})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d.ok){_allUsers=d.users;renderSidebar();}});
+}
 
 /* ══════════════════════════════════════════════
    NAVIGATION
@@ -1244,7 +1284,7 @@ function navTo(page,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','links':'Private Links'};
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','links':'Documents & Spreadsheets'};
   document.getElementById('tb-title').textContent=T[page]||page;
   if(page==='overview') drawTrend();
   if(page==='digest') renderDigest();
@@ -1296,13 +1336,19 @@ function renderSidebar(){
       '<span>'+b.name+'</span>'+
     '</div>').join('');
 
-  document.getElementById('sb-team-list').innerHTML=ST.members.map(m=>
-    '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')">'+
-      '<div class="sb-mem-av">'+
-        (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.style.display=\'none\'"/>':'')+
+  document.getElementById('sb-team-list').innerHTML=ST.members.map(m=>{
+    var uRole=_allUsers.find(function(u){return u.member_id===m.id;});
+    var isAdminMember=uRole&&uRole.role==='admin';
+    return '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')" style="justify-content:space-between">'+
+      '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+
+        '<div class="sb-mem-av">'+
+          (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.style.display=\'none\'"/>':'')+
+        '</div>'+
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.name+'</span>'+
       '</div>'+
-      '<span>'+m.name+'</span>'+
-    '</div>').join('');
+      '<span style="font-size:10px;flex-shrink:0;margin-left:4px;opacity:.7">'+(isAdminMember?'★':'&#128100;')+'</span>'+
+    '</div>';
+  }).join('');
 }
 
 /* KPIs */
@@ -1316,6 +1362,36 @@ function getDateRange(){
 function getLogsInRange(mid,bid,days){
   return getLogs(mid).filter(l=>l.brandId===bid&&days.includes(l.date));
 }
+function getWeekRange(offsetWeeks){
+  var days=[];
+  var now=new Date();
+  var dow=now.getDay();
+  var monday=new Date(now);
+  monday.setDate(now.getDate()-((dow+6)%7)+(offsetWeeks*7));
+  for(var i=0;i<7;i++){var d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d.toISOString().split('T')[0]);}
+  return days;
+}
+function sumDays(days){
+  var sourced=0,contacted=0,confirmed=0,vids=0;
+  ST.members.forEach(function(m){ST.brands.forEach(function(b){
+    var logs=getLogsInRange(m.id,b.id,days);
+    sourced+=logs.reduce(function(s,l){return s+(+l.kols_sourced||0);},0);
+    contacted+=logs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
+    confirmed+=logs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
+    vids+=logs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
+  });});
+  return {sourced:sourced,contacted:contacted,confirmed:confirmed,vids:vids};
+}
+function weekBadge(cur,prev){
+  if(!prev) return '<span class="kpi-badge neutral">vs last wk</span>';
+  var diff=cur-prev;
+  var pct=prev>0?Math.round((diff/prev)*100):null;
+  if(diff===0) return '<span class="kpi-badge neutral">→ same as last wk</span>';
+  var sign=diff>0?'↑':'↓';
+  var cls=diff>0?'up':'down';
+  var label=pct!==null?(sign+' '+Math.abs(pct)+'%'):(sign+' '+Math.abs(diff));
+  return '<span class="kpi-badge '+cls+'">'+label+' vs last wk</span>';
+}
 function renderKPIs(){
   const el=document.getElementById('kpi-overview');if(!el)return;
   const days=getDateRange();
@@ -1327,23 +1403,29 @@ function renderKPIs(){
     confirmed+=logs.reduce((s,l)=>s+(+l.confirmed||0),0);
     vids+=logs.reduce((s,l)=>s+(+l.vids_published||0),0);
   });});
-  const vl={daily:'today',weekly:'this week',monthly:'this month'}[timeView];
+  var showBadge=timeView==='weekly';
+  var prev=showBadge?sumDays(getWeekRange(-1)):null;
+  var vl={daily:'today',weekly:'this week',monthly:'this month'}[timeView];
   el.innerHTML=
     '<div class="kpi" style="animation-delay:0ms">'+
-      '<div><div class="kpi-lbl">KOLs Sourced</div><div class="kpi-val">'+sourced+'</div><div class="kpi-sub">'+vl+'</div></div>'+
-      '<div class="kpi-ico ico-b">&#128269;</div>'+
+      '<div><div class="kpi-lbl">KOLs Sourced</div><div class="kpi-val">'+sourced+'</div>'+
+      '<div class="kpi-sub">'+vl+'</div>'+(showBadge?weekBadge(sourced,prev.sourced):'')+
+      '</div><div class="kpi-ico ico-b">&#128269;</div>'+
     '</div>'+
     '<div class="kpi" style="animation-delay:50ms">'+
-      '<div><div class="kpi-lbl">KOLs Contacted</div><div class="kpi-val" style="color:var(--primary)">'+contacted+'</div><div class="kpi-sub">'+vl+'</div></div>'+
-      '<div class="kpi-ico ico-g">&#128222;</div>'+
+      '<div><div class="kpi-lbl">KOLs Contacted</div><div class="kpi-val" style="color:var(--primary)">'+contacted+'</div>'+
+      '<div class="kpi-sub">'+vl+'</div>'+(showBadge?weekBadge(contacted,prev.contacted):'')+
+      '</div><div class="kpi-ico ico-g">&#128222;</div>'+
     '</div>'+
     '<div class="kpi" style="animation-delay:100ms">'+
-      '<div><div class="kpi-lbl">Confirmed Partners</div><div class="kpi-val" style="color:var(--green)">'+confirmed+'</div><div class="kpi-sub">'+vl+'</div></div>'+
-      '<div class="kpi-ico ico-a">&#129309;</div>'+
+      '<div><div class="kpi-lbl">Confirmed Partners</div><div class="kpi-val" style="color:var(--green)">'+confirmed+'</div>'+
+      '<div class="kpi-sub">'+vl+'</div>'+(showBadge?weekBadge(confirmed,prev.confirmed):'')+
+      '</div><div class="kpi-ico ico-a">&#129309;</div>'+
     '</div>'+
     '<div class="kpi" style="animation-delay:150ms">'+
-      '<div><div class="kpi-lbl">Videos Published</div><div class="kpi-val" style="color:var(--amber)">'+vids+'</div><div class="kpi-sub">'+vl+'</div></div>'+
-      '<div class="kpi-ico ico-p">&#127909;</div>'+
+      '<div><div class="kpi-lbl">Videos Published</div><div class="kpi-val" style="color:var(--amber)">'+vids+'</div>'+
+      '<div class="kpi-sub">'+vl+'</div>'+(showBadge?weekBadge(vids,prev.vids):'')+
+      '</div><div class="kpi-ico ico-p">&#127909;</div>'+
     '</div>';
 }
 
@@ -2588,7 +2670,13 @@ function renderAdminHome(){
   var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
   var uname=userM?userM.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'Admin');
 
-  var membersStatus=ST.members.map(function(m){
+  // Only count non-admin members in team status
+  var teamMembers=ST.members.filter(function(m){
+    var u=_allUsers.find(function(u){return u.member_id===m.id;});
+    return !u||(u.role!=='admin');
+  });
+
+  var membersStatus=teamMembers.map(function(m){
     var hasLogged=m.brands.some(function(bid){
       return getLogs(m.id).some(function(l){return l.brandId===bid&&l.date===today;});
     });
@@ -2606,23 +2694,26 @@ function renderAdminHome(){
   var totConfirmed=membersStatus.reduce(function(s,x){return s+x.tots.confirmed;},0);
   var totVids=membersStatus.reduce(function(s,x){return s+x.tots.vids;},0);
 
-  var html='<div style="margin-bottom:20px">'+
-    '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
-    '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
+  var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px">'+
+    '<div>'+
+      '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
+      '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
+    '</div>'+
+    '<div>'+attendanceWidget()+'</div>'+
   '</div>';
 
   html+='<div class="admin-kpi-row">'+
-    adminKpiCard('Active Today',activeCount+' / '+ST.members.length,activeCount===ST.members.length?'var(--green)':'var(--amber)','&#128101;')+
-    adminKpiCard('KOLs Sourced',totSourced,'var(--primary)','&#128269;')+
-    adminKpiCard('Confirmed',totConfirmed,'var(--green)','&#129309;')+
+    adminKpiCard('Active Today',activeCount+' / '+teamMembers.length,activeCount===teamMembers.length?'var(--green)':'var(--amber)','&#128101;')+
+    adminKpiCard('Ongoing Projects',ST.brands.length,'var(--primary)','&#127919;')+
+    adminKpiCard('Confirmed Today',totConfirmed,'var(--green)','&#129309;')+
     adminKpiCard('Videos Published',totVids,'var(--purple)','&#127916;')+
   '</div>';
 
   html+='<div class="card mb16">'+
     '<div class="sec"><div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
     (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
-     activeCount===ST.members.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
-     '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+ST.members.length+' active</span>')+
+     activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
+     '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
     '</div>'+
     '<div class="team-status-grid">'+
     membersStatus.map(function(s){
@@ -2647,7 +2738,6 @@ function renderAdminHome(){
     }).join('')+
     '</div></div>';
 
-  // Brand mini-progress
   html+='<div class="card">'+
     '<div class="sec"><div class="sec-t">Campaign Progress</div></div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">'+
@@ -2673,6 +2763,57 @@ function renderAdminHome(){
   el.innerHTML=html;
 }
 
+function attendanceWidget(){
+  var now=new Date();
+  var year=now.getFullYear();
+  var month=now.getMonth();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var today=now.getDate();
+
+  // Gather all log dates this month
+  var logsByDate={};
+  var monthStr=(month+1<10?'0'+(month+1):''+( month+1));
+  for(var day=1;day<=daysInMonth;day++){
+    var dayStr=day<10?'0'+day:''+day;
+    var dateStr=year+'-'+monthStr+'-'+dayStr;
+    var who=[];
+    ST.members.forEach(function(m){
+      var hasLog=getLogs(m.id).some(function(l){return l.date===dateStr;});
+      if(hasLog) who.push(m.name.split(' ')[0]);
+    });
+    logsByDate[dateStr]={who:who,dow:new Date(dateStr).getDay()};
+  }
+
+  var workDays=0,activeDays=0;
+  var dots='';
+  for(var d=1;d<=daysInMonth;d++){
+    var ds=(year+'-'+monthStr+'-'+(d<10?'0'+d:''+d));
+    var info=logsByDate[ds];
+    var dow=info.dow;
+    var isWeekend=dow===0||dow===6;
+    var isFuture=d>today;
+    var hasAct=info.who.length>0;
+    var color,tip;
+    if(isFuture){color='#e5e7eb';tip='';}
+    else if(isWeekend){color='#f3f4f6';tip='Weekend';}
+    else{
+      workDays++;
+      if(hasAct){activeDays++;color='#fbbf24';tip=info.who.join(', ');}
+      else{color='#fca5a5';tip='No activity';}
+    }
+    dots+='<div class="attend-dot" style="background:'+color+(isFuture?';opacity:.35':'')+'" title="'+ds+(tip?' — '+tip:'')+'"></div>';
+  }
+
+  return '<div style="background:#1e2d4f;border-radius:12px;padding:12px 14px;min-width:180px">'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:8px">Attendance — '+MONTHS_S[month]+'</div>'+
+    '<div class="attend-grid">'+dots+'</div>'+
+    '<div style="display:flex;gap:10px;margin-top:8px">'+
+      '<span style="font-size:11px;color:#fbbf24;font-weight:700">'+activeDays+'x</span><span style="font-size:10px;color:rgba(255,255,255,.35);align-self:center"> active</span>'+
+      '<span style="font-size:11px;color:#f87171;font-weight:700;margin-left:6px">'+( workDays-activeDays)+'x</span><span style="font-size:10px;color:rgba(255,255,255,.35);align-self:center"> off</span>'+
+    '</div>'+
+  '</div>';
+}
+
 function adminKpiCard(label,val,color,ico){
   return '<div class="kpi">'+
     '<div><div class="kpi-lbl">'+label+'</div><div class="kpi-val" style="color:'+color+'">'+val+'</div></div>'+
@@ -2681,17 +2822,18 @@ function adminKpiCard(label,val,color,ico){
 }
 
 /* ══════════════════════════════════════════════
-   PRIVATE LINKS
+   DOCUMENTS & SPREADSHEETS
 ══════════════════════════════════════════════ */
 var _adminLinks=[];
+var _editingLinkId=null;
 
 function catColor(cat){
-  var map={'Brand Portal':'var(--primary)','Tool':'var(--green)','Contract':'var(--amber)','Internal Doc':'var(--purple)','Analytics':'var(--pink)','Finance':'var(--amber)'};
+  var map={'Contract':'var(--amber)','Spreadsheet':'var(--green)','Brief':'var(--primary)','Analytics':'var(--pink)','Finance':'var(--amber)','Internal Doc':'var(--purple)','Tool':'var(--green)'};
   return map[cat]||'var(--primary)';
 }
 function catIcon(cat){
-  var map={'Brand Portal':'&#127970;','Tool':'&#128295;','Contract':'&#128196;','Internal Doc':'&#128203;','Analytics':'&#128202;','Finance':'&#128176;','General':'&#128279;'};
-  return map[cat]||'&#128279;';
+  var map={'Contract':'&#128196;','Spreadsheet':'&#128202;','Brief':'&#128203;','Analytics':'&#128200;','Finance':'&#128176;','Internal Doc':'&#128221;','Tool':'&#128295;'};
+  return map[cat]||'&#128203;';
 }
 function escHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -2704,20 +2846,49 @@ function renderLinks(){
   fetch('/api/admin/links',{headers:authHeaders()})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d.ok){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading links</div>';return;}
+      if(!d.ok){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading</div>';return;}
       _adminLinks=d.links||[];
       if(!_adminLinks.length){
-        el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">No links yet. Click "+ Add Link" to save your first bookmark!</div>';
+        el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">No notes yet. Click "+ Add Note" to save your first document or link!</div>';
         return;
       }
-      var cats={};
-      _adminLinks.forEach(function(l){var c=l.category||'General';if(!cats[c])cats[c]=[];cats[c].push(l);});
+
+      // Group by brand first, then by quarter within each brand
+      var groups={}; // key: brandName or 'General'
+      _adminLinks.forEach(function(l){
+        var bname='General';
+        if(l.brand_id){var b=getBrand(l.brand_id);if(b)bname=b.name;}
+        if(!groups[bname])groups[bname]={color:'var(--text-s)',links:[]};
+        if(l.brand_id){var b2=getBrand(l.brand_id);if(b2)groups[bname].color=b2.color;}
+        groups[bname].links.push(l);
+      });
+
       var html='';
-      Object.keys(cats).sort().forEach(function(cat){
-        html+='<div style="margin-bottom:24px">'+
-          '<div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px">'+escHtml(cat)+'</div>'+
-          '<div class="links-grid">'+cats[cat].map(function(l){return linkCardHTML(l);}).join('')+'</div>'+
-        '</div>';
+      // Sort: General last
+      var keys=Object.keys(groups).sort(function(a,b){if(a==='General')return 1;if(b==='General')return-1;return a.localeCompare(b);});
+      keys.forEach(function(bname){
+        var grp=groups[bname];
+        var links=grp.links;
+        // Sub-group by quarter
+        var quarters={};
+        links.forEach(function(l){var q=l.quarter||'';if(!quarters[q])quarters[q]=[];quarters[q].push(l);});
+        var qKeys=Object.keys(quarters).sort(function(a,b){
+          var ord=['Q1','Q2','Q3','Q4',''];
+          return ord.indexOf(a)-ord.indexOf(b);
+        });
+
+        html+='<div style="margin-bottom:28px">'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+            (bname!=='General'?'<div style="width:10px;height:10px;border-radius:50%;background:'+grp.color+'"></div>':'')+'<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(bname)+'</span>'+
+          '</div>';
+
+        qKeys.forEach(function(q){
+          if(q){
+            html+='<div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px;margin-left:2px">'+q+'</div>';
+          }
+          html+='<div class="links-grid" style="margin-bottom:'+(q?'16px':'0')+'">'+quarters[q].map(function(l){return linkCardHTML(l);}).join('')+'</div>';
+        });
+        html+='</div>';
       });
       el.innerHTML=html;
     })
@@ -2727,30 +2898,57 @@ function renderLinks(){
 function linkCardHTML(l){
   var color=catColor(l.category);
   var icon=catIcon(l.category);
-  var shortUrl=(l.url||'').replace(/^https?:\/\/(www\.)?/,'');
+  var shortUrl=l.url?(l.url.replace(/^https?:\/\/(www\.)?/,'')):'';
   if(shortUrl.length>45) shortUrl=shortUrl.slice(0,45)+'...';
   return '<div class="link-card">'+
     '<div class="link-card-top">'+
       '<div class="link-card-ico" style="background:'+color+'22;color:'+color+'">'+icon+'</div>'+
       '<div style="flex:1;min-width:0">'+
         '<div class="link-card-title">'+escHtml(l.title)+'</div>'+
-        '<div class="link-card-url" title="'+escHtml(l.url)+'">'+escHtml(shortUrl)+'</div>'+
+        (l.category?'<div style="font-size:9px;font-weight:600;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-top:1px">'+escHtml(l.category)+'</div>':'')+
+        (l.url?'<div class="link-card-url" title="'+escHtml(l.url)+'">'+escHtml(shortUrl)+'</div>':'')+
       '</div>'+
     '</div>'+
-    (l.notes?'<div class="link-card-notes">'+escHtml(l.notes)+'</div>':'')+
+    (l.notes?'<div class="link-card-notes" style="white-space:pre-line">'+escHtml(l.notes)+'</div>':'')+
     '<div class="link-card-actions">'+
-      '<a href="'+escHtml(l.url)+'" target="_blank" rel="noopener noreferrer" class="link-btn-open">Open &#8599;</a>'+
+      (l.url?'<a href="'+escHtml(l.url)+'" target="_blank" rel="noopener noreferrer" class="link-btn-open">Open &#8599;</a>':'<span style="flex:1"></span>')+
+      '<button class="link-btn-del" onclick="openEditLink('+l.id+')" style="background:rgba(59,126,248,.1);color:var(--primary);border-color:rgba(59,126,248,.2)" title="Edit">&#9998;</button>'+
       '<button class="link-btn-del" onclick="deleteLink('+l.id+')" title="Remove">&#128465;</button>'+
     '</div>'+
   '</div>';
 }
 
 function openAddLink(){
+  _editingLinkId=null;
+  document.getElementById('nl-modal-title').textContent='Add Note';
+  document.getElementById('nl-save-btn').textContent='Save Note';
   document.getElementById('nl-title').value='';
   document.getElementById('nl-url').value='';
   document.getElementById('nl-cat').value='';
   document.getElementById('nl-notes').value='';
+  document.getElementById('nl-quarter').value='';
   document.getElementById('nl-err').textContent='';
+  // Populate brand select
+  var sel=document.getElementById('nl-brand');
+  sel.innerHTML='<option value="">— General —</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'">'+escHtml(b.name)+'</option>';}).join('');
+  openOv('ov-add-link');
+  setTimeout(function(){document.getElementById('nl-title').focus();},100);
+}
+
+function openEditLink(id){
+  var l=_adminLinks.find(function(x){return x.id===id;});
+  if(!l) return;
+  _editingLinkId=id;
+  document.getElementById('nl-modal-title').textContent='Edit Note';
+  document.getElementById('nl-save-btn').textContent='Save Changes';
+  document.getElementById('nl-title').value=l.title||'';
+  document.getElementById('nl-url').value=l.url||'';
+  document.getElementById('nl-cat').value=l.category||'';
+  document.getElementById('nl-notes').value=l.notes||'';
+  document.getElementById('nl-quarter').value=l.quarter||'';
+  document.getElementById('nl-err').textContent='';
+  var sel=document.getElementById('nl-brand');
+  sel.innerHTML='<option value="">— General —</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'"'+(l.brand_id===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
   openOv('ov-add-link');
   setTimeout(function(){document.getElementById('nl-title').focus();},100);
 }
@@ -2758,23 +2956,27 @@ function openAddLink(){
 function saveLink(){
   var title=document.getElementById('nl-title').value.trim();
   var url=document.getElementById('nl-url').value.trim();
-  var cat=document.getElementById('nl-cat').value.trim()||'General';
+  var cat=document.getElementById('nl-cat').value.trim()||'';
   var notes=document.getElementById('nl-notes').value.trim();
+  var brandId=document.getElementById('nl-brand').value||null;
+  var quarter=document.getElementById('nl-quarter').value||null;
   var errEl=document.getElementById('nl-err');
   if(!title){errEl.textContent='Title is required';return;}
-  if(!url){errEl.textContent='URL is required';return;}
-  if(!/^https?:\/\//.test(url)) url='https://'+url;
-  fetch('/api/admin/links',{method:'POST',headers:authHeaders(),body:JSON.stringify({title:title,url:url,category:cat,notes:notes})})
+  if(url&&!/^https?:\/\//.test(url)) url='https://'+url;
+  var body={title:title,url:url||null,category:cat,notes:notes,brandId:brandId,quarter:quarter};
+  var method=_editingLinkId?'PUT':'POST';
+  var endpoint=_editingLinkId?'/api/admin/links/'+_editingLinkId:'/api/admin/links';
+  fetch(endpoint,{method:method,headers:authHeaders(),body:JSON.stringify(body)})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.ok){closeOv('ov-add-link');renderLinks();}
-      else{errEl.textContent=d.error||'Error saving link';}
+      else{errEl.textContent=d.error||'Error saving';}
     })
     .catch(function(){errEl.textContent='Connection error';});
 }
 
 function deleteLink(id){
-  if(!confirm('Remove this link?')) return;
+  if(!confirm('Remove this note?')) return;
   fetch('/api/admin/links/'+id,{method:'DELETE',headers:authHeaders()})
     .then(function(r){return r.json();})
     .then(function(d){if(d.ok) renderLinks();});
