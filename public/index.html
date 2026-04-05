@@ -635,8 +635,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div style="flex:1"></div>
   <div style="padding:8px;border-top:1px solid rgba(255,255,255,.07)">
-    <div class="sb-item" style="font-size:10px;color:rgba(255,255,255,.3);gap:7px" onclick="openSetPassword()">
-      &#128274; Access Password
+    <div class="sb-item" id="sb-account-btn" style="font-size:11px;color:rgba(255,255,255,.5);gap:8px" onclick="openAccount()">
+      <span id="sb-account-av" style="width:22px;height:22px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;color:#fff">?</span>
+      <span id="sb-account-name">Loading...</span>
     </div>
   </div>
 </aside>
@@ -689,7 +690,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="page" id="page-members">
       <div class="sec">
         <div><span class="sec-t">Team Activity</span><span class="sec-s">log &amp; track by member + brand</span></div>
-        <button class="sec-btn" onclick="openAddMember()">+ Add Member</button>
+        <button class="sec-btn" id="btn-add-member-ta" onclick="openAddMember()">+ Add Member</button>
       </div>
       <div class="mem-cards-grid" id="member-cards"></div>
     </div>
@@ -703,7 +704,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="page" id="page-campaigns">
       <div class="sec">
         <div><span class="sec-t">Campaign Progress</span><span class="sec-s">goals &amp; KPIs per brand</span></div>
-        <button class="sec-btn" onclick="openAddBrand()">+ Add Brand</button>
+        <button class="sec-btn" id="btn-add-brand" onclick="openAddBrand()">+ Add Brand</button>
       </div>
       <div class="g2" id="campaign-cards"></div>
     </div>
@@ -727,9 +728,31 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <div class="login-box">
     <div class="login-logo" id="login-logo">D</div>
     <div class="login-title" id="login-title">DigitUly</div>
-    <div class="login-sub">Digite a senha para continuar</div>
-    <input class="login-inp" type="password" id="login-pwd" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()"/>
-    <button class="login-btn" onclick="doLogin()">Entrar</button>
+
+    <!-- STEP 1: Email -->
+    <div id="login-step-email">
+      <div class="login-sub">Enter your email to continue</div>
+      <input class="login-inp" type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')loginCheckEmail()"/>
+      <button class="login-btn" onclick="loginCheckEmail()">Continue</button>
+    </div>
+
+    <!-- STEP 2: Password -->
+    <div id="login-step-pwd" style="display:none">
+      <div class="login-sub" id="login-sub-pwd">Enter your password</div>
+      <input class="login-inp" type="password" id="login-pwd" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="login-btn" onclick="doLogin()">Sign In</button>
+      <button onclick="loginBack()" style="background:none;color:rgba(255,255,255,.4);font-size:11px;margin-top:8px;width:100%">← Back</button>
+    </div>
+
+    <!-- STEP 3: First time - set password -->
+    <div id="login-step-setup" style="display:none">
+      <div class="login-sub">Welcome! Set your password to continue</div>
+      <input class="login-inp" type="password" id="login-setup-pwd" placeholder="New password (min 6 chars)" onkeydown="if(event.key==='Enter')doSetupPassword()"/>
+      <input class="login-inp" type="password" id="login-setup-conf" placeholder="Confirm password" onkeydown="if(event.key==='Enter')doSetupPassword()" style="margin-top:8px"/>
+      <button class="login-btn" onclick="doSetupPassword()">Set Password & Sign In</button>
+      <button onclick="loginBack()" style="background:none;color:rgba(255,255,255,.4);font-size:11px;margin-top:8px;width:100%">← Back</button>
+    </div>
+
     <div class="login-err" id="login-err"></div>
   </div>
 </div>
@@ -893,6 +916,34 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: MY ACCOUNT ══════════════════ -->
+<div class="overlay" id="ov-account" onclick="ovBg('ov-account',event)">
+  <div class="modal goals-modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">My Account</div>
+        <div id="acct-email-lbl" style="font-size:11px;color:var(--text-s);margin-top:2px"></div>
+      </div>
+      <button class="modal-close" onclick="closeOv('ov-account')">✕</button>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:11px;font-weight:600;color:var(--text-m);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Change Email</div>
+      <input class="goal-inp" type="email" id="acct-new-email" placeholder="New email address"/>
+      <input class="goal-inp" type="password" id="acct-email-pwd" placeholder="Current password (to confirm)" style="margin-top:6px"/>
+      <button class="save-btn" onclick="saveAccountEmail()" style="margin-top:8px">Update Email</button>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--text-m);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Change Password</div>
+      <input class="goal-inp" type="password" id="acct-cur-pwd" placeholder="Current password"/>
+      <input class="goal-inp" type="password" id="acct-new-pwd" placeholder="New password (min 6 chars)" style="margin-top:6px"/>
+      <input class="goal-inp" type="password" id="acct-conf-pwd" placeholder="Confirm new password" style="margin-top:6px"/>
+      <button class="save-btn" onclick="saveAccountPassword()" style="margin-top:8px">Update Password</button>
+    </div>
+    <div id="acct-msg" style="font-size:11px;margin-top:10px;text-align:center"></div>
+    <button onclick="doLogout()" style="width:100%;margin-top:16px;padding:10px;background:rgba(248,113,113,.1);color:#f87171;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid rgba(248,113,113,.2);cursor:pointer">Sign Out</button>
+  </div>
+</div>
+
 <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="onAvatarFileSelected(this)"/>
 
 <script>
@@ -938,7 +989,11 @@ const DEFAULT_MEMBERS = [
 ];
 
 /* API */
-function authHeaders(){ return { 'Content-Type':'application/json' }; }
+function authToken(){ return localStorage.getItem('dg_token')||''; }
+function authHeaders(){
+  var t=authToken();
+  return t ? {'Content-Type':'application/json','Authorization':'Bearer '+t} : {'Content-Type':'application/json'};
+}
 
 /* LOAD from API */
 let ST = {
@@ -955,6 +1010,17 @@ let ST = {
 
 async function loadState(){
   try{
+    // Verify JWT first
+    var token=authToken();
+    if(token){
+      var meRes=await fetch('/api/auth/me',{headers:authHeaders()});
+      var meData=await meRes.json();
+      if(meData.ok){ currentUser=meData.user; updateAccountUI(); }
+      else { localStorage.removeItem('dg_token'); currentUser=null; showLoginOverlay(); return; }
+    } else {
+      showLoginOverlay(); return;
+    }
+
     const res = await fetch('/api/state', { headers: authHeaders() });
     const data = await res.json();
     ST = data;
@@ -962,7 +1028,6 @@ async function loadState(){
     if(!ST.campaigns) ST.campaigns={};
     if(!ST.logoUrl) ST.logoUrl='';
     updateSiteLogo();
-    showLoginIfNeeded();
     document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
     renderAll();
   }catch(err){
@@ -1058,6 +1123,7 @@ let logMember=null, logBrand=null, trendChart=null;
 let newBrandColor='#3b7ef8';
 let profileMember=null;
 let currentMemberId=null, memberChart=null;
+let currentUser=null; // { id, email, role, memberId }
 
 /* ══════════════════════════════════════════════
    NAVIGATION
@@ -1106,6 +1172,10 @@ function renderAll(){
   document.getElementById('tb-time').textContent=
     'Updated '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('app-name-label').textContent=ST.appName||'DigitUly';
+  // Show/hide admin-only buttons
+  var adminOnly=['btn-add-member-ta','btn-add-brand'];
+  adminOnly.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isAdmin()?'':'none';});
+  updateAccountUI();
 }
 
 /* SIDEBAR */
@@ -1328,7 +1398,7 @@ function memberCardHTML(m,i){
         '<div style="font-size:15px;font-weight:700;color:#fff">'+m.name+'</div>'+
         (streak>0?'<div class="mc-streak">&#128293; '+streak+' day streak</div>':'')+
       '</div>'+
-      '<button class="mc-log-btn" onclick="openLog(\''+m.id+'\')">+ Log</button>'+
+      (canEdit(m.id)?'<button class="mc-log-btn" onclick="openLog(\''+m.id+'\')">+ Log</button>':'')+
     '</div>'+
     '<div class="mc-body">'+(blocksHTML||'<div style="padding:14px 18px;font-size:11px;color:var(--text-s)">No brands assigned.</div>')+'</div>'+
   '</div>';
@@ -1435,7 +1505,7 @@ function renderMemberPage(mid){
         '</div>'+
         (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
         '<div class="mp-cfg-btns">'+
-          '<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>'+
+          (canEdit(mid)?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
         '</div>'+
       '</div>'+
       '<div class="mp-right">'+
@@ -1460,6 +1530,10 @@ function renderMemberPage(mid){
   document.getElementById('mp-content').innerHTML=html;
   setTimeout(function(){drawMemberChart(mid);},50);
 }
+
+function isAdmin(){ return currentUser&&currentUser.role==='admin'; }
+function isOwnMember(mid){ return currentUser&&currentUser.memberId===mid; }
+function canEdit(mid){ return isAdmin()||isOwnMember(mid); }
 
 function buildMonthOptions(){
   var opts='<option value="">Last 30 days</option>';
@@ -1906,8 +1980,12 @@ function openMemberDetail(mid){
   document.getElementById('page-member').classList.add('active');
   document.getElementById('tb-title').textContent=m.name;
   var ma=document.getElementById('tb-member-actions');
-  ma.style.display='flex';
-  document.getElementById('tb-remove-btn').onclick=function(){deleteMember(mid);};
+  if(isAdmin()){
+    ma.style.display='flex';
+    document.getElementById('tb-remove-btn').onclick=function(){deleteMember(mid);};
+  } else {
+    ma.style.display='none';
+  }
   renderMemberPage(mid);
 }
 
@@ -2047,69 +2125,173 @@ function showDayDigest(date){
 }
 
 /* ══════════════════════════════════════════════
-   AUTH (ACCESS PASSWORD)
+   AUTH (JWT LOGIN)
 ══════════════════════════════════════════════ */
-function showLoginIfNeeded(){
-  if(!ST.hasAuth) return;
-  var s=JSON.parse(localStorage.getItem('dg_auth')||'{}');
-  if(s.expiry && s.expiry>Date.now()) return; // valid session
-  // show login
+function showLoginOverlay(){
   var ov=document.getElementById('login-overlay');
-  if(ov){
-    // update logo in login screen
-    var ll=document.getElementById('login-logo');
-    if(ll){
-      if(ST.logoUrl) ll.innerHTML='<img src="'+ST.logoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:14px"/>';
-      else ll.textContent=(ST.appName||'D')[0].toUpperCase();
-    }
-    var lt=document.getElementById('login-title');
-    if(lt) lt.textContent=ST.appName||'DigitUly';
-    ov.style.display='flex';
-  }
+  if(!ov) return;
+  // reset to step 1
+  document.getElementById('login-step-email').style.display='';
+  document.getElementById('login-step-pwd').style.display='none';
+  document.getElementById('login-step-setup').style.display='none';
+  document.getElementById('login-err').textContent='';
+  document.getElementById('login-email').value='';
+  ov.style.display='flex';
+}
+
+var _loginEmail='';
+
+function loginCheckEmail(){
+  var email=document.getElementById('login-email').value.trim();
+  var errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!email){errEl.textContent='Enter your email';return;}
+  // Check if user exists and if they need setup
+  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,password:'__check__'})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      _loginEmail=email;
+      if(d.needsSetup){
+        document.getElementById('login-step-email').style.display='none';
+        document.getElementById('login-step-setup').style.display='';
+        document.getElementById('login-setup-pwd').focus();
+      } else if(d.error==='Wrong password'||d.error==='wrong'){
+        // user exists, has password
+        document.getElementById('login-step-email').style.display='none';
+        document.getElementById('login-step-pwd').style.display='';
+        document.getElementById('login-sub-pwd').textContent='Welcome back, '+email;
+        document.getElementById('login-pwd').value='';
+        document.getElementById('login-pwd').focus();
+      } else if(d.error==='Email not found'){
+        errEl.textContent='Email not found. Contact your admin.';
+      } else {
+        // Has password (any non-setup response means user exists)
+        document.getElementById('login-step-email').style.display='none';
+        document.getElementById('login-step-pwd').style.display='';
+        document.getElementById('login-sub-pwd').textContent='Welcome back';
+        document.getElementById('login-pwd').value='';
+        document.getElementById('login-pwd').focus();
+      }
+    })
+    .catch(function(){errEl.textContent='Connection error';});
+}
+
+function loginBack(){
+  document.getElementById('login-step-pwd').style.display='none';
+  document.getElementById('login-step-setup').style.display='none';
+  document.getElementById('login-step-email').style.display='';
+  document.getElementById('login-err').textContent='';
 }
 
 function doLogin(){
   var pwd=document.getElementById('login-pwd').value;
   var errEl=document.getElementById('login-err');
   errEl.textContent='';
-  if(!pwd){errEl.textContent='Digite a senha';return;}
-  fetch('/api/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})})
+  if(!pwd){errEl.textContent='Enter your password';return;}
+  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_loginEmail,password:pwd})})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.ok){
-        localStorage.setItem('dg_auth',JSON.stringify({expiry:Date.now()+30*24*60*60*1000}));
+        localStorage.setItem('dg_token',d.token);
+        currentUser=d.user;
         document.getElementById('login-overlay').style.display='none';
+        updateAccountUI();
+        loadState();
       } else {
-        errEl.textContent='Senha incorreta';
+        errEl.textContent=d.error||'Wrong password';
         document.getElementById('login-pwd').value='';
       }
     })
-    .catch(function(){errEl.textContent='Erro de conexão';});
+    .catch(function(){errEl.textContent='Connection error';});
 }
 
-function openSetPassword(){
-  document.getElementById('set-pwd-inp').value='';
-  document.getElementById('set-pwd-conf').value='';
-  openOv('ov-set-pwd');
-}
-
-function saveNewPassword(){
-  var p=document.getElementById('set-pwd-inp').value;
-  var c=document.getElementById('set-pwd-conf').value;
-  if(p && p!==c){alert('As senhas não coincidem');return;}
-  fetch('/api/auth/set-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
+function doSetupPassword(){
+  var pwd=document.getElementById('login-setup-pwd').value;
+  var conf=document.getElementById('login-setup-conf').value;
+  var errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!pwd||pwd.length<6){errEl.textContent='Password must be at least 6 characters';return;}
+  if(pwd!==conf){errEl.textContent='Passwords do not match';return;}
+  fetch('/api/auth/setup-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_loginEmail,password:pwd})})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.ok){
-        ST.hasAuth=!!p;
-        // persist our own session so we don't get locked out
-        if(p) localStorage.setItem('dg_auth',JSON.stringify({expiry:Date.now()+30*24*60*60*1000}));
-        else localStorage.removeItem('dg_auth');
-        closeOv('ov-set-pwd');
-        alert(p?'Senha definida com sucesso!':'Senha removida. App agora é público.');
+        localStorage.setItem('dg_token',d.token);
+        currentUser=d.user;
+        document.getElementById('login-overlay').style.display='none';
+        updateAccountUI();
+        loadState();
       } else {
-        alert('Erro ao salvar senha');
+        errEl.textContent=d.error||'Error setting password';
       }
+    })
+    .catch(function(){errEl.textContent='Connection error';});
+}
+
+function doLogout(){
+  localStorage.removeItem('dg_token');
+  currentUser=null;
+  closeOv('ov-account');
+  showLoginOverlay();
+}
+
+function updateAccountUI(){
+  if(!currentUser) return;
+  var m=currentUser.memberId?getMember(currentUser.memberId):null;
+  var name=m?m.name:currentUser.email.split('@')[0];
+  var ini=(name||'?')[0].toUpperCase();
+  var avEl=document.getElementById('sb-account-av');
+  var nmEl=document.getElementById('sb-account-name');
+  if(avEl) avEl.textContent=ini;
+  if(nmEl) nmEl.textContent=name+(currentUser.role==='admin'?' ★':'');
+}
+
+function openAccount(){
+  var m=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  var name=m?m.name:(currentUser?currentUser.email:'');
+  var lbl=document.getElementById('acct-email-lbl');
+  if(lbl) lbl.textContent=(currentUser?currentUser.email:'')+' · '+(currentUser?currentUser.role:'');
+  document.getElementById('acct-new-email').value='';
+  document.getElementById('acct-email-pwd').value='';
+  document.getElementById('acct-cur-pwd').value='';
+  document.getElementById('acct-new-pwd').value='';
+  document.getElementById('acct-conf-pwd').value='';
+  document.getElementById('acct-msg').textContent='';
+  openOv('ov-account');
+}
+
+function saveAccountEmail(){
+  var newEmail=document.getElementById('acct-new-email').value.trim();
+  var pwd=document.getElementById('acct-email-pwd').value;
+  var msg=document.getElementById('acct-msg');
+  if(!newEmail){msg.style.color='#f87171';msg.textContent='Enter new email';return;}
+  fetch('/api/auth/change-email',{method:'PUT',headers:authHeaders(),body:JSON.stringify({newEmail:newEmail,password:pwd})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        currentUser.email=newEmail;
+        if(d.token) localStorage.setItem('dg_token',d.token);
+        msg.style.color='var(--green)';msg.textContent='Email updated!';
+        document.getElementById('acct-email-lbl').textContent=newEmail+' · '+currentUser.role;
+        updateAccountUI();
+      } else {
+        msg.style.color='#f87171';msg.textContent=d.error||'Error';
+      }
+    });
+}
+
+function saveAccountPassword(){
+  var cur=document.getElementById('acct-cur-pwd').value;
+  var np=document.getElementById('acct-new-pwd').value;
+  var conf=document.getElementById('acct-conf-pwd').value;
+  var msg=document.getElementById('acct-msg');
+  if(!np||np.length<6){msg.style.color='#f87171';msg.textContent='Min 6 characters';return;}
+  if(np!==conf){msg.style.color='#f87171';msg.textContent='Passwords do not match';return;}
+  fetch('/api/auth/change-password',{method:'PUT',headers:authHeaders(),body:JSON.stringify({currentPassword:cur,newPassword:np})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){msg.style.color='var(--green)';msg.textContent='Password updated!';}
+      else{msg.style.color='#f87171';msg.textContent=d.error||'Error';}
     });
 }
 
