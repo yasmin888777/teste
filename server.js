@@ -60,7 +60,7 @@ app.get('/api/state', async (req, res) => {
     settingsRows.forEach(r => { settings[r.key] = r.value; });
 
     const brandsFormatted = brands.map(b => ({
-      id: b.id, name: b.name, color: b.color,
+      id: b.id, name: b.name, color: b.color, status: b.status || 'ongoing',
       goals: { confirmed: b.goal_confirmed, videos: b.goal_videos },
     }));
 
@@ -282,6 +282,15 @@ app.put('/api/brands/:id', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.patch('/api/brands/:id/status', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['ongoing','finished'].includes(status)) return res.json({ ok: false, error: 'Invalid status' });
+    await sql`UPDATE brands SET status=${status} WHERE id=${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Members ─────────────────────────────────────
 app.post('/api/members', requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -392,7 +401,7 @@ app.post('/api/camp-logs', requireAuth, requireAdmin, async (req, res) => {
 // ── Links (admin only) ──────────────────────────
 app.get('/api/admin/links', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const links = await sql`SELECT * FROM links ORDER BY category, title`;
+    const links = await sql`SELECT * FROM links ORDER BY created_at DESC`;
     res.json({ ok: true, links });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

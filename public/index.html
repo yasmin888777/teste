@@ -762,7 +762,14 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="page" id="page-campaigns">
       <div class="sec">
         <div><span class="sec-t">Campaign Progress</span><span class="sec-s">goals &amp; KPIs per brand</span></div>
-        <button class="sec-btn" id="btn-add-brand" onclick="openAddBrand()">+ Add Brand</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="camp-status-filter" onchange="renderCampaigns()" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;cursor:pointer;outline:none">
+            <option value="ongoing">Ongoing</option>
+            <option value="all">All brands</option>
+            <option value="finished">Finished</option>
+          </select>
+          <button class="sec-btn" id="btn-add-brand" onclick="openAddBrand()">+ Add Brand</button>
+        </div>
       </div>
       <div class="g2" id="campaign-cards"></div>
     </div>
@@ -2134,7 +2141,16 @@ function saveProfileUser(){
 ══════════════════════════════════════════════ */
 function renderCampaigns(){
   const el=document.getElementById('campaign-cards');if(!el)return;
-  el.innerHTML=ST.brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
+  var statusFilter=(document.getElementById('camp-status-filter')||{}).value||'ongoing';
+  var brands=ST.brands.filter(function(b){
+    if(statusFilter==='all') return true;
+    return (b.status||'ongoing')===statusFilter;
+  });
+  if(!brands.length){
+    el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s);grid-column:1/-1">'+(statusFilter==='finished'?'No finished brands yet.':'No ongoing brands. Change filter to see all.')+'</div>';
+    return;
+  }
+  el.innerHTML=brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
 }
 function campaignCardHTML(b,i){
   const totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
@@ -2183,10 +2199,16 @@ function campaignCardHTML(b,i){
     '</div>':
     '<div style="font-size:11px;color:var(--text-s);margin-bottom:10px;padding:6px 0;border-bottom:1px solid var(--border)">No campaigns yet</div>';
 
+  var bStatus=b.status||'ongoing';
+  var isOngoing=bStatus==='ongoing';
+  var statusBadge='<span onclick="toggleBrandStatus(\''+b.id+'\',\''+bStatus+'\')" title="Click to toggle status" style="cursor:pointer;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;'+(isOngoing?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
+    (isOngoing?'● Ongoing':'○ Finished')+
+  '</span>';
   return '<div class="camp-card" style="animation-delay:'+i*55+'ms">'+
     '<div class="camp-card-head">'+
       '<div class="camp-card-dot" style="background:'+b.color+'"></div>'+
       '<span class="camp-card-name">'+b.name+'</span>'+
+      statusBadge+
       '<div style="display:flex;margin-left:8px">'+avatars+'</div>'+
       '<button style="margin-left:auto;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--primary);background:var(--primary-d);border:1px solid rgba(59,126,248,.15);cursor:pointer;margin-right:6px" onclick="openAddCampaign(\''+b.id+'\')">+ Campaign</button>'+
       '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openGoals(\''+b.id+'\')">Edit Goals</button>'+
@@ -2819,6 +2841,19 @@ function deleteMember(mid){
 /* ══════════════════════════════════════════════
    CAMPAIGNS (per brand)
 ══════════════════════════════════════════════ */
+function toggleBrandStatus(brandId, currentStatus){
+  var newStatus=currentStatus==='ongoing'?'finished':'ongoing';
+  fetch('/api/brands/'+brandId+'/status',{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:newStatus})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        var b=getBrand(brandId);
+        if(b) b.status=newStatus;
+        renderCampaigns();
+      }
+    });
+}
+
 var _addCampBrandId=null;
 function openAddCampaign(brandId){
   _addCampBrandId=brandId;
@@ -3054,40 +3089,46 @@ function renderLinks(){
         return;
       }
 
-      // Group by brand first, then by quarter within each brand
-      var groups={}; // key: brandName or 'General'
+      // Group by brand → campaign
+      var groups={}; // key: brandId or 'General'
+      var brandOrder=[];
       filtered.forEach(function(l){
-        var bname='General';
-        if(l.brand_id){var b=getBrand(l.brand_id);if(b)bname=b.name;}
-        if(!groups[bname])groups[bname]={color:'var(--text-s)',links:[]};
-        if(l.brand_id){var b2=getBrand(l.brand_id);if(b2)groups[bname].color=b2.color;}
-        groups[bname].links.push(l);
+        var key=l.brand_id||'__general__';
+        if(!groups[key]){
+          groups[key]={brandId:l.brand_id,campaigns:{}};
+          brandOrder.push(key);
+        }
+        var camp=l.campaign||'';
+        if(!groups[key].campaigns[camp]) groups[key].campaigns[camp]=[];
+        groups[key].campaigns[camp].push(l);
       });
 
       var html='';
-      // Sort: General last
-      var keys=Object.keys(groups).sort(function(a,b){if(a==='General')return 1;if(b==='General')return-1;return a.localeCompare(b);});
-      keys.forEach(function(bname){
-        var grp=groups[bname];
-        var links=grp.links;
-        // Sub-group by quarter
-        var quarters={};
-        links.forEach(function(l){var q=l.quarter||'';if(!quarters[q])quarters[q]=[];quarters[q].push(l);});
-        var qKeys=Object.keys(quarters).sort(function(a,b){
-          var ord=['Q1','Q2','Q3','Q4',''];
-          return ord.indexOf(a)-ord.indexOf(b);
-        });
+      // Sort: General last, others in original order
+      brandOrder.sort(function(a,b){if(a==='__general__')return 1;if(b==='__general__')return-1;return 0;});
+      brandOrder.forEach(function(key){
+        var grp=groups[key];
+        var b=grp.brandId?getBrand(grp.brandId):null;
+        var bname=b?b.name:'General';
+        var bcolor=b?b.color:'var(--text-s)';
 
-        html+='<div style="margin-bottom:28px">'+
-          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
-            (bname!=='General'?'<div style="width:10px;height:10px;border-radius:50%;background:'+grp.color+'"></div>':'')+'<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(bname)+'</span>'+
+        html+='<div style="margin-bottom:32px">'+
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'+
+            (b?'<div style="width:10px;height:10px;border-radius:50%;background:'+bcolor+'"></div>':'')+
+            '<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(bname)+'</span>'+
           '</div>';
 
-        qKeys.forEach(function(q){
-          if(q){
-            html+='<div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px;margin-left:2px">'+q+'</div>';
+        // Sort campaigns: named first (alphabetically), unnamed last
+        var campKeys=Object.keys(grp.campaigns).sort(function(a,b){
+          if(!a&&b) return 1;if(a&&!b) return -1;return a.localeCompare(b);
+        });
+        campKeys.forEach(function(camp){
+          if(camp){
+            html+='<div style="margin-bottom:6px;margin-left:2px">'+
+              '<span style="font-size:11px;font-weight:700;color:var(--text-m)">'+escHtml(camp)+'</span>'+
+            '</div>';
           }
-          html+='<div class="links-grid" style="margin-bottom:'+(q?'16px':'0')+'">'+quarters[q].map(function(l){return linkCardHTML(l);}).join('')+'</div>';
+          html+='<div class="links-grid" style="margin-bottom:18px">'+grp.campaigns[camp].map(function(l){return linkCardHTML(l);}).join('')+'</div>';
         });
         html+='</div>';
       });

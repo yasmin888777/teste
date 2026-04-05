@@ -5,3 +5,6 @@ ALTER TABLE links ADD COLUMN IF NOT EXISTS year INT;
 ALTER TABLE links ADD COLUMN IF NOT EXISTS campaign VARCHAR(200) DEFAULT '';
 -- Widen quarter to support multi-quarter values like "Q1,Q2,Q3"
 ALTER TABLE links ALTER COLUMN quarter TYPE VARCHAR(50);
+
+-- Add status to brands table
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ongoing';
