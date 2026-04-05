@@ -1738,15 +1738,14 @@ function renderMemberPage(mid){
         '</div>'+
         '<div style="font-size:10px;color:var(--text-s);margin-bottom:5px">'+roleLabel+'</div>'+
         (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
-        '<div style="font-size:11px;color:var(--text-m);margin:7px 0 4px">'+
-          '<strong style="color:var(--text)">'+totalProjects+'</strong> total project'+(totalProjects!==1?'s':'')+
+        '<div style="font-size:12px;color:var(--text-m);margin:8px 0 4px">'+
+          'Total projects: <strong style="color:var(--text)">'+totalProjects+'</strong>'+
         '</div>'+
-        (ownerCount||supportCount?
-          '<div style="font-size:11px;color:var(--text-s)">'+
-            (ownerCount?'<span style="color:var(--primary);font-weight:600">'+ownerCount+'</span> owning':'') +
-            (ownerCount&&supportCount?' &amp; ':'')+
-            (supportCount?'<span style="color:var(--amber);font-weight:600">'+supportCount+'</span> support':'')+
-          '</div>':'')+
+        '<div style="font-size:12px;color:var(--text-s);line-height:1.5">'+
+          m.name+' is currently '+
+          (ownerCount?'owning <strong style="color:var(--primary)">'+ownerCount+'</strong> brand'+(ownerCount!==1?'s':''):'owning <strong>0</strong> brands')+
+          ' and being support for <strong style="color:var(--amber)">'+supportCount+'</strong> brand'+(supportCount!==1?'s':'')+'.'+
+        '</div>'+
         '<div class="mp-cfg-btns" style="margin-top:8px">'+
           (isAdmin()?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
         '</div>'+
