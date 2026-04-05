@@ -328,6 +328,37 @@ app.put('/api/settings', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── Admin: list users ────────────────────────────
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const users = await sql`SELECT id, email, role, member_id, created_at, (password_hash IS NOT NULL) AS has_password FROM users ORDER BY role DESC, email`;
+    res.json({ ok: true, users });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Admin: update any user ────────────────────────
+app.put('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { email, newPassword, role, memberId } = req.body;
+    const rows = await sql`SELECT id FROM users WHERE id=${req.params.id}`;
+    if (!rows.length) return res.json({ ok: false, error: 'User not found' });
+
+    if (email) {
+      const clash = await sql`SELECT id FROM users WHERE LOWER(email)=LOWER(${email}) AND id!=${req.params.id}`;
+      if (clash.length) return res.json({ ok: false, error: 'Email already in use' });
+      await sql`UPDATE users SET email=${email} WHERE id=${req.params.id}`;
+    }
+    if (newPassword) {
+      if (newPassword.length < 6) return res.json({ ok: false, error: 'Min 6 characters' });
+      const hash = await bcrypt.hash(newPassword, 10);
+      await sql`UPDATE users SET password_hash=${hash} WHERE id=${req.params.id}`;
+    }
+    if (role) await sql`UPDATE users SET role=${role} WHERE id=${req.params.id}`;
+    if (memberId !== undefined) await sql`UPDATE users SET member_id=${memberId||null} WHERE id=${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Camp logs ────────────────────────────────────
 app.post('/api/camp-logs', requireAuth, requireAdmin, async (req, res) => {
   try {

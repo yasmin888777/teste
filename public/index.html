@@ -912,6 +912,21 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
     <div id="prof-roles-form"></div>
     <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+    <!-- Admin: manage this member's login account -->
+    <div id="prof-user-section" style="display:none;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Login Account</div>
+      <div id="prof-user-info" style="font-size:11px;color:var(--text-m);margin-bottom:10px"></div>
+      <input class="goal-inp" type="email" id="prof-user-email" placeholder="Email address"/>
+      <input class="goal-inp" type="password" id="prof-user-pwd" placeholder="New password (leave blank to keep)" style="margin-top:6px"/>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <select id="prof-user-role" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:11px;background:#fff">
+          <option value="member">Member</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="save-btn" onclick="saveProfileUser()" style="flex:2;margin-top:0">Save Account</button>
+      </div>
+      <div id="prof-user-msg" style="font-size:11px;margin-top:6px"></div>
+    </div>
     <button id="prof-del-btn" onclick="deleteMember()" style="width:100%;margin-top:8px;padding:10px;background:#fee2e2;color:#dc2626;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid #fca5a5;transition:background .2s">🗑 Delete Member</button>
   </div>
 </div>
@@ -1756,6 +1771,35 @@ function openProfile(mid){
   }).filter(Boolean).join('');
 
   document.getElementById('prof-roles-form').innerHTML=html||'<div style="font-size:11px;color:var(--text-s)">No brands assigned.</div>';
+
+  // Admin: show user account section
+  var userSection=document.getElementById('prof-user-section');
+  if(isAdmin() && userSection){
+    userSection.style.display='';
+    document.getElementById('prof-user-msg').textContent='';
+    // load user linked to this member
+    fetch('/api/admin/users',{headers:authHeaders()})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d.ok) return;
+        var u=d.users.find(function(u){return u.member_id===profileMember.id;});
+        var infoEl=document.getElementById('prof-user-info');
+        var emailEl=document.getElementById('prof-user-email');
+        var roleEl=document.getElementById('prof-user-role');
+        userSection._userId=u?u.id:null;
+        if(u){
+          infoEl.innerHTML='<span style="color:var(--green)">✓ Account linked</span> · '+(u.has_password?'Password set':'<span style="color:var(--amber)">No password yet</span>');
+          emailEl.value=u.email||'';
+          roleEl.value=u.role||'member';
+        } else {
+          infoEl.innerHTML='<span style="color:var(--amber)">⚠ No login account</span>';
+          emailEl.value='';roleEl.value='member';
+        }
+      });
+  } else if(userSection){
+    userSection.style.display='none';
+  }
+
   openOv('ov-profile');
 }
 function saveProfile(){
@@ -1767,6 +1811,24 @@ function saveProfile(){
   });
   apiPut('/api/members/'+profileMember.id,{brands:profileMember.brands,roles:profileMember.roles});
   renderAll();closeOv('ov-profile');
+}
+function saveProfileUser(){
+  var userSection=document.getElementById('prof-user-section');
+  var uid=userSection._userId;
+  if(!uid){document.getElementById('prof-user-msg').innerHTML='<span style="color:#f87171">No account linked to this member</span>';return;}
+  var email=document.getElementById('prof-user-email').value.trim();
+  var pwd=document.getElementById('prof-user-pwd').value;
+  var role=document.getElementById('prof-user-role').value;
+  var msg=document.getElementById('prof-user-msg');
+  var body={role:role};
+  if(email) body.email=email;
+  if(pwd) body.newPassword=pwd;
+  fetch('/api/admin/users/'+uid,{method:'PUT',headers:authHeaders(),body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){msg.style.color='var(--green)';msg.textContent='Saved!';}
+      else{msg.style.color='#f87171';msg.textContent=d.error||'Error';}
+    });
 }
 
 /* ══════════════════════════════════════════════
