@@ -615,7 +615,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .ts-dot.idle{background:#d1d5db}
 
 /* ══════════ PRIVATE LINKS ══════════ */
-.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:16px}
+.links-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+@media(max-width:900px){.links-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.links-grid{grid-template-columns:1fr}}
 .link-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;transition:box-shadow .2s,transform .15s}
 .link-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
 .link-card-top{display:flex;align-items:flex-start;gap:10px}
@@ -3170,7 +3172,10 @@ function renderLinks(){
         html+='<div style="margin-bottom:32px">'+
           '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'+
             (b?'<div style="width:10px;height:10px;border-radius:50%;background:'+bcolor+'"></div>':'')+
-            '<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(bname)+'</span>'+
+            '<div>'+
+              '<span style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(bname)+'</span>'+
+              (grp.maxYear?'<span style="font-size:11px;color:var(--text-s);margin-left:8px">'+grp.maxYear+'</span>':'')+
+            '</div>'+
           '</div>';
 
         // Sort campaigns by most recent document (newest first), unnamed last
