@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:claude.ai)",
+      "Bash(npm install:*)",
+      "Bash(where npm:*)",
+      "Bash(where.exe npm:*)",
+      "Bash(where node:*)",
+      "Bash(where.exe node:*)",
+      "Bash(cmd.exe /c \"where npm\")",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Users/yxsmi/AppData/Roaming/npm\")",
+      "Bash(npm --version)",
+      "Read(//c/Program Files/**)",
+      "Read(//mnt/c/Program Files/**)",
+      "Bash(cmd.exe /c \"dir \"\"C:\\\\Program Files\\\\nodejs\"\"\")",
+      "Bash(cmd.exe /c \"node --version\")",
+      "Bash(cmd.exe /c \"start notepad C:\\\\Users\\\\yxsmi\\\\Downloads\\\\teste\\\\.env\")",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}
