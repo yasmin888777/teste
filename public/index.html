@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Pulse — KOL Team Dashboard</title>
+<title>DigitUly — KOL Team Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -510,9 +510,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   .main{width:100%}
   .topbar{padding:0 12px}
   .content{padding:14px 14px 70px}
-  .tb-view{display:none}
   .tb-time{display:none!important}
   .tb-btn.export{display:none}
+  .tb-vbtn{padding:4px 7px;font-size:10px}
+  .tb-title{font-size:13px}
   .kpi-row{grid-template-columns:1fr 1fr!important}
   .mem-cards-grid{grid-template-columns:1fr!important}
   .g2,.g3{grid-template-columns:1fr!important}
@@ -532,7 +533,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <div class="sb-brand-row">
     <div class="sb-icon">P</div>
     <div>
-      <div class="sb-app-name" id="app-name-label" onclick="editAppName()" title="Click to rename">Pulse</div>
+      <div class="sb-app-name" id="app-name-label" onclick="editAppName()" title="Click to rename">DigitUly</div>
       <div class="sb-app-sub">KOL Team Dashboard</div>
     </div>
   </div>
@@ -779,7 +780,7 @@ const METRICS = [
   {key:'kols_contacted',  label:'New KOLs contacted',         icon:'&#128222;'},
   {key:'kols_replied',    label:'New KOLs who replied',       icon:'&#128172;'},
   {key:'kols_followedup', label:'KOLs followed up with',      icon:'&#128257;'},
-  {key:'prelim_agree',    label:'New preliminary agreements',  icon:'&#9203;'},
+  {key:'prelim_agree',    label:'New preliminary agreements reached', icon:'&#9203;'},
   {key:'confirmed',       label:'New confirmed partnerships',  icon:'&#129309;'},
   {key:'vids_published',  label:'New videos published',       icon:'&#127909;'},
 ];
@@ -815,7 +816,7 @@ function authHeaders(){ return { 'Content-Type':'application/json' }; }
 
 /* LOAD from API */
 let ST = {
-  appName:'Pulse',
+  appName:'DigitUly',
   brands:JSON.parse(JSON.stringify(DEFAULT_BRANDS)),
   members:JSON.parse(JSON.stringify(DEFAULT_MEMBERS)),
   logs:{},
@@ -831,7 +832,7 @@ async function loadState(){
     ST = data;
     if(!ST.customAvatars) ST.customAvatars={};
     if(!ST.campaigns) ST.campaigns={};
-    document.title=(ST.appName||'Pulse')+' — KOL Team Dashboard';
+    document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
     renderAll();
   }catch(err){
     console.error('Failed to load state:', err);
@@ -963,7 +964,7 @@ function renderAll(){
   if(currentPage==='digest') renderDigest();
   document.getElementById('tb-time').textContent=
     'Updated '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('app-name-label').textContent=ST.appName||'Pulse';
+  document.getElementById('app-name-label').textContent=ST.appName||'DigitUly';
 }
 
 /* SIDEBAR */
@@ -1358,8 +1359,20 @@ function campaignCardHTML(b,i){
           '<div style="font-size:10px;color:var(--text-s);margin-top:8px">contacted &rarr; confirmed</div>'+
         '</div>'+
       '</div>'+
-      '<div class="camp-funnel-title">Activity Funnel</div>'+
-      funnel+
+      '<div class="camp-funnel-title">Summary</div>'+
+      [
+        {label:'Total KOLs Contacted', val:totC,      icon:'&#128222;'},
+        {label:'Confirmed KOLs',        val:totCo,     icon:'&#129309;'},
+        {label:'Shipped Products',      val:totShipped,icon:'&#128230;'},
+        {label:'Received Products',     val:totReceived,icon:'&#9989;'},
+        {label:'Published Videos',      val:totV,      icon:'&#127909;'},
+        {label:'Videos to be Published',val:gV>0?Math.max(0,gV-totV):'—',icon:'&#127916;'},
+      ].map(function(r){
+        return '<div class="camp-funnel-row">'+
+          '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px"><span>'+r.icon+'</span>'+r.label+'</span>'+
+          '<span style="font-size:14px;font-weight:700">'+r.val+'</span>'+
+        '</div>';
+      }).join('')+
     '</div>'+
   '</div>';
 }
@@ -1544,10 +1557,10 @@ function saveBrand(){
 function editAppName(){
   const lbl=document.getElementById('app-name-label');
   const inp=document.createElement('input');
-  inp.className='sb-app-name-input';inp.value=ST.appName||'Pulse';
+  inp.className='sb-app-name-input';inp.value=ST.appName||'DigitUly';
   lbl.replaceWith(inp);inp.focus();inp.select();
   var done=function(){
-    ST.appName=inp.value.trim()||'Pulse';
+    ST.appName=inp.value.trim()||'DigitUly';
     apiPut('/api/settings',{key:'appName',value:ST.appName});
     const newLbl=document.createElement('div');
     newLbl.id='app-name-label';newLbl.className='sb-app-name';
