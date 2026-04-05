@@ -7,6 +7,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const sql = neon(process.env.DATABASE_URL);
 
+function safeDate(d) {
+  if (d == null) return null;
+  if (d instanceof Date) return d.toISOString().split('T')[0];
+  const m = String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[0] : null;
+}
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -42,7 +49,7 @@ app.get('/api/state', async (req, res) => {
     logs.forEach(l => {
       if (!logsGrouped[l.member_id]) logsGrouped[l.member_id] = [];
       logsGrouped[l.member_id].push({
-        date: String(l.date).split('T')[0],
+        date: safeDate(l.date),
         brandId: l.brand_id,
         campaignId: l.campaign_id || null,
         kols_sourced: l.kols_sourced, kols_contacted: l.kols_contacted,
@@ -56,7 +63,7 @@ app.get('/api/state', async (req, res) => {
     campLogs.forEach(l => {
       if (!campLogsGrouped[l.brand_id]) campLogsGrouped[l.brand_id] = [];
       campLogsGrouped[l.brand_id].push({
-        date: String(l.date).split('T')[0],
+        date: safeDate(l.date),
         videos: l.videos, shipped: l.shipped, received: l.received,
       });
     });
