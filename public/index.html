@@ -487,13 +487,48 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+
+/* ══════════ MOBILE ══════════ */
+.hamburger{
+  display:none;flex-direction:column;gap:5px;
+  padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .2s;flex-shrink:0;
+}
+.hamburger:hover{background:rgba(255,255,255,.1)}
+.hamburger span{display:block;width:19px;height:2px;background:#fff;border-radius:2px}
+.sb-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25;
+  display:none;
+}
+.sb-overlay.open{display:block}
+@media(max-width:720px){
+  .hamburger{display:flex}
+  .sidebar{
+    position:fixed;left:calc(-1 * var(--sw) - 10px);top:0;bottom:0;
+    z-index:30;transition:left .28s cubic-bezier(.4,0,.2,1);
+  }
+  .sidebar.mob-open{left:0}
+  .main{width:100%}
+  .topbar{padding:0 12px}
+  .content{padding:14px 14px 70px}
+  .tb-view{display:none}
+  .tb-time{display:none!important}
+  .tb-btn.export{display:none}
+  .kpi-row{grid-template-columns:1fr 1fr!important}
+  .mem-cards-grid{grid-template-columns:1fr!important}
+  .g2,.g3{grid-template-columns:1fr!important}
+  .camp-goals-grid{grid-template-columns:1fr 1fr!important}
+  .modal{border-radius:14px;padding:18px}
+  .form-g{grid-template-columns:1fr!important}
+}
 </style>
 </head>
 <body>
 <div class="shell">
 
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+
 <!-- ══════════════════ SIDEBAR ══════════════════ -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sb-brand-row">
     <div class="sb-icon">P</div>
     <div>
@@ -529,6 +564,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 <div class="main">
   <div class="topbar">
     <div class="tb-left">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
       <div class="tb-title" id="tb-title">Overview</div>
       <div class="tb-view">
         <button class="tb-vbtn active" onclick="setTimeView('daily',this)">Daily</button>
@@ -610,6 +648,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <label>Date:</label>
       <input type="date" class="date-inp" id="log-date"/>
     </div>
+    <div id="log-campaign-wrap"></div>
     <div class="form-g" id="log-form"></div>
     <div class="ff full" style="margin-top:10px">
       <label class="ff-lbl">Notes (optional)</label>
@@ -696,6 +735,22 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: ADD CAMPAIGN ══════════════════ -->
+<div class="overlay" id="ov-add-campaign" onclick="ovBg('ov-add-campaign',event)">
+  <div class="modal goals-modal">
+    <div class="modal-hd">
+      <div style="font-size:22px">&#127919;</div>
+      <div><div class="modal-title">New Campaign</div><div class="modal-sub" id="add-camp-sub">Create a campaign for this brand</div></div>
+      <button class="modal-x" onclick="closeOv('ov-add-campaign')">&#10005;</button>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Campaign Name</label>
+      <input class="ff-inp" id="nc-name" placeholder="e.g. Modelo MYWLK Y1"/>
+    </div>
+    <button class="save-btn" onclick="saveNewCampaign()">Create Campaign</button>
+  </div>
+</div>
+
 <!-- ══════════════════ MODAL: EDIT PROFILE (Roles) ══════════════════ -->
 <div class="overlay" id="ov-profile" onclick="ovBg('ov-profile',event)">
   <div class="modal goals-modal">
@@ -709,6 +764,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
     <div id="prof-roles-form"></div>
     <button class="save-btn" onclick="saveProfile()">Save Profile</button>
+    <button id="prof-del-btn" onclick="deleteMember()" style="width:100%;margin-top:8px;padding:10px;background:#fee2e2;color:#dc2626;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid #fca5a5;transition:background .2s">🗑 Delete Member</button>
   </div>
 </div>
 
@@ -764,6 +820,7 @@ let ST = {
   members:JSON.parse(JSON.stringify(DEFAULT_MEMBERS)),
   logs:{},
   campLogs:{},
+  campaigns:{},
   customAvatars:{},
 };
 
@@ -773,6 +830,7 @@ async function loadState(){
     const data = await res.json();
     ST = data;
     if(!ST.customAvatars) ST.customAvatars={};
+    if(!ST.campaigns) ST.campaigns={};
     document.title=(ST.appName||'Pulse')+' — KOL Team Dashboard';
     renderAll();
   }catch(err){
@@ -1258,14 +1316,29 @@ function campaignCardHTML(b,i){
   const totShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
   const totReceived=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.received||0);},0);
 
+  const brandCamps=(ST.campaigns&&ST.campaigns[b.id])||[];
+  const campListHTML=brandCamps.length?
+    '<div style="margin-bottom:12px">'+
+      '<div class="camp-funnel-title" style="margin-bottom:6px">Campaigns</div>'+
+      brandCamps.map(function(c){
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'+
+          '<span style="font-size:12px;font-weight:500">&#127991; '+c.name+'</span>'+
+          '<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="font-size:11px;color:#dc2626;padding:2px 7px;border-radius:4px;background:transparent;border:none;cursor:pointer" onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'transparent\'">&#10005;</button>'+
+        '</div>';
+      }).join('')+
+    '</div>':
+    '<div style="font-size:11px;color:var(--text-s);margin-bottom:10px;padding:6px 0;border-bottom:1px solid var(--border)">No campaigns yet</div>';
+
   return '<div class="camp-card" style="animation-delay:'+i*55+'ms">'+
     '<div class="camp-card-head">'+
       '<div class="camp-card-dot" style="background:'+b.color+'"></div>'+
       '<span class="camp-card-name">'+b.name+'</span>'+
       '<div style="display:flex;margin-left:8px">'+avatars+'</div>'+
-      '<button style="margin-left:auto;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openGoals(\''+b.id+'\')">Edit Goals</button>'+
+      '<button style="margin-left:auto;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--primary);background:var(--primary-d);border:1px solid rgba(59,126,248,.15);cursor:pointer;margin-right:6px" onclick="openAddCampaign(\''+b.id+'\')">+ Campaign</button>'+
+      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openGoals(\''+b.id+'\')">Edit Goals</button>'+
     '</div>'+
     '<div class="camp-card-body">'+
+      campListHTML+
       '<div class="camp-goals-grid">'+
         '<div class="camp-goal-box">'+
           '<div class="camp-goal-lbl">Confirmed</div>'+
@@ -1323,6 +1396,21 @@ function switchLogBrand(bid){
 function prefillLog(){
   const date=document.getElementById('log-date').value;
   const e=logBrand?getLogs(logMember.id).find(function(l){return l.date===date&&l.brandId===logBrand.id;})||{}:{};
+  const brandCamps=(ST.campaigns&&logBrand&&ST.campaigns[logBrand.id])||[];
+  const campWrap=document.getElementById('log-campaign-wrap');
+  if(campWrap){
+    if(brandCamps.length){
+      campWrap.innerHTML='<div class="ff full" style="margin-bottom:12px">'+
+        '<label class="ff-lbl">Campaign (optional)</label>'+
+        '<select class="ff-inp" id="log-campaign">'+
+          '<option value="">— No campaign —</option>'+
+          brandCamps.map(function(c){return '<option value="'+c.id+'"'+(e.campaignId===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+
+        '</select>'+
+      '</div>';
+    } else {
+      campWrap.innerHTML='';
+    }
+  }
   document.getElementById('log-form').innerHTML=METRICS.map(function(mt){
     return '<div class="ff">'+
       '<label class="ff-lbl">'+mt.icon+' '+mt.label+'</label>'+
@@ -1335,7 +1423,9 @@ function saveLog(){
   if(!logMember||!logBrand)return;
   const date=document.getElementById('log-date').value;
   if(!date){alert('Please select a date');return;}
-  const entry={date:date,brandId:logBrand.id,note:document.getElementById('log-note').value};
+  const campSel=document.getElementById('log-campaign');
+  const campaignId=campSel?campSel.value||null:null;
+  const entry={date:date,brandId:logBrand.id,campaignId:campaignId,note:document.getElementById('log-note').value};
   METRICS.forEach(function(mt){entry[mt.key]=+(document.getElementById('li-'+mt.key)?.value)||0;});
   addLog(logMember.id,entry);
   renderLogHistory();renderAll();
@@ -1537,6 +1627,65 @@ function showDayDigest(date){
     '</div>'+
   '</div></div>';
   el.innerHTML=html;
+}
+
+/* ══════════════════════════════════════════════
+   MOBILE SIDEBAR
+══════════════════════════════════════════════ */
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sb-overlay');
+  const open=sb.classList.toggle('mob-open');
+  ov.classList.toggle('open',open);
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('mob-open');
+  document.getElementById('sb-overlay').classList.remove('open');
+}
+
+/* ══════════════════════════════════════════════
+   DELETE MEMBER
+══════════════════════════════════════════════ */
+function deleteMember(){
+  if(!profileMember) return;
+  if(!confirm('Remove "'+profileMember.name+'"? This will also delete all their activity logs.')) return;
+  ST.members=ST.members.filter(function(m){return m.id!==profileMember.id;});
+  delete ST.logs[profileMember.id];
+  apiDel('/api/members/'+profileMember.id);
+  closeOv('ov-profile');
+  renderAll();
+}
+
+/* ══════════════════════════════════════════════
+   CAMPAIGNS (per brand)
+══════════════════════════════════════════════ */
+var _addCampBrandId=null;
+function openAddCampaign(brandId){
+  _addCampBrandId=brandId;
+  const b=getBrand(brandId);
+  document.getElementById('add-camp-sub').textContent=b?'Campaign for '+b.name:'Create a campaign for this brand';
+  document.getElementById('nc-name').value='';
+  openOv('ov-add-campaign');
+}
+function saveNewCampaign(){
+  const name=document.getElementById('nc-name').value.trim();
+  if(!name){alert('Please enter a campaign name');return;}
+  if(!_addCampBrandId) return;
+  const id='camp_'+Date.now();
+  if(!ST.campaigns) ST.campaigns={};
+  if(!ST.campaigns[_addCampBrandId]) ST.campaigns[_addCampBrandId]=[];
+  ST.campaigns[_addCampBrandId].push({id:id,name:name,brandId:_addCampBrandId});
+  apiPost('/api/campaigns',{id:id,brandId:_addCampBrandId,name:name});
+  renderAll();
+  closeOv('ov-add-campaign');
+}
+function deleteCampaign(campId,brandId){
+  if(!confirm('Delete this campaign?')) return;
+  if(ST.campaigns&&ST.campaigns[brandId]){
+    ST.campaigns[brandId]=ST.campaigns[brandId].filter(function(c){return c.id!==campId;});
+  }
+  apiDel('/api/campaigns/'+campId);
+  renderCampaigns();
 }
 
 /* ══════════════════════════════════════════════

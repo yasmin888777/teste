@@ -13,13 +13,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── GET full state ──────────────────────────────
 app.get('/api/state', async (req, res) => {
   try {
-    const [brands, members, memberBrands, logs, campLogs, settingsRows] = await Promise.all([
+    const [brands, members, memberBrands, logs, campLogs, settingsRows, campaigns] = await Promise.all([
       sql`SELECT * FROM brands ORDER BY name`,
       sql`SELECT * FROM members ORDER BY name`,
       sql`SELECT * FROM member_brands`,
       sql`SELECT * FROM logs ORDER BY date DESC`,
       sql`SELECT * FROM camp_logs ORDER BY date DESC`,
       sql`SELECT * FROM settings`,
+      sql`SELECT * FROM campaigns ORDER BY created_at ASC`,
     ]);
 
     const settings = {};
@@ -43,6 +44,7 @@ app.get('/api/state', async (req, res) => {
       logsGrouped[l.member_id].push({
         date: String(l.date).split('T')[0],
         brandId: l.brand_id,
+        campaignId: l.campaign_id || null,
         kols_sourced: l.kols_sourced, kols_contacted: l.kols_contacted,
         kols_replied: l.kols_replied, kols_followedup: l.kols_followedup,
         prelim_agree: l.prelim_agree, confirmed: l.confirmed,
@@ -59,7 +61,13 @@ app.get('/api/state', async (req, res) => {
       });
     });
 
-    res.json({ appName: settings.appName || 'Pulse', brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, customAvatars: {} });
+    const campaignsGrouped = {};
+    campaigns.forEach(c => {
+      if (!campaignsGrouped[c.brand_id]) campaignsGrouped[c.brand_id] = [];
+      campaignsGrouped[c.brand_id].push({ id: c.id, name: c.name, brandId: c.brand_id });
+    });
+
+    res.json({ appName: settings.appName || 'Pulse', brands: brandsFormatted, members: membersFormatted, logs: logsGrouped, campLogs: campLogsGrouped, campaigns: campaignsGrouped, customAvatars: {} });
   } catch (err) {
     console.error('State error:', err.message);
     res.status(500).json({ error: 'Database error: ' + err.message });
@@ -69,15 +77,16 @@ app.get('/api/state', async (req, res) => {
 // ── Logs ────────────────────────────────────────
 app.post('/api/logs', async (req, res) => {
   try {
-    const { memberId, brandId, date, kols_sourced, kols_contacted, kols_replied, kols_followedup, prelim_agree, confirmed, vids_published, note } = req.body;
+    const { memberId, brandId, date, kols_sourced, kols_contacted, kols_replied, kols_followedup, prelim_agree, confirmed, vids_published, note, campaignId } = req.body;
     await sql`
-      INSERT INTO logs (member_id, brand_id, date, kols_sourced, kols_contacted, kols_replied, kols_followedup, prelim_agree, confirmed, vids_published, note)
-      VALUES (${memberId}, ${brandId}, ${date}, ${kols_sourced||0}, ${kols_contacted||0}, ${kols_replied||0}, ${kols_followedup||0}, ${prelim_agree||0}, ${confirmed||0}, ${vids_published||0}, ${note||''})
+      INSERT INTO logs (member_id, brand_id, date, kols_sourced, kols_contacted, kols_replied, kols_followedup, prelim_agree, confirmed, vids_published, note, campaign_id)
+      VALUES (${memberId}, ${brandId}, ${date}, ${kols_sourced||0}, ${kols_contacted||0}, ${kols_replied||0}, ${kols_followedup||0}, ${prelim_agree||0}, ${confirmed||0}, ${vids_published||0}, ${note||''}, ${campaignId||null})
       ON CONFLICT (member_id, brand_id, date) DO UPDATE SET
         kols_sourced=EXCLUDED.kols_sourced, kols_contacted=EXCLUDED.kols_contacted,
         kols_replied=EXCLUDED.kols_replied, kols_followedup=EXCLUDED.kols_followedup,
         prelim_agree=EXCLUDED.prelim_agree, confirmed=EXCLUDED.confirmed,
-        vids_published=EXCLUDED.vids_published, note=EXCLUDED.note
+        vids_published=EXCLUDED.vids_published, note=EXCLUDED.note,
+        campaign_id=EXCLUDED.campaign_id
     `;
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -130,6 +139,29 @@ app.put('/api/members/:id', async (req, res) => {
         await sql`INSERT INTO member_brands (member_id, brand_id, role) VALUES (${req.params.id}, ${bid}, ${(roles&&roles[bid])||''}) ON CONFLICT DO NOTHING`;
       }
     }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/members/:id', async (req, res) => {
+  try {
+    await sql`DELETE FROM members WHERE id=${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Campaigns ───────────────────────────────────
+app.post('/api/campaigns', async (req, res) => {
+  try {
+    const { id, brandId, name } = req.body;
+    await sql`INSERT INTO campaigns (id, brand_id, name) VALUES (${id}, ${brandId}, ${name})`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/campaigns/:id', async (req, res) => {
+  try {
+    await sql`DELETE FROM campaigns WHERE id=${req.params.id}`;
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
