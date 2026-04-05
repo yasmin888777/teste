@@ -368,6 +368,30 @@ app.post('/api/camp-logs', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── Links (admin only) ──────────────────────────
+app.get('/api/admin/links', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const links = await sql`SELECT * FROM links ORDER BY category, title`;
+    res.json({ ok: true, links });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/admin/links', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { title, url, category, notes } = req.body;
+    if (!title || !url) return res.json({ ok: false, error: 'Title and URL required' });
+    const rows = await sql`INSERT INTO links (title, url, category, notes) VALUES (${title}, ${url}, ${category||'General'}, ${notes||''}) RETURNING id`;
+    res.json({ ok: true, id: rows[0].id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/admin/links/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await sql`DELETE FROM links WHERE id=${req.params.id}`;
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Serve app ────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

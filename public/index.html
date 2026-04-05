@@ -594,6 +594,33 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 }
 .login-btn:hover{opacity:.85}
 .login-err{color:#f87171;font-size:11px;margin-top:8px;min-height:16px}
+
+/* ══════════ ADMIN HOME ══════════ */
+.admin-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:980px){.admin-kpi-row{grid-template-columns:repeat(2,1fr)}}
+.team-status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.team-status-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);transition:box-shadow .15s;cursor:pointer}
+.team-status-card:hover{box-shadow:var(--shadow-lg)}
+.team-status-card.ts-active{border-left:3px solid var(--green)}
+.team-status-card.ts-idle{border-left:3px solid #e5e7eb;opacity:.8}
+.ts-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ts-dot.active{background:var(--green)}
+.ts-dot.idle{background:#d1d5db}
+
+/* ══════════ PRIVATE LINKS ══════════ */
+.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:16px}
+.link-card{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;transition:box-shadow .2s,transform .15s}
+.link-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.link-card-top{display:flex;align-items:flex-start;gap:10px}
+.link-card-ico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.link-card-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+.link-card-url{font-size:10px;color:var(--text-s);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.link-card-notes{font-size:11px;color:var(--text-m);line-height:1.4}
+.link-card-actions{display:flex;gap:6px;margin-top:4px}
+.link-btn-open{flex:1;padding:7px;border-radius:7px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;transition:opacity .2s;text-align:center;text-decoration:none;display:block}
+.link-btn-open:hover{opacity:.85}
+.link-btn-del{padding:7px 11px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);transition:background .2s;cursor:pointer}
+.link-btn-del:hover{background:rgba(248,113,113,.2)}
 </style>
 </head>
 <body>
@@ -611,9 +638,21 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
   </div>
 
+  <div id="sb-admin-nav" style="display:none">
+    <div class="sb-sep">Admin</div>
+    <nav class="sb-nav">
+      <div class="sb-item" id="sbi-admin-home" onclick="navTo('admin-home',this)">
+        <div class="sb-dot" style="background:var(--green)"></div> Home
+      </div>
+      <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
+        <div class="sb-dot" style="background:var(--purple)"></div> Private Links
+      </div>
+    </nav>
+  </div>
+
   <div class="sb-sep">Navigation</div>
   <nav class="sb-nav">
-    <div class="sb-item active" onclick="navTo('overview',this)">
+    <div class="sb-item active" id="sbi-overview" onclick="navTo('overview',this)">
       <div class="sb-dot" style="background:var(--primary)"></div> Overview
     </div>
     <div class="sb-item" onclick="navTo('members',this)">
@@ -707,6 +746,20 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <button class="sec-btn" id="btn-add-brand" onclick="openAddBrand()">+ Add Brand</button>
       </div>
       <div class="g2" id="campaign-cards"></div>
+    </div>
+
+    <!-- ── ADMIN HOME ── -->
+    <div class="page" id="page-admin-home">
+      <div id="admin-home-content"></div>
+    </div>
+
+    <!-- ── PRIVATE LINKS ── -->
+    <div class="page" id="page-links">
+      <div class="sec">
+        <div><span class="sec-t">Private Links</span><span class="sec-s">admin-only bookmarks</span></div>
+        <button class="sec-btn" onclick="openAddLink()">+ Add Link</button>
+      </div>
+      <div id="links-content"></div>
     </div>
 
     <!-- ── WEEKLY DIGEST ── -->
@@ -880,6 +933,43 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: ADD LINK ══════════════════ -->
+<div class="overlay" id="ov-add-link" onclick="ovBg('ov-add-link',event)">
+  <div class="modal goals-modal">
+    <div class="modal-hd">
+      <div style="font-size:22px">&#128279;</div>
+      <div><div class="modal-title">Add Link</div><div class="modal-sub">Save a private bookmark</div></div>
+      <button class="modal-x" onclick="closeOv('ov-add-link')">&#10005;</button>
+    </div>
+    <div class="ff" style="margin-bottom:8px">
+      <label class="ff-lbl">Title</label>
+      <input class="ff-inp" id="nl-title" placeholder="e.g. Brand Portal"/>
+    </div>
+    <div class="ff" style="margin-bottom:8px">
+      <label class="ff-lbl">URL</label>
+      <input class="ff-inp" id="nl-url" placeholder="https://" type="url"/>
+    </div>
+    <div class="ff" style="margin-bottom:8px">
+      <label class="ff-lbl">Category</label>
+      <input class="ff-inp" id="nl-cat" placeholder="e.g. Brand, Tool, Contract" list="nl-cat-list"/>
+      <datalist id="nl-cat-list">
+        <option value="Brand Portal"/>
+        <option value="Tool"/>
+        <option value="Contract"/>
+        <option value="Internal Doc"/>
+        <option value="Analytics"/>
+        <option value="Finance"/>
+      </datalist>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Notes (optional)</label>
+      <input class="ff-inp" id="nl-notes" placeholder="Brief description..."/>
+    </div>
+    <div id="nl-err" style="font-size:11px;color:#f87171;margin-bottom:8px;min-height:14px"></div>
+    <button class="save-btn" onclick="saveLink()">Save Link</button>
+  </div>
+</div>
+
 <!-- ══════════════════ MODAL: ADD CAMPAIGN ══════════════════ -->
 <div class="overlay" id="ov-add-campaign" onclick="ovBg('ov-add-campaign',event)">
   <div class="modal goals-modal">
@@ -1045,6 +1135,7 @@ async function loadState(){
     updateSiteLogo();
     document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
     renderAll();
+    if(isAdmin()) navTo('admin-home', document.getElementById('sbi-admin-home'));
   }catch(err){
     console.error('Failed to load state:', err);
     document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:Inter,sans-serif;flex-direction:column;gap:16px;color:#5a6072;text-align:center;padding:20px"><div style="font-size:48px">⚠️</div><div style="font-size:18px;font-weight:700;color:#1a1f2e">Servidor não está rodando</div><div style="font-size:13px;line-height:1.7">Dê duplo clique no arquivo<br/><strong style="color:#3b7ef8">INICIAR.bat</strong><br/>que está na pasta do app<br/>e depois recarregue esta página.</div><button onclick="location.reload()" style="margin-top:4px;padding:10px 24px;background:#3b7ef8;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">↻ Tentar de novo</button></div>';
@@ -1153,12 +1244,14 @@ function navTo(page,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest'};
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','links':'Private Links'};
   document.getElementById('tb-title').textContent=T[page]||page;
   if(page==='overview') drawTrend();
   if(page==='digest') renderDigest();
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
+  if(page==='admin-home') renderAdminHome();
+  if(page==='links') renderLinks();
 }
 function setTimeView(v,el){
   timeView=v;
@@ -1187,9 +1280,11 @@ function renderAll(){
   document.getElementById('tb-time').textContent=
     'Updated '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('app-name-label').textContent=ST.appName||'DigitUly';
-  // Show/hide admin-only buttons
+  // Show/hide admin-only elements
   var adminOnly=['btn-add-member-ta','btn-add-brand'];
   adminOnly.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isAdmin()?'':'none';});
+  var adminNav=document.getElementById('sb-admin-nav');
+  if(adminNav) adminNav.style.display=isAdmin()?'':'none';
   updateAccountUI();
 }
 
@@ -2479,6 +2574,210 @@ function deleteCampaign(campId,brandId){
   }
   apiDel('/api/campaigns/'+campId);
   renderCampaigns();
+}
+
+/* ══════════════════════════════════════════════
+   ADMIN HOME
+══════════════════════════════════════════════ */
+function renderAdminHome(){
+  var el=document.getElementById('admin-home-content');
+  if(!el) return;
+  var today=todayStr();
+  var h=new Date().getHours();
+  var greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  var uname=userM?userM.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'Admin');
+
+  var membersStatus=ST.members.map(function(m){
+    var hasLogged=m.brands.some(function(bid){
+      return getLogs(m.id).some(function(l){return l.brandId===bid&&l.date===today;});
+    });
+    var tots=m.brands.reduce(function(acc,bid){
+      var log=getLogs(m.id).find(function(l){return l.brandId===bid&&l.date===today;});
+      if(log){acc.sourced+=+log.kols_sourced||0;acc.contacted+=+log.kols_contacted||0;acc.confirmed+=+log.confirmed||0;acc.vids+=+log.vids_published||0;}
+      return acc;
+    },{sourced:0,contacted:0,confirmed:0,vids:0});
+    return {m:m,hasLogged:hasLogged,tots:tots};
+  });
+
+  var activeCount=membersStatus.filter(function(s){return s.hasLogged;}).length;
+  var totSourced=membersStatus.reduce(function(s,x){return s+x.tots.sourced;},0);
+  var totContacted=membersStatus.reduce(function(s,x){return s+x.tots.contacted;},0);
+  var totConfirmed=membersStatus.reduce(function(s,x){return s+x.tots.confirmed;},0);
+  var totVids=membersStatus.reduce(function(s,x){return s+x.tots.vids;},0);
+
+  var html='<div style="margin-bottom:20px">'+
+    '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
+    '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
+  '</div>';
+
+  html+='<div class="admin-kpi-row">'+
+    adminKpiCard('Active Today',activeCount+' / '+ST.members.length,activeCount===ST.members.length?'var(--green)':'var(--amber)','&#128101;')+
+    adminKpiCard('KOLs Sourced',totSourced,'var(--primary)','&#128269;')+
+    adminKpiCard('Confirmed',totConfirmed,'var(--green)','&#129309;')+
+    adminKpiCard('Videos Published',totVids,'var(--purple)','&#127916;')+
+  '</div>';
+
+  html+='<div class="card mb16">'+
+    '<div class="sec"><div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
+    (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
+     activeCount===ST.members.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
+     '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+ST.members.length+' active</span>')+
+    '</div>'+
+    '<div class="team-status-grid">'+
+    membersStatus.map(function(s){
+      var m=s.m;
+      var avUrl=avatarUrl(m);
+      var avHtml='<div class="mem-av-img av-sm" style="flex-shrink:0">'+
+        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
+      '</div>';
+      var streak=calcStreak(m.id);
+      return '<div class="team-status-card '+(s.hasLogged?'ts-active':'ts-idle')+'" onclick="openMemberDetail(\''+m.id+'\')" title="View '+m.name+'\'s page">'+
+        avHtml+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:600;color:var(--text)">'+m.name+'</div>'+
+          (s.hasLogged?
+            '<div style="font-size:10px;color:var(--green);font-weight:500">&#10003; Logged today</div>'+
+            '<div style="font-size:10px;color:var(--text-s)">'+s.tots.sourced+' sourced &middot; '+s.tots.confirmed+' conf</div>':
+            '<div style="font-size:10px;color:var(--text-s)">No activity yet</div>'+
+            (streak?'<div style="font-size:10px;color:var(--amber)">&#128293; '+streak+'d streak</div>':''))+
+        '</div>'+
+        '<div class="ts-dot '+(s.hasLogged?'active':'idle')+'"></div>'+
+      '</div>';
+    }).join('')+
+    '</div></div>';
+
+  // Brand mini-progress
+  html+='<div class="card">'+
+    '<div class="sec"><div class="sec-t">Campaign Progress</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">'+
+    ST.brands.map(function(b){
+      var totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+      var gCo=b.goals&&b.goals.confirmed?+b.goals.confirmed:0;
+      var pCo=gCo>0?Math.min((totCo/gCo)*100,100):0;
+      var todayCo=ST.members.reduce(function(s,m){return s+todayM(m.id,b.id,'confirmed');},0);
+      return '<div style="padding:12px;background:#f8f9fb;border-radius:10px;border:1px solid var(--border)">'+
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
+          '<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+'"></div>'+
+          '<span style="font-size:12px;font-weight:700">'+b.name+'</span>'+
+          '<span style="margin-left:auto;font-size:10px;color:var(--text-s)">+'+todayCo+' today</span>'+
+        '</div>'+
+        '<div style="height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden">'+
+          '<div style="height:100%;background:'+b.color+';border-radius:3px;width:'+pCo+'%;transition:width 1s ease"></div>'+
+        '</div>'+
+        '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+totCo+' / '+(gCo||'—')+' confirmed</div>'+
+      '</div>';
+    }).join('')+
+    '</div></div>';
+
+  el.innerHTML=html;
+}
+
+function adminKpiCard(label,val,color,ico){
+  return '<div class="kpi">'+
+    '<div><div class="kpi-lbl">'+label+'</div><div class="kpi-val" style="color:'+color+'">'+val+'</div></div>'+
+    '<div style="width:38px;height:38px;border-radius:10px;background:'+color+'22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+ico+'</div>'+
+  '</div>';
+}
+
+/* ══════════════════════════════════════════════
+   PRIVATE LINKS
+══════════════════════════════════════════════ */
+var _adminLinks=[];
+
+function catColor(cat){
+  var map={'Brand Portal':'var(--primary)','Tool':'var(--green)','Contract':'var(--amber)','Internal Doc':'var(--purple)','Analytics':'var(--pink)','Finance':'var(--amber)'};
+  return map[cat]||'var(--primary)';
+}
+function catIcon(cat){
+  var map={'Brand Portal':'&#127970;','Tool':'&#128295;','Contract':'&#128196;','Internal Doc':'&#128203;','Analytics':'&#128202;','Finance':'&#128176;','General':'&#128279;'};
+  return map[cat]||'&#128279;';
+}
+function escHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderLinks(){
+  var el=document.getElementById('links-content');
+  if(!el) return;
+  el.innerHTML='<div style="color:var(--text-s);font-size:12px;padding:20px">Loading...</div>';
+  fetch('/api/admin/links',{headers:authHeaders()})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading links</div>';return;}
+      _adminLinks=d.links||[];
+      if(!_adminLinks.length){
+        el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">No links yet. Click "+ Add Link" to save your first bookmark!</div>';
+        return;
+      }
+      var cats={};
+      _adminLinks.forEach(function(l){var c=l.category||'General';if(!cats[c])cats[c]=[];cats[c].push(l);});
+      var html='';
+      Object.keys(cats).sort().forEach(function(cat){
+        html+='<div style="margin-bottom:24px">'+
+          '<div style="font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px">'+escHtml(cat)+'</div>'+
+          '<div class="links-grid">'+cats[cat].map(function(l){return linkCardHTML(l);}).join('')+'</div>'+
+        '</div>';
+      });
+      el.innerHTML=html;
+    })
+    .catch(function(){el.innerHTML='<div style="color:#f87171;font-size:12px">Connection error</div>';});
+}
+
+function linkCardHTML(l){
+  var color=catColor(l.category);
+  var icon=catIcon(l.category);
+  var shortUrl=(l.url||'').replace(/^https?:\/\/(www\.)?/,'');
+  if(shortUrl.length>45) shortUrl=shortUrl.slice(0,45)+'...';
+  return '<div class="link-card">'+
+    '<div class="link-card-top">'+
+      '<div class="link-card-ico" style="background:'+color+'22;color:'+color+'">'+icon+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div class="link-card-title">'+escHtml(l.title)+'</div>'+
+        '<div class="link-card-url" title="'+escHtml(l.url)+'">'+escHtml(shortUrl)+'</div>'+
+      '</div>'+
+    '</div>'+
+    (l.notes?'<div class="link-card-notes">'+escHtml(l.notes)+'</div>':'')+
+    '<div class="link-card-actions">'+
+      '<a href="'+escHtml(l.url)+'" target="_blank" rel="noopener noreferrer" class="link-btn-open">Open &#8599;</a>'+
+      '<button class="link-btn-del" onclick="deleteLink('+l.id+')" title="Remove">&#128465;</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function openAddLink(){
+  document.getElementById('nl-title').value='';
+  document.getElementById('nl-url').value='';
+  document.getElementById('nl-cat').value='';
+  document.getElementById('nl-notes').value='';
+  document.getElementById('nl-err').textContent='';
+  openOv('ov-add-link');
+  setTimeout(function(){document.getElementById('nl-title').focus();},100);
+}
+
+function saveLink(){
+  var title=document.getElementById('nl-title').value.trim();
+  var url=document.getElementById('nl-url').value.trim();
+  var cat=document.getElementById('nl-cat').value.trim()||'General';
+  var notes=document.getElementById('nl-notes').value.trim();
+  var errEl=document.getElementById('nl-err');
+  if(!title){errEl.textContent='Title is required';return;}
+  if(!url){errEl.textContent='URL is required';return;}
+  if(!/^https?:\/\//.test(url)) url='https://'+url;
+  fetch('/api/admin/links',{method:'POST',headers:authHeaders(),body:JSON.stringify({title:title,url:url,category:cat,notes:notes})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){closeOv('ov-add-link');renderLinks();}
+      else{errEl.textContent=d.error||'Error saving link';}
+    })
+    .catch(function(){errEl.textContent='Connection error';});
+}
+
+function deleteLink(id){
+  if(!confirm('Remove this link?')) return;
+  fetch('/api/admin/links/'+id,{method:'DELETE',headers:authHeaders()})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d.ok) renderLinks();});
 }
 
 /* ══════════════════════════════════════════════
