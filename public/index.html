@@ -1540,7 +1540,12 @@ function drawTrend(){
 ══════════════════════════════════════════════ */
 function renderMembers(){
   const el=document.getElementById('member-cards');if(!el)return;
-  el.innerHTML=ST.members.map(function(m,i){return memberCardHTML(m,i);}).join('');
+  // Only show members with role 'member' or 'member+admin' — pure admins don't log daily activity
+  const teamMembers=ST.members.filter(function(m){
+    var u=_allUsers.find(function(u){return u.member_id===m.id;});
+    return !u||(u.role!=='admin');
+  });
+  el.innerHTML=teamMembers.map(function(m,i){return memberCardHTML(m,i);}).join('');
 }
 
 function memberCardHTML(m,i){
