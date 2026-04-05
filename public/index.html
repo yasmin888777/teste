@@ -108,6 +108,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   font-size:11px;color:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;margin-bottom:2px;
 }
 .sb-member-pill:hover{background:rgba(255,255,255,.07);color:#fff}
+.sb-member-pill-active{background:rgba(59,126,248,.25)!important;color:#fff!important}
 .sb-mem-av{
   width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;
   border:1.5px solid rgba(255,255,255,.2);
@@ -488,6 +489,27 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
 
+/* ══════════ MEMBER PAGE ══════════ */
+.mp-hero{display:flex;align-items:center;gap:20px;padding:20px;background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);margin-bottom:16px;box-shadow:var(--shadow)}
+.mp-av{width:72px;height:72px;border-radius:50%;flex-shrink:0;overflow:hidden;border:3px solid var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--primary-d);position:relative}
+.mp-av img{width:100%;height:100%;object-fit:cover}
+.mp-av-icon{position:absolute;bottom:0;right:0;width:20px;height:20px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;border:2px solid #fff}
+.mp-info{flex:1}
+.mp-name{font-size:20px;font-weight:700;color:var(--text)}
+.mp-streak{font-size:11px;color:#b45309;margin-top:4px}
+.mp-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mp-brand-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.mp-brand-chip{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;border:1.5px solid;cursor:pointer;transition:all .15s;user-select:none}
+.mp-section{margin-bottom:20px}
+.mp-table-wrap{overflow-x:auto}
+.mp-table{width:100%;border-collapse:collapse;font-size:11px}
+.mp-table th{background:var(--bg);padding:7px 10px;text-align:left;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border);white-space:nowrap}
+.mp-table td{padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.mp-table tr:hover td{background:var(--bg)}
+.mp-table .total{font-weight:700;color:var(--primary)}
+.mp-chart-wrap{position:relative;height:220px}
+@media(max-width:600px){.mp-hero{flex-direction:column;text-align:center}.mp-av{width:60px;height:60px}}
+
 /* ══════════ MOBILE ══════════ */
 .hamburger{
   display:none;flex-direction:column;gap:5px;
@@ -578,9 +600,6 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="sb-item" onclick="navTo('members',this)">
       <div class="sb-dot" style="background:var(--pink)"></div> Team Activity
     </div>
-    <div class="sb-item" onclick="navTo('team',this)">
-      <div class="sb-dot" style="background:var(--purple)"></div> Team
-    </div>
     <div class="sb-item" onclick="navTo('campaigns',this)">
       <div class="sb-dot" style="background:var(--green)"></div> Campaigns
     </div>
@@ -652,13 +671,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div class="mem-cards-grid" id="member-cards"></div>
     </div>
 
-    <!-- ── TEAM MANAGEMENT ── -->
-    <div class="page" id="page-team">
-      <div class="sec">
-        <div><span class="sec-t">Team</span><span class="sec-s">members &amp; roles</span></div>
-        <button class="sec-btn" onclick="openAddMember()">+ Add Member</button>
-      </div>
-      <div class="mem-cards-grid" id="team-cards"></div>
+    <!-- ── MEMBER DETAIL PAGE ── -->
+    <div class="page" id="page-member">
+      <div id="mp-content"></div>
     </div>
 
     <!-- ── CAMPAIGNS ── -->
@@ -1019,6 +1034,7 @@ let currentPage='overview', timeView='daily';
 let logMember=null, logBrand=null, trendChart=null;
 let newBrandColor='#3b7ef8';
 let profileMember=null;
+let currentMemberId=null, memberChart=null;
 
 /* ══════════════════════════════════════════════
    NAVIGATION
@@ -1028,14 +1044,14 @@ function navTo(page,el){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   if(el) el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',team:'Team',campaigns:'Campaign Progress',digest:'Weekly Digest'};
+  const pageEl=document.getElementById('page-'+page);
+  if(pageEl) pageEl.classList.add('active');
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest'};
   document.getElementById('tb-title').textContent=T[page]||page;
   if(page==='overview') drawTrend();
   if(page==='digest') renderDigest();
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
-  if(page==='team') renderTeam();
 }
 function setTimeView(v,el){
   timeView=v;
@@ -1049,7 +1065,6 @@ function setTimeView(v,el){
 ══════════════════════════════════════════════ */
 function renderAll(){
   renderSidebar();
-  renderTeam();
   renderKPIs();
   renderConvTable();
   renderBrandProgress();
@@ -1057,6 +1072,7 @@ function renderAll(){
   renderCampaigns();
   if(currentPage==='overview') drawTrend();
   if(currentPage==='digest') renderDigest();
+  if(currentMemberId && document.getElementById('page-member').classList.contains('active')) renderMemberPage(currentMemberId);
   document.getElementById('tb-time').textContent=
     'Updated '+new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   document.getElementById('app-name-label').textContent=ST.appName||'DigitUly';
@@ -1071,7 +1087,7 @@ function renderSidebar(){
     '</div>').join('');
 
   document.getElementById('sb-team-list').innerHTML=ST.members.map(m=>
-    '<div class="sb-member-pill" onclick="openMemberDetail(\''+m.id+'\')">'+
+    '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')">'+
       '<div class="sb-mem-av">'+
         (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.style.display=\'none\'"/>':'')+
       '</div>'+
@@ -1309,39 +1325,155 @@ function toggleBrand(mid,bid){
 }
 
 /* ══════════════════════════════════════════════
-   TEAM MANAGEMENT PAGE
+   MEMBER DETAIL PAGE
 ══════════════════════════════════════════════ */
-function renderTeam(){
-  var el=document.getElementById('team-cards');if(!el)return;
-  el.innerHTML=ST.members.map(function(m,i){return teamMemberCardHTML(m,i);}).join('');
-}
-
-function teamMemberCardHTML(m,i){
+function renderMemberPage(mid){
+  var m=getMember(mid);if(!m)return;
   var avUrl=avatarUrl(m);
-  var streak=calcStreak(m.id);
-  var tagsHTML=ST.brands.map(function(b){
-    return '<div class="mc-brand-tag '+(m.brands.includes(b.id)?'on':'off')+'"'+
-      ' style="border-color:'+b.color+';color:'+b.color+';background:'+(m.brands.includes(b.id)?b.color+'18':'transparent')+'"'+
-      ' onclick="toggleBrand(\''+m.id+'\',\''+b.id+'\')"'+
-      ' title="'+(m.brands.includes(b.id)?'Remove':'Add')+' '+b.name+'">'+b.name+'</div>';
+  var streak=calcStreak(mid);
+  var chipsHTML=ST.brands.map(function(b){
+    var on=m.brands.includes(b.id);
+    var role=(m.roles&&m.roles[b.id])||'';
+    return '<div class="mp-brand-chip" style="border-color:'+b.color+';color:'+(on?'#fff':b.color)+';background:'+(on?b.color:'transparent')+'"'+
+      ' onclick="mpToggleBrand(\''+mid+'\',\''+b.id+'\')" title="Click to toggle">'+
+      b.name+(role?' <span style="opacity:.7;font-size:9px">('+role+')</span>':'')+
+    '</div>';
   }).join('');
 
-  return '<div class="mc" style="animation-delay:'+i*70+'ms">'+
-    '<div class="mc-head">'+
-      '<div class="mem-av-img av-md" onclick="triggerAvatarUpload(\'member\',\''+m.id+'\')" title="Trocar foto"'+
-           ' style="border-color:rgba(255,255,255,.3);flex-shrink:0;cursor:pointer;position:relative">'+
-        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:14px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'">':'<span style="font-size:14px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
-        '<div style="position:absolute;bottom:0;right:-2px;width:16px;height:16px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:8px;border:2px solid rgba(21,30,53,1)">&#128247;</div>'+
+  var weekHTML=renderMemberWeekly(mid);
+
+  var html=
+    '<div class="mp-hero">'+
+      '<div class="mp-av" onclick="triggerAvatarUpload(\'member\',\''+mid+'\')" title="Trocar foto">'+
+        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:22px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:22px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
+        '<div class="mp-av-icon">&#128247;</div>'+
       '</div>'+
-      '<div class="mc-head-info">'+
-        '<div class="mc-head-name" onclick="startEditName(\''+m.id+'\',this)" title="Click to rename">'+m.name+'</div>'+
-        (streak>0?'<div class="mc-streak">&#128293; '+streak+' day streak</div>':'')+
+      '<div class="mp-info">'+
+        '<div class="mp-name">'+m.name+'</div>'+
+        (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
+        '<div class="mp-brand-chips">'+chipsHTML+'</div>'+
       '</div>'+
-      '<button style="padding:5px 8px;border-radius:6px;font-size:10px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.1);margin-right:5px" onclick="openProfile(\''+m.id+'\')" title="Edit Roles">&#9881;</button>'+
-      '<button style="padding:5px 8px;border-radius:6px;font-size:10px;color:#f87171;background:rgba(248,113,113,.15);border:none;cursor:pointer" onclick="deleteMember(\''+m.id+'\')" title="Delete">&#128465;</button>'+
+      '<div class="mp-actions">'+
+        '<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>'+
+        '<button class="sec-btn" onclick="openAddMember()" style="background:var(--green-d);color:var(--green);border-color:rgba(16,185,129,.15)">+ Add Member</button>'+
+        '<button style="padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" onclick="deleteMember(\''+mid+'\')">&#128465; Remove</button>'+
+      '</div>'+
     '</div>'+
-    '<div class="mc-brands-bar">'+tagsHTML+'</div>'+
-  '</div>';
+
+    '<div class="mp-section card mb16">'+
+      '<div class="sec" style="margin-bottom:14px"><div class="sec-t">Monthly Activity <span class="sec-s">last 30 days</span></div></div>'+
+      '<div class="mp-chart-wrap"><canvas id="mp-chart"></canvas></div>'+
+    '</div>'+
+
+    weekHTML;
+
+  document.getElementById('mp-content').innerHTML=html;
+
+  // draw chart after DOM is updated
+  setTimeout(function(){drawMemberChart(mid);},50);
+}
+
+function mpToggleBrand(mid,bid){
+  var m=getMember(mid);if(!m)return;
+  if(m.brands.includes(bid)){m.brands=m.brands.filter(function(x){return x!==bid;});}
+  else{m.brands.push(bid);}
+  apiPut('/api/members/'+mid,{brands:m.brands,roles:m.roles||{}});
+  renderSidebar();
+  renderMemberPage(mid);
+}
+
+function renderMemberWeekly(mid){
+  var m=getMember(mid);if(!m)return'';
+  var today=new Date();
+  // Week: Mon to Sun of current week
+  var day=today.getDay(); // 0=Sun
+  var mondayOffset=day===0?-6:1-day;
+  var weekDates=[];
+  for(var i=0;i<7;i++){
+    var d=new Date(today);d.setDate(today.getDate()+mondayOffset+i);
+    weekDates.push(d.toISOString().split('T')[0]);
+  }
+  var dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  var memberBrands=m.brands.map(function(bid){return getBrand(bid);}).filter(Boolean);
+  if(!memberBrands.length) return '<div class="card mb16" style="font-size:11px;color:var(--text-s);padding:16px">No brands assigned.</div>';
+
+  var tables=memberBrands.map(function(b){
+    var rows=METRICS.map(function(mt){
+      var cells=weekDates.map(function(date){
+        var logs=getLogs(mid).filter(function(l){return l.brandId===b.id&&l.date===date;});
+        var val=logs.reduce(function(s,l){return s+(+l[mt.key]||0);},0);
+        return '<td style="text-align:center'+(val>0?';font-weight:600;color:var(--primary)':'')+'">'+(val||'—')+'</td>';
+      }).join('');
+      var total=weekDates.reduce(function(s,date){
+        var logs=getLogs(mid).filter(function(l){return l.brandId===b.id&&l.date===date;});
+        return s+logs.reduce(function(ss,l){return ss+(+l[mt.key]||0);},0);
+      },0);
+      return '<tr>'+
+        '<td style="font-size:10px;color:var(--text-m);white-space:nowrap">'+mt.icon+' '+mt.label+'</td>'+
+        cells+
+        '<td style="text-align:center;font-weight:700;color:var(--primary)">'+(total||'—')+'</td>'+
+      '</tr>';
+    }).join('');
+
+    var headerCells=dayLabels.map(function(d,i){
+      var isToday=weekDates[i]===todayStr();
+      return '<th style="text-align:center'+(isToday?';color:var(--primary)':'')+'">'+(isToday?'<u>'+d+'</u>':d)+'</th>';
+    }).join('');
+
+    return '<div class="mp-section card mb16">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+        '<div style="width:10px;height:10px;border-radius:50%;background:'+b.color+'"></div>'+
+        '<span style="font-size:13px;font-weight:700;color:var(--text)">'+b.name+'</span>'+
+        '<span class="sec-s">weekly overview</span>'+
+      '</div>'+
+      '<div class="mp-table-wrap">'+
+        '<table class="mp-table">'+
+          '<thead><tr><th>Metric</th>'+headerCells+'<th style="text-align:center">Total</th></tr></thead>'+
+          '<tbody>'+rows+'</tbody>'+
+        '</table>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  return tables;
+}
+
+function drawMemberChart(mid){
+  var m=getMember(mid);if(!m)return;
+  var canvas=document.getElementById('mp-chart');if(!canvas)return;
+  if(memberChart){memberChart.destroy();memberChart=null;}
+
+  var days=[];
+  var labels=[];
+  for(var i=29;i>=0;i--){
+    var d=new Date();d.setDate(d.getDate()-i);
+    days.push(d.toISOString().split('T')[0]);
+    labels.push(i===0?'Today':d.toLocaleDateString('en',{month:'short',day:'numeric'}));
+  }
+
+  var memberBrands=m.brands.map(function(bid){return getBrand(bid);}).filter(Boolean);
+  var datasets=memberBrands.map(function(b){
+    var data=days.map(function(date){
+      var logs=getLogs(mid).filter(function(l){return l.brandId===b.id&&l.date===date;});
+      return logs.reduce(function(s,l){return s+(+l.kols_contacted||0)+(+l.confirmed||0)+(+l.vids_published||0);},0);
+    });
+    return {label:b.name,data:data,borderColor:b.color,backgroundColor:b.color+'22',tension:.35,fill:true,pointRadius:2,pointHoverRadius:5};
+  });
+
+  memberChart=new Chart(canvas,{
+    type:'line',
+    data:{labels:labels,datasets:datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10,padding:12}}},
+      scales:{
+        x:{ticks:{font:{size:9},maxRotation:45,color:'#9aa0b0'},grid:{display:false}},
+        y:{beginAtZero:true,ticks:{font:{size:9},color:'#9aa0b0'},grid:{color:'rgba(0,0,0,.04)'}},
+      }
+    }
+  });
 }
 
 /* ADD MEMBER */
@@ -1607,33 +1739,17 @@ function doDelLog(date,bid){
 ══════════════════════════════════════════════ */
 function openMemberDetail(mid){
   const m=getMember(mid);if(!m)return;
-  document.getElementById('sb-mem-detail-img').src=avatarUrl(m);
-  document.getElementById('sb-mem-detail-img').alt=m.name;
-  document.getElementById('sb-mem-detail-name').textContent=m.name;
-
-  const memberBrands=m.brands.map(function(id){return getBrand(id);}).filter(Boolean);
-  let html='';
-  const streak=calcStreak(m.id);
-  if(streak>0) html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:8px 12px;background:#fef3c7;border-radius:8px;font-size:12px;font-weight:600;color:#b45309">&#128293; '+streak+' day streak</div>';
-
-  memberBrands.forEach(function(b){
-    const role=(m.roles&&m.roles[b.id])||'';
-    html+='<div style="margin-bottom:16px">'+
-      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;padding:6px 10px;background:'+b.color+'12;border-radius:8px;border-left:4px solid '+b.color+'">'+
-        '<span style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:'+b.color+'">'+b.name+'</span>'+
-        (role?'<span class="pill pill-'+role+'" style="margin-left:auto">'+role+'</span>':'')+
-      '</div>'+
-      METRICS.map(function(mt){
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">'+
-          '<span style="font-size:11px;color:var(--text-m)">'+mt.icon+' '+mt.label+'</span>'+
-          '<span style="font-size:14px;font-weight:700">'+sumM(m.id,b.id,mt.key)+'</span>'+
-        '</div>';
-      }).join('')+
-    '</div>';
+  currentMemberId=mid;
+  // deactivate nav items
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  // highlight selected member pill
+  document.querySelectorAll('.sb-member-pill').forEach(function(pill){
+    pill.classList.toggle('sb-member-pill-active', pill.getAttribute('data-mid')===mid);
   });
-  if(!html) html='<div style="font-size:11px;color:var(--text-s);padding:8px 0">No brands assigned.</div>';
-  document.getElementById('sb-mem-detail-body').innerHTML=html;
-  openOv('ov-member');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-member').classList.add('active');
+  document.getElementById('tb-title').textContent=m.name;
+  renderMemberPage(mid);
 }
 
 /* ══════════════════════════════════════════════
@@ -1924,8 +2040,10 @@ function deleteMember(mid){
   ST.members=ST.members.filter(function(m){return m.id!==target.id;});
   delete ST.logs[target.id];
   apiDel('/api/members/'+target.id);
-  if(!mid)closeOv('ov-profile');
+  if(!mid){closeOv('ov-profile');}
+  if(currentMemberId===target.id){currentMemberId=null;}
   renderAll();
+  if(!currentMemberId) navTo('overview',document.querySelector('.sb-item'));
 }
 
 /* ══════════════════════════════════════════════
