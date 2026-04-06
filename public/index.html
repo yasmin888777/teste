@@ -2657,6 +2657,7 @@ function doDelLog(date,bid){
 function openMemberDetail(mid){
   const m=getMember(mid);if(!m)return;
   currentMemberId=mid;
+  currentPage='member';
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   document.querySelectorAll('.sb-member-pill').forEach(function(pill){
     pill.classList.toggle('sb-member-pill-active', pill.getAttribute('data-mid')===mid);
@@ -4190,9 +4191,11 @@ function exportDashboard(){
     if(m){
       var mDays=getDateRange();
       var avUrl=avatarUrl(m);
+      // Make relative URLs absolute for the new export window
+      if(avUrl&&avUrl.startsWith('/')){avUrl=window.location.origin+avUrl;}
       // Member header with avatar
       bodyHTML+='<div class="mem-header">'+
-        (avUrl?'<img src="'+avUrl+'" class="mem-av-exp" alt="'+m.name+'"/>':'<div class="mem-av-exp mem-av-ini">'+ini(m.name)+'</div>')+
+        (avUrl?'<img src="'+avUrl+'" class="mem-av-exp" alt="'+m.name+'" crossorigin="anonymous"/>':'<div class="mem-av-exp mem-av-ini">'+ini(m.name)+'</div>')+
         '<div>'+
           '<div class="mem-name-exp">'+m.name+'</div>'+
           '<div class="mem-period-exp">'+periodName+' Report &nbsp;·&nbsp; '+periodRange+'</div>'+
