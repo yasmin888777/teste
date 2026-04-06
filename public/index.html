@@ -671,9 +671,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 /* ══════════ ATTENDANCE WIDGET ══════════ */
 .attend-grid{display:flex;flex-wrap:wrap;gap:4px}
-.attend-dot{width:13px;height:13px;border-radius:50%;cursor:default;transition:transform .1s;flex-shrink:0}
-.attend-dot:hover{transform:scale(1.3)}
-.attend-dot[title]:hover::after{content:attr(title);position:absolute;background:#1a1f2e;color:#fff;font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:100;margin-top:18px;margin-left:-20px}
+.attend-dot{width:13px;height:13px;border-radius:50%;cursor:pointer;transition:transform .1s;flex-shrink:0;position:relative}
+.attend-dot:hover{transform:scale(1.25)}
+.attend-dot.no-click{cursor:default}
+.attend-dot[title]:hover::after{content:attr(title);position:absolute;background:#1a1f2e;color:#fff;font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:100;top:18px;left:-20px}
 </style>
 </head>
 <body>
@@ -978,6 +979,13 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
     <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Confirmed Partnerships Goal</label><input class="ff-inp goal-inp" id="nb-goal-conf" type="number" placeholder="e.g. 20"/></div>
     <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Published Videos Goal</label><input class="ff-inp goal-inp" id="nb-goal-vid" type="number" placeholder="e.g. 15"/></div>
+    <div class="ff" id="nb-status-row" style="margin-bottom:10px;display:none">
+      <label class="ff-lbl">Status</label>
+      <select class="ff-inp" id="nb-status" style="cursor:pointer">
+        <option value="ongoing">● Ongoing</option>
+        <option value="finished">○ Finished</option>
+      </select>
+    </div>
     <button class="save-btn" id="nb-save-btn" onclick="saveBrand()">Create Brand</button>
     <button id="nb-delete-btn" style="display:none;width:100%;margin-top:8px;padding:10px;border-radius:10px;background:transparent;border:1.5px solid #fca5a5;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer" onclick="deleteBrand()">🗑 Delete Brand</button>
   </div>
@@ -1494,7 +1502,7 @@ function renderAll(){
 
 /* SIDEBAR */
 function renderSidebar(){
-  document.getElementById('sb-brands-list').innerHTML=ST.brands.map(b=>
+  document.getElementById('sb-brands-list').innerHTML=ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).map(b=>
     '<div class="sb-pill'+(b.id===_activeBrandId?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
       '<div class="sb-dot2" style="background:'+b.color+'"></div>'+
       '<span>'+b.name+'</span>'+
@@ -1926,6 +1934,51 @@ function renderMemberPage(mid){
   setTimeout(function(){drawMemberChart(mid);},50);
 }
 
+// Day status storage: {mid_date: 'worked'|'holiday'|'off'}
+function getDayStatus(mid,ds){var k='dg_day_status';var obj=JSON.parse(localStorage.getItem(k)||'{}');return obj[(mid?mid+'_':'')+ds]||null;}
+function setDayStatus(mid,ds,status){var k='dg_day_status';var obj=JSON.parse(localStorage.getItem(k)||'{}');var key=(mid?mid+'_':'')+ds;if(status===null)delete obj[key];else obj[key]=status;localStorage.setItem(k,JSON.stringify(obj));}
+function cycleDayStatus(mid,ds,hasLog,btn){
+  var cur=getDayStatus(mid,ds);
+  var next=cur===null?(hasLog?'holiday':'worked'):cur==='worked'?'holiday':cur==='holiday'?'off':null;
+  setDayStatus(mid,ds,next);
+  var info=dayStatusInfo(next,hasLog);
+  btn.style.background=info.color;
+  btn.title=ds+' — '+info.label;
+  // re-render counters
+  var wrap=btn.closest('[data-aw]');
+  if(wrap) updateAttendCounters(wrap,mid);
+}
+function dayStatusInfo(status,hasLog){
+  if(status==='worked') return {color:'#10b981',label:'Worked ✓'};
+  if(status==='holiday') return {color:'#fbbf24',label:'Holiday'};
+  if(status==='off') return {color:'#fca5a5',label:'Day off'};
+  // auto
+  return hasLog?{color:'#10b981',label:'Worked ✓'}:{color:'#fca5a5',label:'Day off'};
+}
+function updateAttendCounters(wrap,mid){
+  var year=new Date().getFullYear(),month=new Date().getMonth(),today=new Date().getDate();
+  var monthStr=(month+1<10?'0'+(month+1):''+( month+1));
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var worked=0,off=0,holidays=0;
+  for(var d=1;d<=daysInMonth;d++){
+    if(d>today) continue;
+    var ds=year+'-'+monthStr+'-'+(d<10?'0'+d:''+d);
+    var dow=new Date(ds).getDay();
+    if(dow===0||dow===6) continue;
+    var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
+    var st=getDayStatus(mid,ds);
+    var info=dayStatusInfo(st,hasLog);
+    if(info.label.startsWith('Worked')) worked++;
+    else if(info.label==='Holiday') holidays++;
+    else off++;
+  }
+  var ctr=wrap.querySelector('[data-aw-ctr]');
+  if(ctr) ctr.innerHTML=
+    '<span style="font-size:12px;color:#10b981;font-weight:800">'+worked+'x</span><span style="font-size:10px;color:var(--text-s)">worked</span>'+
+    (holidays?'<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span><span style="font-size:12px;color:#d97706;font-weight:800">'+holidays+'x</span><span style="font-size:10px;color:var(--text-s)">holiday</span>':'')+
+    '<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span><span style="font-size:12px;color:#dc2626;font-weight:800">'+off+'x</span><span style="font-size:10px;color:var(--text-s)">off</span>';
+}
+
 function memberAttendWidget(mid){
   var now=new Date();
   var year=now.getFullYear();
@@ -1933,27 +1986,42 @@ function memberAttendWidget(mid){
   var daysInMonth=new Date(year,month+1,0).getDate();
   var todayD=now.getDate();
   var monthStr=(month+1<10?'0'+(month+1):''+(month+1));
-  var workDays=0,activeDays=0,dots='';
+  var worked=0,off=0,holidays=0,dots='';
   for(var d=1;d<=daysInMonth;d++){
     var ds=year+'-'+monthStr+'-'+(d<10?'0'+d:''+d);
     var dow=new Date(ds).getDay();
     var isWeekend=dow===0||dow===6;
     var isFuture=d>todayD;
     var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
-    var color;
-    if(isFuture){color='#e5e7eb';}
-    else if(isWeekend){color='#f3f4f6';}
-    else{workDays++;if(hasLog){activeDays++;color='#fbbf24';}else{color='#fca5a5';}}
-    dots+='<div class="attend-dot" style="background:'+color+(isFuture?';opacity:.35':'')+'" title="'+ds+(hasLog?' ✓':'')+'"></div>';
+    var color,cls='attend-dot',onclick='',tip;
+    if(isFuture){color='#e5e7eb';cls+=' no-click';tip=ds;}
+    else if(isWeekend){color='#d1d5db';cls+=' no-click';tip=ds+' — Weekend';}
+    else{
+      var st=getDayStatus(mid,ds);
+      var info=dayStatusInfo(st,hasLog);
+      color=info.color;tip=ds+' — '+info.label;
+      onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\','+(hasLog?'true':'false')+',this)"';
+      if(info.label.startsWith('Worked')) worked++;
+      else if(info.label==='Holiday') holidays++;
+      else off++;
+    }
+    dots+='<div class="'+cls+'" style="background:'+color+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
   }
-  return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;flex-shrink:0;margin-left:auto">'+
-    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Working days</div>'+
+  var widId='aw-'+mid;
+  return '<div data-aw="'+widId+'" style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;flex-shrink:0;margin-left:auto">'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working days</div>'+
+    '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;font-size:9px;color:var(--text-s)">'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Worked &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Holiday &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off'+
+    '</div>'+
     '<div class="attend-grid" style="max-width:168px">'+dots+'</div>'+
-    '<div style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
-      '<span style="font-size:12px;color:#d97706;font-weight:800">'+activeDays+'x</span>'+
+    '<div data-aw-ctr style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
+      '<span style="font-size:12px;color:#10b981;font-weight:800">'+worked+'x</span>'+
       '<span style="font-size:10px;color:var(--text-s)">worked</span>'+
+      (holidays?'<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span><span style="font-size:12px;color:#d97706;font-weight:800">'+holidays+'x</span><span style="font-size:10px;color:var(--text-s)">holiday</span>':'')+
       '<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span>'+
-      '<span style="font-size:12px;color:#dc2626;font-weight:800">'+(workDays-activeDays)+'x</span>'+
+      '<span style="font-size:12px;color:#dc2626;font-weight:800">'+off+'x</span>'+
       '<span style="font-size:10px;color:var(--text-s)">off</span>'+
     '</div>'+
   '</div>';
@@ -2512,6 +2580,7 @@ function openAddBrand(){
   document.getElementById('nb-modal-sub').textContent='Create a new brand / campaign';
   document.getElementById('nb-save-btn').textContent='Create Brand';
   document.getElementById('nb-delete-btn').style.display='none';
+  document.getElementById('nb-status-row').style.display='none';
   document.getElementById('nb-name').value='';
   document.getElementById('nb-goal-conf').value='';
   document.getElementById('nb-goal-vid').value='';
@@ -2530,6 +2599,8 @@ function openEditBrand(brandId){
   document.getElementById('nb-name').value=b.name||'';
   document.getElementById('nb-goal-conf').value=b.goals?.confirmed||'';
   document.getElementById('nb-goal-vid').value=b.goals?.videos||'';
+  document.getElementById('nb-status').value=b.status||'ongoing';
+  document.getElementById('nb-status-row').style.display='';
   // Select matching swatch or none
   document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.c===b.color);});
   document.getElementById('nb-custom-color').value=b.color||'#3b7ef8';
@@ -2548,10 +2619,11 @@ function saveBrand(){
   const name=document.getElementById('nb-name').value.trim();
   if(!name){alert('Please enter a brand name');return;}
   const goals={confirmed:+document.getElementById('nb-goal-conf').value||0,videos:+document.getElementById('nb-goal-vid').value||0};
+  const newStatus=document.getElementById('nb-status').value||'ongoing';
   if(_editingBrandId){
     var b=getBrand(_editingBrandId);
-    if(b){b.name=name;b.color=newBrandColor;b.goals=goals;}
-    apiPut('/api/brands/'+_editingBrandId,{name:name,color:newBrandColor,goals:goals});
+    if(b){b.name=name;b.color=newBrandColor;b.goals=goals;b.status=newStatus;}
+    apiPut('/api/brands/'+_editingBrandId,{name:name,color:newBrandColor,goals:goals,status:newStatus});
     renderAll();closeOv('ov-brand');
   } else {
     const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
@@ -3176,28 +3248,52 @@ function renderBrandDetail(brandId){
       '</div>'+
     '</div>':'';
 
-  var membersBlockHtml=(ownersHtml||supportersHtml)?
-    '<div style="background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
-      '<div style="font-size:11px;font-weight:600;color:var(--text-m);margin-bottom:10px">Team</div>'+
-      ownersHtml+supportersHtml+
-    '</div>':'';
+  // Compact inline team for header
+  function memberPillSmall(m,color,metricVal,metricLabel){
+    return '<div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">'+
+      '<div class="mem-av-img av-sm" style="flex-shrink:0;width:22px;height:22px">'+
+        (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:8px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:8px;font-weight:700">'+ini(m.name)+'</span>')+
+      '</div>'+
+      '<div>'+
+        '<div style="font-size:10px;font-weight:600;color:var(--text)">'+escHtml(m.name.split(' ')[0])+'</div>'+
+        '<div style="font-size:9px;color:'+color+'">'+metricVal+' '+metricLabel+'</div>'+
+      '</div>'+
+    '</div>';
+  }
+  var headerTeamHtml='';
+  if(owners.length||supporters.length){
+    headerTeamHtml='<div style="display:flex;gap:14px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:12px;margin-top:4px">'+
+      (owners.length?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+        '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--primary)">&#128081; Owner</span>'+
+        owners.map(function(m){return memberPillSmall(m,'var(--primary)',sumM(m.id,b.id,'confirmed'),'confirmed');}).join('')+
+      '</div>':'')+
+      (supporters.length?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+        '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--amber)">&#128222; Support</span>'+
+        supporters.map(function(m){return memberPillSmall(m,'var(--amber)',sumM(m.id,b.id,'kols_followedup'),'follow-ups');}).join('')+
+      '</div>':'')+
+    '</div>';
+  }
+  var membersBlockHtml='';
 
   // ── Status badge ──────────────────────────────
   var statusBadge='<span onclick="toggleBrandStatus(\''+b.id+'\',\''+bStatus+'\')" title="Click to toggle status" style="cursor:pointer;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;'+(isOngoing?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
     (isOngoing?'● Ongoing':'○ Finished')+'</span>';
 
   // ── Header ────────────────────────────────────
-  var headerHtml='<div class="brand-detail-header">'+
-    '<div class="brand-detail-dot" style="background:'+bColor+'"></div>'+
-    '<div>'+
-      '<div class="brand-detail-name">'+escHtml(b.name)+'</div>'+
-      (camps.length?'<div style="font-size:11px;color:var(--text-s);margin-top:2px">'+camps.length+' campaign'+(camps.length>1?'s':'')+'</div>':'<div style="font-size:11px;color:var(--text-s);margin-top:2px">No campaigns yet</div>')+
+  var headerHtml='<div class="brand-detail-header" style="flex-direction:column;align-items:stretch">'+
+    '<div style="display:flex;align-items:center;gap:12px">'+
+      '<div class="brand-detail-dot" style="background:'+bColor+'"></div>'+
+      '<div>'+
+        '<div class="brand-detail-name">'+escHtml(b.name)+'</div>'+
+        (camps.length?'<div style="font-size:11px;color:var(--text-s);margin-top:2px">'+camps.length+' campaign'+(camps.length>1?'s':'')+'</div>':'<div style="font-size:11px;color:var(--text-s);margin-top:2px">No campaigns yet</div>')+
+      '</div>'+
+      statusBadge+
+      '<div class="brand-detail-actions">'+
+        (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
+        (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">&#9998; Edit Brand</button>':'') +
+      '</div>'+
     '</div>'+
-    statusBadge+
-    '<div class="brand-detail-actions">'+
-      (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
-      (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">&#9998; Edit Brand</button>':'') +
-    '</div>'+
+    headerTeamHtml+
   '</div>';
 
   // ── KPI row ───────────────────────────────────
@@ -3441,7 +3537,7 @@ function attendanceWidget(){
     logsByDate[dateStr]={who:who,dow:new Date(dateStr).getDay()};
   }
 
-  var workDays=0,activeDays=0;
+  var worked=0,off=0,holidays=0;
   var dots='';
   for(var d=1;d<=daysInMonth;d++){
     var ds=(year+'-'+monthStr+'-'+(d<10?'0'+d:''+d));
@@ -3450,25 +3546,35 @@ function attendanceWidget(){
     var isWeekend=dow===0||dow===6;
     var isFuture=d>today;
     var hasAct=info.who.length>0;
-    var color,tip;
-    if(isFuture){color='#e5e7eb';tip='';}
-    else if(isWeekend){color='#f3f4f6';tip='Weekend';}
+    var color,cls='attend-dot',onclick='',tip;
+    if(isFuture){color='#e5e7eb';cls+=' no-click';tip=ds;}
+    else if(isWeekend){color='#d1d5db';cls+=' no-click';tip=ds+' — Weekend';}
     else{
-      workDays++;
-      if(hasAct){activeDays++;color='#fbbf24';tip=info.who.join(', ');}
-      else{color='#fca5a5';tip='No activity';}
+      var st=getDayStatus(null,ds);
+      var si=dayStatusInfo(st,hasAct);
+      color=si.color;tip=ds+(hasAct?' — '+info.who.join(', '):'')+(st?' ['+si.label+']':'');
+      onclick=' onclick="cycleDayStatus(null,\''+ds+'\','+(hasAct?'true':'false')+',this)"';
+      if(si.label.startsWith('Worked')) worked++;
+      else if(si.label==='Holiday') holidays++;
+      else off++;
     }
-    dots+='<div class="attend-dot" style="background:'+color+(isFuture?';opacity:.35':'')+'" title="'+ds+(tip?' — '+tip:'')+'"></div>';
+    dots+='<div class="'+cls+'" style="background:'+color+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
   }
 
-  return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:180px">'+
-    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Working days</div>'+
+  return '<div data-aw="admin" style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:180px">'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working days</div>'+
+    '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;font-size:9px;color:var(--text-s)">'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Worked &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Holiday &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off'+
+    '</div>'+
     '<div class="attend-grid">'+dots+'</div>'+
-    '<div style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
-      '<span style="font-size:12px;color:#d97706;font-weight:800">'+activeDays+'x</span>'+
+    '<div data-aw-ctr style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
+      '<span style="font-size:12px;color:#10b981;font-weight:800">'+worked+'x</span>'+
       '<span style="font-size:10px;color:var(--text-s)">worked</span>'+
+      (holidays?'<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span><span style="font-size:12px;color:#d97706;font-weight:800">'+holidays+'x</span><span style="font-size:10px;color:var(--text-s)">holiday</span>':'')+
       '<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span>'+
-      '<span style="font-size:12px;color:#dc2626;font-weight:800">'+(workDays-activeDays)+'x</span>'+
+      '<span style="font-size:12px;color:#dc2626;font-weight:800">'+off+'x</span>'+
       '<span style="font-size:10px;color:var(--text-s)">off</span>'+
     '</div>'+
   '</div>';
