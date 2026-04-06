@@ -674,7 +674,6 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .attend-dot{width:13px;height:13px;border-radius:50%;cursor:pointer;transition:transform .1s;flex-shrink:0;position:relative}
 .attend-dot:hover{transform:scale(1.25)}
 .attend-dot.no-click{cursor:default}
-.attend-dot[title]:hover::after{content:attr(title);position:absolute;background:#1a1f2e;color:#fff;font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:100;top:18px;left:-20px}
 </style>
 </head>
 <body>
@@ -1150,13 +1149,17 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <label class="ff-lbl">&#128230; Samples Quantity</label>
       <input class="ff-inp" id="ec-samples" type="number" min="0" placeholder="0"/>
     </div>
-    <!-- Custom fields -->
-    <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-s)">Custom Fields</span>
-        <button onclick="addCampCustomField()" style="font-size:10px;font-weight:600;color:var(--primary);background:var(--primary-d);border:none;padding:3px 10px;border-radius:6px;cursor:pointer">+ Add Field</button>
-      </div>
-      <div id="ec-custom-fields"></div>
+    <div class="ff" style="margin-bottom:14px">
+      <label class="ff-lbl">&#128666; Shipment Status</label>
+      <select class="ff-inp" id="ec-shipment-status" style="cursor:pointer">
+        <option value="">— Not set —</option>
+        <option value="pending">⏳ Pending</option>
+        <option value="preparing">📦 Preparing</option>
+        <option value="shipped">🚚 Shipped</option>
+        <option value="in_transit">✈️ In transit</option>
+        <option value="delivered">✅ Delivered</option>
+        <option value="issue">⚠️ Issue / Returned</option>
+      </select>
     </div>
     <button class="save-btn" onclick="saveEditCampaign()">Save Changes</button>
   </div>
@@ -3125,11 +3128,7 @@ function openEditCampaign(campId,brandId){
   document.getElementById('ec-start').value=c.startDate||'';
   document.getElementById('ec-end').value=c.endDate||'';
   document.getElementById('ec-samples').value=c.samples||0;
-  // Render custom fields
-  var cfEl=document.getElementById('ec-custom-fields');
-  cfEl.innerHTML='';
-  var fields=c.customFields||[];
-  fields.forEach(function(f,i){renderCampCustomFieldRow(cfEl,f.label,f.value,i);});
+  document.getElementById('ec-shipment-status').value=c.shipmentStatus||'';
   openOv('ov-edit-campaign');
 }
 function renderCampCustomFieldRow(container,label,value,idx){
@@ -3155,18 +3154,11 @@ function saveEditCampaign(){
   const startDate=document.getElementById('ec-start').value||null;
   const endDate=document.getElementById('ec-end').value||null;
   const samples=+(document.getElementById('ec-samples').value)||0;
-  // Collect custom fields
-  var customFields=[];
-  document.querySelectorAll('#ec-custom-fields [data-idx]').forEach(function(row){
-    var inputs=row.querySelectorAll('input');
-    var label=(inputs[0]&&inputs[0].value.trim())||'';
-    var value=(inputs[1]&&inputs[1].value.trim())||'';
-    if(label) customFields.push({label:label,value:value});
-  });
+  const shipmentStatus=document.getElementById('ec-shipment-status').value||'';
   const camps=(ST.campaigns&&ST.campaigns[_editCampBrandId])||[];
   const c=camps.find(function(x){return x.id===_editCampId;});
-  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.customFields=customFields;}
-  apiPut('/api/campaigns/'+_editCampId,{name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,customFields:JSON.stringify(customFields)});
+  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.shipmentStatus=shipmentStatus;}
+  apiPut('/api/campaigns/'+_editCampId,{name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,shipmentStatus:shipmentStatus});
   renderAll();
   if(_activeBrandId===_editCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-edit-campaign');
@@ -3358,16 +3350,16 @@ function renderBrandDetail(brandId){
           '<div class="bd-prog-label"><span>&#127909; Published Videos</span><span>'+campVids+(gV?' / '+gV:'')+'</span></div>'+
           '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pV.toFixed(0)+'%;background:'+bColor+'88"></div></div>'+
         '</div>'+
-        // Custom fields
-        ((c.customFields&&c.customFields.length)?
-          '<div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--border)">'+
-            c.customFields.map(function(f){
-              return '<div style="display:flex;justify-content:space-between;font-size:11px">'+
-                '<span style="color:var(--text-m)">'+escHtml(f.label)+'</span>'+
-                '<span style="font-weight:600;color:var(--text)">'+escHtml(f.value)+'</span>'+
-              '</div>';
-            }).join('')+
-          '</div>':'')+
+        // Shipment status
+        (c.shipmentStatus?function(){
+          var shipLabels={'pending':'⏳ Pending','preparing':'📦 Preparing','shipped':'🚚 Shipped','in_transit':'✈️ In transit','delivered':'✅ Delivered','issue':'⚠️ Issue / Returned'};
+          var shipColors={'pending':'#9ca3af','preparing':'#f59e0b','shipped':'#3b7ef8','in_transit':'#8b5cf6','delivered':'#10b981','issue':'#f87171'};
+          var sc=shipColors[c.shipmentStatus]||'var(--text-m)';
+          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border)">'+
+            '<span style="font-size:11px;color:var(--text-m)">&#128666; Shipment</span>'+
+            '<span style="font-size:11px;font-weight:600;color:'+sc+'">'+escHtml(shipLabels[c.shipmentStatus]||c.shipmentStatus)+'</span>'+
+          '</div>';
+        }():'')+
         (admin?
           '<div class="bd-camp-actions">'+
             '<button onclick="openEditCampaign(\''+c.id+'\',\''+b.id+'\')" style="flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">&#9998; Edit</button>'+
