@@ -703,26 +703,28 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </nav>
   </div>
 
-  <div class="sb-sep">Navigation</div>
-  <nav class="sb-nav">
-    <div class="sb-item active" id="sbi-overview" onclick="navTo('overview',this)">
+  <div class="sb-sep" id="sb-nav-sep">Navigation</div>
+  <nav class="sb-nav" id="sb-nav-admin-items">
+    <div class="sb-item" id="sbi-overview" onclick="navTo('overview',this)">
       <div class="sb-dot" style="background:var(--primary)"></div> Overview
     </div>
-    <div class="sb-item" onclick="navTo('members',this)">
+    <div class="sb-item" id="sbi-team-activity" onclick="navTo('members',this)">
       <div class="sb-dot" style="background:var(--pink)"></div> Team Activity
     </div>
-    <div class="sb-item" onclick="navTo('campaigns',this)">
+  </nav>
+  <nav class="sb-nav" id="sb-nav-member-items">
+    <div class="sb-item" id="sbi-campaigns" onclick="navTo('campaigns',this)">
       <div class="sb-dot" style="background:var(--green)"></div> Campaigns
     </div>
-    <div class="sb-item" onclick="navTo('digest',this)">
+    <div class="sb-item" id="sbi-digest" onclick="navTo('digest',this)">
       <div class="sb-dot" style="background:var(--amber)"></div> Weekly Digest
     </div>
   </nav>
 
-  <div class="sb-sep">Brands</div>
+  <div class="sb-sep" id="sb-brands-sep">Brands</div>
   <div class="sb-list" id="sb-brands-list"></div>
 
-  <div class="sb-sep">Team</div>
+  <div class="sb-sep" id="sb-team-sep">Team</div>
   <div class="sb-list" id="sb-team-list"></div>
 
   <div style="flex:1"></div>
@@ -761,22 +763,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div class="content">
 
-    <!-- ── OVERVIEW ── -->
-    <div class="page active" id="page-overview">
-      <div class="kpi-row" id="kpi-overview"></div>
-      <div class="g2 mb16">
-        <div class="card">
-          <div class="sec"><div class="sec-t">Activity Trend <span class="sec-s">last 14 days</span></div></div>
-          <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
-          <div class="legend-row" id="legend-trend"></div>
-        </div>
-        <div class="card">
-          <div class="sec"><div class="sec-t">Conversion Rates</div></div>
-          <div id="conv-table-wrap"></div>
-        </div>
-      </div>
-      <div id="brand-progress-row"></div>
-    </div>
+    <!-- ── OVERVIEW (content moved to admin home) ── -->
+    <div class="page" id="page-overview"></div>
 
     <!-- ── TEAM ACTIVITY ── -->
     <div class="page" id="page-members">
@@ -816,6 +804,21 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <!-- ── ADMIN HOME ── -->
     <div class="page" id="page-admin-home">
       <div id="admin-home-content"></div>
+      <div id="admin-overview-section">
+        <div class="kpi-row" id="kpi-overview"></div>
+        <div class="g2 mb16">
+          <div class="card">
+            <div class="sec"><div class="sec-t">Activity Trend <span class="sec-s">last 14 days</span></div></div>
+            <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+            <div class="legend-row" id="legend-trend"></div>
+          </div>
+          <div class="card">
+            <div class="sec"><div class="sec-t">Conversion Rates</div></div>
+            <div id="conv-table-wrap"></div>
+          </div>
+        </div>
+        <div id="brand-progress-row"></div>
+      </div>
     </div>
 
     <!-- ── DOCUMENTS & SPREADSHEETS ── -->
@@ -1451,7 +1454,7 @@ function navTo(page,el,brandId){
   if(page==='digest') renderDigest();
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
-  if(page==='admin-home') renderAdminHome();
+  if(page==='admin-home'){renderAdminHome();drawTrend();}
   if(page==='links') renderLinks();
   if(page==='brand') renderBrandDetail(_activeBrandId);
 }
@@ -1485,7 +1488,7 @@ function renderAll(){
   renderBrandProgress();
   renderMembers();
   renderCampaigns();
-  if(currentPage==='overview') drawTrend();
+  if(currentPage==='overview'||currentPage==='admin-home') drawTrend();
   if(currentPage==='digest') renderDigest();
   if(currentMemberId && document.getElementById('page-member').classList.contains('active')) renderMemberPage(currentMemberId);
   if(currentPage==='brand'&&_activeBrandId) renderBrandDetail(_activeBrandId);
@@ -1497,10 +1500,19 @@ function renderAll(){
   adminOnly.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isAdmin()?'':'none';});
   var adminNav=document.getElementById('sb-admin-nav');
   if(adminNav) adminNav.style.display=isAdmin()?'':'none';
-  // For pure members: hide navigation sections they don't need
+  // Sidebar visibility per role
   var pureMember=currentUser&&currentUser.role==='member';
-  var navSections=document.querySelectorAll('.sb-sep, .sb-nav, #sb-brands-list');
-  navSections.forEach(function(el){el.style.display=pureMember?'none':'';});
+  // Admin-only nav items (Overview, Team Activity)
+  ['sb-nav-admin-items','sb-team-sep','sb-team-list'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display=pureMember?'none':'';
+  });
+  // Items always hidden for pure members: the navigation sep when no admin items visible
+  var navSep=document.getElementById('sb-nav-sep');
+  if(navSep) navSep.style.display=''; // always show Navigation label (has Campaigns + Digest)
+  // Brands sep+list always visible for members
+  ['sb-brands-sep','sb-brands-list'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display='';
+  });
   // Topbar time/export hidden for members
   var tbView=document.querySelector('.tb-view');
   if(tbView) tbView.style.display=pureMember?'none':'';
@@ -3505,28 +3517,6 @@ function renderAdminHome(){
             (streak?'<div style="font-size:10px;color:var(--amber)">&#128293; '+streak+'d streak</div>':''))+
         '</div>'+
         '<div class="ts-dot '+(s.hasLogged?'active':'idle')+'"></div>'+
-      '</div>';
-    }).join('')+
-    '</div></div>';
-
-  html+='<div class="card">'+
-    '<div class="sec"><div class="sec-t">Campaign Progress</div></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">'+
-    ST.brands.map(function(b){
-      var totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
-      var gCo=b.goals&&b.goals.confirmed?+b.goals.confirmed:0;
-      var pCo=gCo>0?Math.min((totCo/gCo)*100,100):0;
-      var todayCo=ST.members.reduce(function(s,m){return s+todayM(m.id,b.id,'confirmed');},0);
-      return '<div style="padding:12px;background:#f8f9fb;border-radius:10px;border:1px solid var(--border)">'+
-        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'+
-          '<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+'"></div>'+
-          '<span style="font-size:12px;font-weight:700">'+b.name+'</span>'+
-          '<span style="margin-left:auto;font-size:10px;color:var(--text-s)">+'+todayCo+' today</span>'+
-        '</div>'+
-        '<div style="height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden">'+
-          '<div style="height:100%;background:'+b.color+';border-radius:3px;width:'+pCo+'%;transition:width 1s ease"></div>'+
-        '</div>'+
-        '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+totCo+' / '+(gCo||'—')+' confirmed</div>'+
       '</div>';
     }).join('')+
     '</div></div>';
