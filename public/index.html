@@ -1477,6 +1477,8 @@ function loadAdminData(){
         renderSidebar();
         renderMembers();
         if(currentMemberId) renderMemberPage(currentMemberId);
+        // Re-render home + trend now that user roles are known (fixes pure-admin filtering)
+        if(currentPage==='admin-home'){renderAdminHome();drawTrend();}
       }
     });
 }
