@@ -99,6 +99,7 @@ app.get('/api/state', async (req, res) => {
         period: c.period || '', samples: c.samples || 0,
         startDate: c.start_date ? c.start_date.toISOString().split('T')[0] : null,
         endDate: c.end_date ? c.end_date.toISOString().split('T')[0] : null,
+        customFields: (() => { try { return JSON.parse(c.custom_fields||'[]'); } catch(e){ return []; } })(),
       });
     });
 
@@ -362,8 +363,8 @@ app.post('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
 
 app.put('/api/campaigns/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { name, period, startDate, endDate, samples } = req.body;
-    await sql`UPDATE campaigns SET name=${name}, period=${period||''}, start_date=${startDate||null}, end_date=${endDate||null}, samples=${samples||0} WHERE id=${req.params.id}`;
+    const { name, period, startDate, endDate, samples, customFields } = req.body;
+    await sql`UPDATE campaigns SET name=${name}, period=${period||''}, start_date=${startDate||null}, end_date=${endDate||null}, samples=${samples||0}, custom_fields=${customFields||'[]'} WHERE id=${req.params.id}`;
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

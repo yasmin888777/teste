@@ -1142,6 +1142,14 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <label class="ff-lbl">&#128230; Samples Quantity</label>
       <input class="ff-inp" id="ec-samples" type="number" min="0" placeholder="0"/>
     </div>
+    <!-- Custom fields -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-s)">Custom Fields</span>
+        <button onclick="addCampCustomField()" style="font-size:10px;font-weight:600;color:var(--primary);background:var(--primary-d);border:none;padding:3px 10px;border-radius:6px;cursor:pointer">+ Add Field</button>
+      </div>
+      <div id="ec-custom-fields"></div>
+    </div>
     <button class="save-btn" onclick="saveEditCampaign()">Save Changes</button>
   </div>
 </div>
@@ -3045,7 +3053,27 @@ function openEditCampaign(campId,brandId){
   document.getElementById('ec-start').value=c.startDate||'';
   document.getElementById('ec-end').value=c.endDate||'';
   document.getElementById('ec-samples').value=c.samples||0;
+  // Render custom fields
+  var cfEl=document.getElementById('ec-custom-fields');
+  cfEl.innerHTML='';
+  var fields=c.customFields||[];
+  fields.forEach(function(f,i){renderCampCustomFieldRow(cfEl,f.label,f.value,i);});
   openOv('ov-edit-campaign');
+}
+function renderCampCustomFieldRow(container,label,value,idx){
+  var row=document.createElement('div');
+  row.style.cssText='display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
+  row.dataset.idx=idx;
+  row.innerHTML=
+    '<input class="ff-inp" placeholder="Field name (e.g. Shipment Status)" value="'+escHtml(label||'')+'" style="font-size:11px;padding:6px 10px"/>'+
+    '<input class="ff-inp" placeholder="Value" value="'+escHtml(value||'')+'" style="font-size:11px;padding:6px 10px"/>'+
+    '<button onclick="this.closest(\'[data-idx]\').remove()" style="width:28px;height:28px;border-radius:6px;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer;font-size:12px;flex-shrink:0">&#10005;</button>';
+  container.appendChild(row);
+}
+function addCampCustomField(){
+  var cfEl=document.getElementById('ec-custom-fields');
+  var idx=cfEl.children.length;
+  renderCampCustomFieldRow(cfEl,'','',idx);
 }
 function saveEditCampaign(){
   if(!_editCampId||!_editCampBrandId) return;
@@ -3055,10 +3083,18 @@ function saveEditCampaign(){
   const startDate=document.getElementById('ec-start').value||null;
   const endDate=document.getElementById('ec-end').value||null;
   const samples=+(document.getElementById('ec-samples').value)||0;
+  // Collect custom fields
+  var customFields=[];
+  document.querySelectorAll('#ec-custom-fields [data-idx]').forEach(function(row){
+    var inputs=row.querySelectorAll('input');
+    var label=(inputs[0]&&inputs[0].value.trim())||'';
+    var value=(inputs[1]&&inputs[1].value.trim())||'';
+    if(label) customFields.push({label:label,value:value});
+  });
   const camps=(ST.campaigns&&ST.campaigns[_editCampBrandId])||[];
   const c=camps.find(function(x){return x.id===_editCampId;});
-  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;}
-  apiPut('/api/campaigns/'+_editCampId,{name:name,period:period,startDate:startDate,endDate:endDate,samples:samples});
+  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.customFields=customFields;}
+  apiPut('/api/campaigns/'+_editCampId,{name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,customFields:JSON.stringify(customFields)});
   renderAll();
   if(_activeBrandId===_editCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-edit-campaign');
@@ -3101,17 +3137,50 @@ function renderBrandDetail(brandId){
   var gCo=b.goals&&b.goals.confirmed||0;
   var gV=b.goals&&b.goals.videos||0;
 
-  // ── Assigned members ──────────────────────────
+  // ── Assigned members split by role ────────────
   var assigned=ST.members.filter(function(m){return m.brands&&m.brands.includes(b.id);});
-  var avatarsHtml=assigned.map(function(m){
-    var role=(m.roles&&m.roles[b.id])||'';
-    return '<div style="position:relative;margin-left:-6px;z-index:1" title="'+m.name+(role?' ('+role+')':'')+'">'+
-      '<div class="mem-av-img av-sm" style="border:2px solid white">'+
+  var owners=assigned.filter(function(m){return (m.roles&&m.roles[b.id])==='owner';});
+  var supporters=assigned.filter(function(m){return (m.roles&&m.roles[b.id])!=='owner';});
+
+  function memberPill(m,metricLabel,metricVal,color){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">'+
+      '<div class="mem-av-img av-sm" style="flex-shrink:0">'+
         (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
       '</div>'+
-      (role?'<span style="position:absolute;bottom:-3px;right:-3px;font-size:7px;font-weight:700;padding:1px 3px;border-radius:3px;background:'+(role==='owner'?'var(--primary)':'var(--amber)')+';color:#fff;text-transform:uppercase">'+role[0]+'</span>':'')+
+      '<div style="min-width:0">'+
+        '<div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(m.name)+'</div>'+
+        '<div style="font-size:10px;color:'+color+';font-weight:600">'+metricVal+' '+metricLabel+'</div>'+
+      '</div>'+
     '</div>';
-  }).join('');
+  }
+
+  var ownersHtml=owners.length?
+    '<div style="margin-bottom:12px">'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:6px">&#128081; Collab Owner</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        owners.map(function(m){
+          var v=sumM(m.id,b.id,'confirmed');
+          return memberPill(m,'confirmed',v,'var(--primary)');
+        }).join('')+
+      '</div>'+
+    '</div>':'';
+
+  var supportersHtml=supporters.length?
+    '<div>'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">&#128222; Follow up Agent</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        supporters.map(function(m){
+          var v=sumM(m.id,b.id,'kols_followedup');
+          return memberPill(m,'follow-ups',v,'var(--amber)');
+        }).join('')+
+      '</div>'+
+    '</div>':'';
+
+  var membersBlockHtml=(ownersHtml||supportersHtml)?
+    '<div style="background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)">'+
+      '<div style="font-size:11px;font-weight:600;color:var(--text-m);margin-bottom:10px">Team</div>'+
+      ownersHtml+supportersHtml+
+    '</div>':'';
 
   // ── Status badge ──────────────────────────────
   var statusBadge='<span onclick="toggleBrandStatus(\''+b.id+'\',\''+bStatus+'\')" title="Click to toggle status" style="cursor:pointer;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;'+(isOngoing?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
@@ -3124,7 +3193,6 @@ function renderBrandDetail(brandId){
       '<div class="brand-detail-name">'+escHtml(b.name)+'</div>'+
       (camps.length?'<div style="font-size:11px;color:var(--text-s);margin-top:2px">'+camps.length+' campaign'+(camps.length>1?'s':'')+'</div>':'<div style="font-size:11px;color:var(--text-s);margin-top:2px">No campaigns yet</div>')+
     '</div>'+
-    '<div style="display:flex;align-items:center;margin-left:12px">'+avatarsHtml+'</div>'+
     statusBadge+
     '<div class="brand-detail-actions">'+
       (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
@@ -3135,8 +3203,8 @@ function renderBrandDetail(brandId){
   // ── KPI row ───────────────────────────────────
   var kpiHtml='<div class="bd-kpi-row">'+
     ['<div class="bd-kpi-lbl">KOLs Contacted</div><div class="bd-kpi-val">'+totContacted+'</div><div class="bd-kpi-sub">sourced: '+totSourced+'</div>',
-     '<div class="bd-kpi-lbl">KOLs Confirmed</div><div class="bd-kpi-val">'+totConfirmed+'</div><div class="bd-kpi-sub">goal: '+(gCo||'—')+'</div>',
-     '<div class="bd-kpi-lbl">Videos Published</div><div class="bd-kpi-val">'+totVids+'</div><div class="bd-kpi-sub">goal: '+(gV||'—')+'</div>',
+     '<div class="bd-kpi-lbl">KOLs Confirmed</div><div class="bd-kpi-val">'+(gCo?'<span>'+totConfirmed+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gCo+'</span>':totConfirmed)+'</div><div class="bd-kpi-sub">'+(gCo>0?Math.min(Math.round(totConfirmed/gCo*100),100)+'% of goal':'no goal set')+'</div>',
+     '<div class="bd-kpi-lbl">Videos Published</div><div class="bd-kpi-val">'+(gV?'<span>'+totVids+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gV+'</span>':totVids)+'</div><div class="bd-kpi-sub">'+(gV>0?Math.min(Math.round(totVids/gV*100),100)+'% of goal':'no goal set')+'</div>',
      '<div class="bd-kpi-lbl">Conversion Rate</div><div class="bd-kpi-val" style="font-size:20px">'+convRate+'</div><div class="bd-kpi-sub">contacted → confirmed</div>',
     ].map(function(inner){return '<div class="bd-kpi">'+inner+'</div>';}).join('')+
   '</div>';
@@ -3194,6 +3262,16 @@ function renderBrandDetail(brandId){
           '<div class="bd-prog-label"><span>&#127909; Published Videos</span><span>'+campVids+(gV?' / '+gV:'')+'</span></div>'+
           '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pV.toFixed(0)+'%;background:'+bColor+'88"></div></div>'+
         '</div>'+
+        // Custom fields
+        ((c.customFields&&c.customFields.length)?
+          '<div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;border-top:1px solid var(--border)">'+
+            c.customFields.map(function(f){
+              return '<div style="display:flex;justify-content:space-between;font-size:11px">'+
+                '<span style="color:var(--text-m)">'+escHtml(f.label)+'</span>'+
+                '<span style="font-weight:600;color:var(--text)">'+escHtml(f.value)+'</span>'+
+              '</div>';
+            }).join('')+
+          '</div>':'')+
         (admin?
           '<div class="bd-camp-actions">'+
             '<button onclick="openEditCampaign(\''+c.id+'\',\''+b.id+'\')" style="flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">&#9998; Edit</button>'+
@@ -3204,7 +3282,7 @@ function renderBrandDetail(brandId){
   }
   campHtml+='</div>';
 
-  el.innerHTML=headerHtml+kpiHtml+chartHtml+campHtml;
+  el.innerHTML=headerHtml+kpiHtml+membersBlockHtml+chartHtml+campHtml;
 
   // ── Draw chart ────────────────────────────────
   if(camps.length){
