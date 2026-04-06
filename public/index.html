@@ -66,7 +66,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 }
 .sb-icon{
   width:36px;height:36px;border-radius:9px;
-  background:var(--primary);
+  background:transparent;
   display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff;
 }
 .sb-app-name{
@@ -686,7 +686,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <div class="sb-brand-row">
     <div class="sb-icon" id="sb-icon" onclick="triggerAvatarUpload('site',null)" title="Clique para trocar a logo" style="cursor:pointer;overflow:hidden;padding:0">P</div>
     <div>
-      <div class="sb-app-name" id="app-name-label" onclick="editAppName()" title="Click to rename">DigitUly</div>
+      <div class="sb-app-name" id="app-name-label" onclick="location.reload()" title="Refresh" style="cursor:pointer">DigitUly</div>
       <div class="sb-app-sub">KOL Team Dashboard</div>
     </div>
   </div>
@@ -714,9 +714,6 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div class="sb-sep" id="sb-nav-sep">Navigation</div>
   <nav class="sb-nav" id="sb-nav-admin-items">
-    <div class="sb-item" id="sbi-overview" onclick="navTo('overview',this)">
-      <div class="sb-dot" style="background:var(--primary)"></div> Overview
-    </div>
     <div class="sb-item" id="sbi-team-activity" onclick="navTo('members',this)">
       <div class="sb-dot" style="background:var(--pink)"></div> Team Activity
     </div>
@@ -820,15 +817,11 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div id="admin-home-content"></div>
       <div id="admin-overview-section">
         <div class="kpi-row" id="kpi-overview"></div>
-        <div class="g2 mb16">
+        <div class="mb16">
           <div class="card">
-            <div class="sec"><div class="sec-t">Activity Trend <span class="sec-s">last 14 days</span></div></div>
+            <div class="sec"><div class="sec-t">Activity Trend <span class="sec-s">last 14 days — Contacted + Follow-ups</span></div></div>
             <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
             <div class="legend-row" id="legend-trend"></div>
-          </div>
-          <div class="card">
-            <div class="sec"><div class="sec-t">Conversion Rates</div></div>
-            <div id="conv-table-wrap"></div>
           </div>
         </div>
         <div id="brand-progress-row"></div>
@@ -1355,7 +1348,7 @@ async function apiDel(url){
 function stSave(){}
 
 /* HELPERS */
-function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();}
 function ini(n){ return n.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
 function getBrand(id){ return ST.brands.find(b=>b.id===id); }
 function getMember(id){ return ST.members.find(m=>m.id===id); }
@@ -1714,13 +1707,17 @@ function drawTrend(){
   const days=[];
   for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
   const labels=days.map(function(d){const[,m,dd]=d.split('-');return(+m).toString().padStart(2,'0')+'/'+(+dd).toString().padStart(2,'0');});
-  const datasets=ST.members.map(function(mem){
+  const trackableMembers=ST.members.filter(function(mem){
+    var u=_allUsers.find(function(u){return u.member_id===mem.id;});
+    return !u||u.role!=='admin'; // exclude pure admin accounts
+  });
+  const datasets=trackableMembers.map(function(mem){
     const col=memberColor(mem);
     return{
       label:mem.name,
       data:days.map(function(d){return ST.brands.reduce(function(s,b){
         const e=getLogs(mem.id).find(function(l){return l.date===d&&l.brandId===b.id;});
-        return s+(e?METRICS.reduce(function(ss,mt){return ss+(+e[mt.key]||0);},0):0);
+        return s+(e?((+e.kols_contacted||0)+(+e.kols_followedup||0)):0);
       },0);}),
       borderColor:col,backgroundColor:col+'18',
       fill:true,tension:.4,pointRadius:3,pointHoverRadius:6,borderWidth:2,
@@ -2061,7 +2058,7 @@ function memberAttendWidget(mid){
       var n=getDayNote(mid,ds);
       tip=fmtBR(ds)+' — FDS'+(info.label!=='Weekend'?' ('+info.label+')':'')+(n?' — '+n:'');
       onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\',false,this,true)"';
-      extraStyle=';border-radius:3px;outline:1.5px dashed #b0b5c0;outline-offset:1px';
+      // weekends: same round style, no special border
     }
     else{
       var st=getDayStatus(mid,ds);
@@ -2074,18 +2071,12 @@ function memberAttendWidget(mid){
       else if(info.label==='Holiday') holidays++;
       else off++;
     }
-    dots+='<div class="'+cls+'" style="background:'+color+extraStyle+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
+    dots+='<div class="'+cls+'" style="background:'+color+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
   }
   var widId='aw-'+mid;
   return '<div data-aw="'+widId+'" style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;flex-shrink:0;margin-left:auto">'+
-    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working days</div>'+
-    '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;font-size:9px;color:var(--text-s)">'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Trab &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Feriado &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:3px;background:#d1d5db;outline:1.5px dashed #b0b5c0;outline-offset:1px;display:inline-block"></span> FDS'+
-    '</div>'+
-    '<div class="attend-grid" style="max-width:168px">'+dots+'</div>'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working Days</div>'+
+    '<div class="attend-grid" style="max-width:168px;margin-bottom:4px">'+dots+'</div>'+
     '<div data-aw-ctr style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
       '<span style="font-size:12px;color:#10b981;font-weight:800">'+worked+'x</span>'+
       '<span style="font-size:10px;color:var(--text-s)">worked</span>'+
@@ -3681,7 +3672,7 @@ function attendanceWidget(){
       var n=getDayNote(null,ds);
       tip=fmtBR(ds)+' — FDS'+(si.label!=='Weekend'?' ('+si.label+')':'')+(n?' — '+n:'');
       onclick=' onclick="cycleDayStatus(null,\''+ds+'\',false,this,true)"';
-      extraStyle=';border-radius:3px;outline:1.5px dashed #b0b5c0;outline-offset:1px';
+      // weekends: same round style
     }
     else{
       var st=getDayStatus(null,ds);
@@ -3694,18 +3685,12 @@ function attendanceWidget(){
       else if(si.label==='Holiday') holidays++;
       else off++;
     }
-    dots+='<div class="'+cls+'" style="background:'+color+extraStyle+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
+    dots+='<div class="'+cls+'" style="background:'+color+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
   }
 
   return '<div data-aw="admin" style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:180px">'+
-    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working days</div>'+
-    '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;font-size:9px;color:var(--text-s)">'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Trab &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Feriado &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:3px;background:#d1d5db;outline:1.5px dashed #b0b5c0;outline-offset:1px;display:inline-block"></span> FDS'+
-    '</div>'+
-    '<div class="attend-grid">'+dots+'</div>'+
+    '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working Days</div>'+
+    '<div class="attend-grid" style="margin-bottom:4px">'+dots+'</div>'+
     '<div data-aw-ctr style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
       '<span style="font-size:12px;color:#10b981;font-weight:800">'+worked+'x</span>'+
       '<span style="font-size:10px;color:var(--text-s)">worked</span>'+
