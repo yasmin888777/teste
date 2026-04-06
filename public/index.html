@@ -691,6 +691,15 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
   </div>
 
+  <div id="sb-member-home-nav" style="display:none">
+    <div class="sb-sep">Member</div>
+    <nav class="sb-nav">
+      <div class="sb-item" id="sbi-member-home" onclick="navTo('member-home',this)">
+        <div class="sb-dot" style="background:var(--green)"></div> Home
+      </div>
+    </nav>
+  </div>
+
   <div id="sb-admin-nav" style="display:none">
     <div class="sb-sep">Admin</div>
     <nav class="sb-nav">
@@ -765,6 +774,11 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
     <!-- ── OVERVIEW (content moved to admin home) ── -->
     <div class="page" id="page-overview"></div>
+
+    <!-- ── MEMBER HOME ── -->
+    <div class="page" id="page-member-home">
+      <div id="member-home-content"></div>
+    </div>
 
     <!-- ── TEAM ACTIVITY ── -->
     <div class="page" id="page-members">
@@ -1318,8 +1332,7 @@ async function loadState(){
     if(isAdmin()){
       navTo('admin-home', document.getElementById('sbi-admin-home'));
     } else if(currentUser&&currentUser.memberId){
-      // Pure member: go straight to their own page
-      openMemberDetail(currentUser.memberId);
+      navTo('member-home', document.getElementById('sbi-member-home'));
     }
   }catch(err){
     console.error('Failed to load state:', err);
@@ -1447,7 +1460,7 @@ function navTo(page,el,brandId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail'};
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','member-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail'};
   if(page==='brand'&&_activeBrandId){const b=getBrand(_activeBrandId);document.getElementById('tb-title').textContent=b?b.name:'Brand Detail';}
   else document.getElementById('tb-title').textContent=T[page]||page;
   if(page==='overview') drawTrend();
@@ -1455,6 +1468,7 @@ function navTo(page,el,brandId){
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
   if(page==='admin-home'){renderAdminHome();drawTrend();}
+  if(page==='member-home') renderMemberHome();
   if(page==='links') renderLinks();
   if(page==='brand') renderBrandDetail(_activeBrandId);
 }
@@ -1503,14 +1517,18 @@ function renderAll(){
   // Sidebar visibility per role
   var pureMember=currentUser&&currentUser.role==='member';
   // Admin-only nav items (Overview, Team Activity)
-  ['sb-nav-admin-items','sb-team-sep','sb-team-list'].forEach(function(id){
+  var adminOnlySbIds=['sb-nav-admin-items'];
+  adminOnlySbIds.forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display=pureMember?'none':'';
   });
-  // Items always hidden for pure members: the navigation sep when no admin items visible
+  // Member-home nav: only for pure members
+  var memHomeNav=document.getElementById('sb-member-home-nav');
+  if(memHomeNav) memHomeNav.style.display=pureMember?'':'none';
+  // Nav sep always visible
   var navSep=document.getElementById('sb-nav-sep');
-  if(navSep) navSep.style.display=''; // always show Navigation label (has Campaigns + Digest)
-  // Brands sep+list always visible for members
-  ['sb-brands-sep','sb-brands-list'].forEach(function(id){
+  if(navSep) navSep.style.display='';
+  // Brands + Team sep+list always visible (team content filtered in renderSidebar)
+  ['sb-brands-sep','sb-brands-list','sb-team-sep','sb-team-list'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display='';
   });
   // Topbar time/export hidden for members
@@ -1529,7 +1547,11 @@ function renderSidebar(){
       '<span>'+b.name+'</span>'+
     '</div>').join('');
 
-  document.getElementById('sb-team-list').innerHTML=ST.members.map(m=>{
+  var pureMember=currentUser&&currentUser.role==='member';
+  var membersToShow=pureMember
+    ? ST.members.filter(function(m){return currentUser&&currentUser.memberId===m.id;})
+    : ST.members;
+  document.getElementById('sb-team-list').innerHTML=membersToShow.map(function(m){
     var uRole=_allUsers.find(function(u){return u.member_id===m.id;});
     var isAdminMember=uRole&&(uRole.role==='admin'||uRole.role==='member+admin');
     return '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')" style="justify-content:space-between">'+
@@ -2409,8 +2431,8 @@ function campaignCardHTML(b,i){
       '<div class="camp-funnel-title" style="margin-bottom:6px">Campaigns</div>'+
       brandCamps.map(function(c){
         return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">'+
-          '<span style="font-size:12px;font-weight:500">&#127991; '+c.name+'</span>'+
-          '<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="font-size:11px;color:#dc2626;padding:2px 7px;border-radius:4px;background:transparent;border:none;cursor:pointer" onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'transparent\'">&#10005;</button>'+
+          '<span style="font-size:12px;font-weight:500">&#127919; '+c.name+'</span>'+
+          (isAdmin()?'<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="font-size:11px;color:#dc2626;padding:2px 7px;border-radius:4px;background:transparent;border:none;cursor:pointer" onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'transparent\'">&#10005;</button>':'')+
         '</div>';
       }).join('')+
     '</div>':
@@ -2675,6 +2697,7 @@ function saveBrand(){
   }
 }
 function deleteBrand(){
+  if(!isAdmin()) return;
   var b=getBrand(_editingBrandId);
   if(!b||!confirm('Delete "'+b.name+'"? This will also remove all logs and documents for this brand. This cannot be undone.')) return;
   fetch('/api/brands/'+_editingBrandId,{method:'DELETE',headers:authHeaders()})
@@ -3099,6 +3122,7 @@ function closeSidebar(){
    DELETE MEMBER
 ══════════════════════════════════════════════ */
 function deleteMember(mid){
+  if(!isAdmin()) return;
   var target=mid?getMember(mid):profileMember;
   if(!target)return;
   if(!confirm('Remove "'+target.name+'"? This will also delete all their activity logs.'))return;
@@ -3202,6 +3226,7 @@ function saveEditCampaign(){
   closeOv('ov-edit-campaign');
 }
 function deleteCampaign(campId,brandId){
+  if(!isAdmin()) return;
   if(!confirm('Delete this campaign?')) return;
   if(ST.campaigns&&ST.campaigns[brandId]){
     ST.campaigns[brandId]=ST.campaigns[brandId].filter(function(c){return c.id!==campId;});
@@ -3401,7 +3426,7 @@ function renderBrandDetail(brandId){
         (admin?
           '<div class="bd-camp-actions">'+
             '<button onclick="openEditCampaign(\''+c.id+'\',\''+b.id+'\')" style="flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">&#9998; Edit</button>'+
-            '<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="padding:6px 10px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" title="Delete">&#128465;</button>'+
+            (isAdmin()?'<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="padding:6px 10px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" title="Delete">&#128465;</button>':'')+
           '</div>':'')+
       '</div>';
     });
@@ -3444,6 +3469,69 @@ function renderBrandDetail(brandId){
 /* ══════════════════════════════════════════════
    ADMIN HOME
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   MEMBER HOME
+══════════════════════════════════════════════ */
+function renderMemberHome(){
+  var el=document.getElementById('member-home-content');
+  if(!el)return;
+  var mid=currentUser&&currentUser.memberId;
+  var m=mid?getMember(mid):null;
+  var h=new Date().getHours();
+  var greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  var uname=m?m.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'');
+  var today=todayStr();
+  var assignedBrands=(m?m.brands:[]).map(getBrand).filter(Boolean);
+
+  var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">'+
+    '<div>'+
+      '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
+      '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
+    '</div>'+
+    (mid?'<div>'+memberAttendWidget(mid)+'</div>':'')+
+  '</div>';
+
+  // Quick daily log button
+  if(mid){
+    html+='<div class="card mb16" style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px">'+
+      '<div>'+
+        '<div style="font-size:14px;font-weight:700">Daily Activity Log</div>'+
+        '<div style="font-size:11px;color:var(--text-s);margin-top:2px">Log your KOL outreach for today</div>'+
+      '</div>'+
+      '<button onclick="openLog(\''+mid+'\')" style="padding:10px 22px;background:var(--primary);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700">+ Log Activity</button>'+
+    '</div>';
+  }
+
+  // Assigned brands summary
+  if(assignedBrands.length){
+    html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">My Campaigns</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px">'+
+    assignedBrands.map(function(b){
+      var role=(m.roles&&m.roles[b.id])||'';
+      var todayLog=getLogs(mid).find(function(l){return l.brandId===b.id&&l.date===today;});
+      var todayCont=todayLog?(+todayLog.kols_contacted||0):0;
+      var todayConf=todayLog?(+todayLog.confirmed||0):0;
+      return '<div style="padding:14px;background:var(--card);border-radius:12px;border:1.5px solid '+(b.color+'44')+';border-left:4px solid '+b.color+'">'+
+        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'+
+          '<div style="width:9px;height:9px;border-radius:50%;background:'+b.color+'"></div>'+
+          '<span style="font-size:13px;font-weight:700">'+b.name+'</span>'+
+          (role?'<span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:'+b.color+'22;color:'+b.color+'">'+role+'</span>':'')+
+        '</div>'+
+        '<div style="display:flex;gap:16px;font-size:11px;color:var(--text-m)">'+
+          '<span>&#128222; <strong>'+todayCont+'</strong> contacted</span>'+
+          '<span>&#129309; <strong>'+todayConf+'</strong> confirmed</span>'+
+        '</div>'+
+        (todayLog?'<div style="font-size:10px;color:var(--green);margin-top:6px">&#10003; Logged today</div>':'<div style="font-size:10px;color:var(--amber);margin-top:6px">&#9888; No log yet today</div>')+
+      '</div>';
+    }).join('')+
+    '</div>';
+  }
+
+  html+='<div style="text-align:center;padding:20px;color:var(--text-s);font-size:11px">More features coming soon &#128640;</div>';
+  el.innerHTML=html;
+  if(mid){setTimeout(function(){drawMemberChart(mid);},50);}
+}
+
 function renderAdminHome(){
   var el=document.getElementById('admin-home-content');
   if(!el) return;
