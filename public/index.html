@@ -1485,7 +1485,9 @@ function setTimeView(v,el){
   timeView=v;
   document.querySelectorAll('.tb-vbtn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
-  if(currentMemberId && document.getElementById('page-member').classList.contains('active')){
+  if(currentPage==='member-home'){
+    renderMemberHome();
+  } else if(currentMemberId && document.getElementById('page-member').classList.contains('active')){
     renderMemberPage(currentMemberId);
   } else {
     renderAll();
@@ -1531,9 +1533,9 @@ function renderAll(){
   ['sb-brands-sep','sb-brands-list','sb-team-sep','sb-team-list'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display='';
   });
-  // Topbar time/export hidden for members
+  // Topbar export hidden for members (but Daily/Weekly/Monthly stays visible)
   var tbView=document.querySelector('.tb-view');
-  if(tbView) tbView.style.display=pureMember?'none':'';
+  if(tbView) tbView.style.display='';
   var tbExport=document.querySelector('.tb-btn.export');
   if(tbExport) tbExport.style.display=pureMember?'none':'';
   updateAccountUI();
@@ -2561,23 +2563,42 @@ function saveLog(){
   btn.textContent='Saved!';btn.style.background='var(--green)';
   setTimeout(function(){btn.textContent='Save Entry';btn.style.background='';},1800);
 }
+function openNotePanel(note,dateLabel){
+  document.getElementById('note-panel-content').textContent=note||'(no note)';
+  document.getElementById('note-panel-date').textContent=dateLabel||'';
+  document.getElementById('note-panel').style.right='0';
+  document.getElementById('note-panel-backdrop').style.display='block';
+}
+function closeNotePanel(){
+  document.getElementById('note-panel').style.right='-360px';
+  document.getElementById('note-panel-backdrop').style.display='none';
+}
+function editLogEntry(date){
+  document.getElementById('log-date').value=date;
+  prefillLog();
+  var modal=document.querySelector('#ov-log .modal');
+  if(modal) modal.scrollTop=0;
+}
 function renderLogHistory(){
   if(!logMember||!logBrand){document.getElementById('log-history').innerHTML='';return;}
-  const entries=getLogs(logMember.id).filter(function(l){return l.brandId===logBrand.id;}).slice(0,8);
+  const entries=getLogs(logMember.id).filter(function(l){return l.brandId===logBrand.id;}).slice(0,10);
   if(!entries.length){document.getElementById('log-history').innerHTML='';return;}
   const b=logBrand;
   const rows=entries.map(function(e){
-    return '<tr>'+
+    var escapedNote=(e.note||'').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+    var dateLabel=fmtDateFull(e.date);
+    var rowClick=isAdmin()?' onclick="editLogEntry(\''+e.date+'\')" style="cursor:pointer" title="Click to edit this entry"':'';
+    return '<tr'+rowClick+'>'+
       '<td class="tip-host" style="font-weight:500;white-space:nowrap">'+
-        fmtDate(e.date)+'<div class="tip">'+fmtDateFull(e.date)+'</div>'+
+        fmtDate(e.date)+'<div class="tip">'+dateLabel+'</div>'+
       '</td>'+
       METRICS.map(function(m){return '<td>'+(e[m.key]||0)+'</td>';}).join('')+
-      '<td class="note-cell" title="'+(e.note||'')+'">'+(e.note||'')+'</td>'+
-      '<td><button class="del-btn" onclick="doDelLog(\''+e.date+'\',\''+b.id+'\')">&#10005;</button></td>'+
+      '<td class="note-cell" onclick="event.stopPropagation();openNotePanel(\''+escapedNote+'\',\''+dateLabel+'\')" style="cursor:pointer;color:var(--primary)" title="Click to read full note">'+(e.note?'&#128196; '+e.note.slice(0,18)+(e.note.length>18?'…':''):'')+'</td>'+
+      '<td><button class="del-btn" onclick="event.stopPropagation();doDelLog(\''+e.date+'\',\''+b.id+'\')">&#10005;</button></td>'+
     '</tr>';
   }).join('');
   document.getElementById('log-history').innerHTML=
-    '<div class="hist-hd">History — '+b.name+'</div>'+
+    '<div class="hist-hd">History — '+b.name+(isAdmin()?'<span style="font-size:10px;color:var(--text-s);font-weight:400;margin-left:8px">click row to edit</span>':'')+'</div>'+
     '<div style="overflow-x:auto"><table class="hist-tbl">'+
       '<thead><tr><th>Date</th>'+METRICS.map(function(m){return '<th title="'+m.label+'">'+m.icon+'</th>';}).join('')+'<th>Note</th><th></th></tr></thead>'+
       '<tbody>'+rows+'</tbody>'+
@@ -3482,6 +3503,8 @@ function renderMemberHome(){
   var uname=m?m.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'');
   var today=todayStr();
   var assignedBrands=(m?m.brands:[]).map(getBrand).filter(Boolean);
+  var days=getDateRange();
+  var periodLabel=timeView==='daily'?'Today':timeView==='weekly'?'This week':'Last 30 days';
 
   var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">'+
     '<div>'+
@@ -3504,13 +3527,14 @@ function renderMemberHome(){
 
   // Assigned brands summary
   if(assignedBrands.length){
-    html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">My Campaigns</div>'+
+    html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">My Campaigns <span style="font-size:11px;font-weight:400;color:var(--text-s)">— '+periodLabel+'</span></div>'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px">'+
     assignedBrands.map(function(b){
       var role=(m.roles&&m.roles[b.id])||'';
+      var periodLogs=getLogsInRange(mid,b.id,days);
+      var totCont=periodLogs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
+      var totConf=periodLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
       var todayLog=getLogs(mid).find(function(l){return l.brandId===b.id&&l.date===today;});
-      var todayCont=todayLog?(+todayLog.kols_contacted||0):0;
-      var todayConf=todayLog?(+todayLog.confirmed||0):0;
       return '<div style="padding:14px;background:var(--card);border-radius:12px;border:1.5px solid '+(b.color+'44')+';border-left:4px solid '+b.color+'">'+
         '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'+
           '<div style="width:9px;height:9px;border-radius:50%;background:'+b.color+'"></div>'+
@@ -3518,10 +3542,10 @@ function renderMemberHome(){
           (role?'<span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:'+b.color+'22;color:'+b.color+'">'+role+'</span>':'')+
         '</div>'+
         '<div style="display:flex;gap:16px;font-size:11px;color:var(--text-m)">'+
-          '<span>&#128222; <strong>'+todayCont+'</strong> contacted</span>'+
-          '<span>&#129309; <strong>'+todayConf+'</strong> confirmed</span>'+
+          '<span>&#128222; <strong>'+totCont+'</strong> contacted</span>'+
+          '<span>&#129309; <strong>'+totConf+'</strong> confirmed</span>'+
         '</div>'+
-        (todayLog?'<div style="font-size:10px;color:var(--green);margin-top:6px">&#10003; Logged today</div>':'<div style="font-size:10px;color:var(--amber);margin-top:6px">&#9888; No log yet today</div>')+
+        (timeView==='daily'?(todayLog?'<div style="font-size:10px;color:var(--green);margin-top:6px">&#10003; Logged today</div>':'<div style="font-size:10px;color:var(--amber);margin-top:6px">&#9888; No log yet today</div>'):'')+
       '</div>';
     }).join('')+
     '</div>';
@@ -4002,5 +4026,18 @@ function ovBg(id,e){if(e.target.id===id)closeOv(id);}
 ══════════════════════════════════════════════ */
 loadState();
 </script>
+
+<!-- NOTE SIDE PANEL -->
+<div id="note-panel" style="position:fixed;top:0;right:-360px;width:320px;height:100vh;background:var(--card);border-left:1.5px solid var(--border);z-index:1200;padding:0;transition:right .25s cubic-bezier(.4,0,.2,1);box-shadow:-12px 0 40px rgba(0,0,0,.12);display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+    <div>
+      <div style="font-size:14px;font-weight:700;color:var(--text)">Note</div>
+      <div id="note-panel-date" style="font-size:11px;color:var(--text-s);margin-top:1px"></div>
+    </div>
+    <button onclick="closeNotePanel()" style="width:28px;height:28px;border-radius:7px;background:#f0f2f7;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--text-m)">&#10005;</button>
+  </div>
+  <div id="note-panel-content" style="flex:1;padding:20px;font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap;overflow-y:auto"></div>
+</div>
+<div id="note-panel-backdrop" onclick="closeNotePanel()" style="display:none;position:fixed;inset:0;z-index:1199;background:rgba(0,0,0,.12)"></div>
 </body>
 </html>
