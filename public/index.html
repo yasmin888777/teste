@@ -1312,7 +1312,12 @@ async function loadState(){
     document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
     renderAll();
     loadAdminData();
-    if(isAdmin()) navTo('admin-home', document.getElementById('sbi-admin-home'));
+    if(isAdmin()){
+      navTo('admin-home', document.getElementById('sbi-admin-home'));
+    } else if(currentUser&&currentUser.memberId){
+      // Pure member: go straight to their own page
+      openMemberDetail(currentUser.memberId);
+    }
   }catch(err){
     console.error('Failed to load state:', err);
     document.body.innerHTML='<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:Inter,sans-serif;flex-direction:column;gap:16px;color:#5a6072;text-align:center;padding:20px"><div style="font-size:48px">⚠️</div><div style="font-size:18px;font-weight:700;color:#1a1f2e">Servidor não está rodando</div><div style="font-size:13px;line-height:1.7">Dê duplo clique no arquivo<br/><strong style="color:#3b7ef8">INICIAR.bat</strong><br/>que está na pasta do app<br/>e depois recarregue esta página.</div><button onclick="location.reload()" style="margin-top:4px;padding:10px 24px;background:#3b7ef8;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600">↻ Tentar de novo</button></div>';
@@ -1492,6 +1497,15 @@ function renderAll(){
   adminOnly.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isAdmin()?'':'none';});
   var adminNav=document.getElementById('sb-admin-nav');
   if(adminNav) adminNav.style.display=isAdmin()?'':'none';
+  // For pure members: hide navigation sections they don't need
+  var pureMember=currentUser&&currentUser.role==='member';
+  var navSections=document.querySelectorAll('.sb-sep, .sb-nav, #sb-brands-list');
+  navSections.forEach(function(el){el.style.display=pureMember?'none':'';});
+  // Topbar time/export hidden for members
+  var tbView=document.querySelector('.tb-view');
+  if(tbView) tbView.style.display=pureMember?'none':'';
+  var tbExport=document.querySelector('.tb-btn.export');
+  if(tbExport) tbExport.style.display=pureMember?'none':'';
   updateAccountUI();
 }
 
@@ -1914,7 +1928,7 @@ function renderMemberPage(mid){
 
     '<div class="mp-chart-card mb16">'+
       '<div class="sec" style="margin-bottom:12px">'+
-        '<div class="sec-t" style="font-size:13px">Activity History</div>'+
+        '<div><div class="sec-t" style="font-size:13px">Activity History</div><div style="font-size:10px;color:var(--text-s);margin-top:1px">Contacted + Follow-ups per day</div></div>'+
         '<select id="mp-month-sel" onchange="drawMemberChart(currentMemberId)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;background:#fff;cursor:pointer;color:var(--text)">'+
           buildMonthOptions()+
         '</select>'+
@@ -1932,22 +1946,32 @@ function renderMemberPage(mid){
 // Day status storage: {mid_date: 'worked'|'holiday'|'off'}
 function getDayStatus(mid,ds){var k='dg_day_status';var obj=JSON.parse(localStorage.getItem(k)||'{}');return obj[(mid?mid+'_':'')+ds]||null;}
 function setDayStatus(mid,ds,status){var k='dg_day_status';var obj=JSON.parse(localStorage.getItem(k)||'{}');var key=(mid?mid+'_':'')+ds;if(status===null)delete obj[key];else obj[key]=status;localStorage.setItem(k,JSON.stringify(obj));}
-function cycleDayStatus(mid,ds,hasLog,btn){
+function getDayNote(mid,ds){var k='dg_day_notes';var obj=JSON.parse(localStorage.getItem(k)||'{}');return obj[(mid?mid+'_':'')+ds]||'';}
+function setDayNote(mid,ds,note){var k='dg_day_notes';var obj=JSON.parse(localStorage.getItem(k)||'{}');var key=(mid?mid+'_':'')+ds;if(!note)delete obj[key];else obj[key]=note;localStorage.setItem(k,JSON.stringify(obj));}
+function cycleDayStatus(mid,ds,hasLog,btn,isWeekend){
   var cur=getDayStatus(mid,ds);
   var next=cur===null?(hasLog?'holiday':'worked'):cur==='worked'?'holiday':cur==='holiday'?'off':null;
+  if(next==='off'){
+    var note=prompt('Reason for day off (optional):', getDayNote(mid,ds)||'');
+    setDayNote(mid,ds,note||'');
+  } else if(next===null){
+    setDayNote(mid,ds,'');
+  }
   setDayStatus(mid,ds,next);
-  var info=dayStatusInfo(next,hasLog);
+  var info=dayStatusInfo(next,hasLog,isWeekend);
   btn.style.background=info.color;
-  btn.title=ds+' — '+info.label;
+  var n=getDayNote(mid,ds);
+  btn.title=ds+' — '+info.label+(n?' — '+n:'');
   // re-render counters
   var wrap=btn.closest('[data-aw]');
   if(wrap) updateAttendCounters(wrap,mid);
 }
-function dayStatusInfo(status,hasLog){
+function dayStatusInfo(status,hasLog,isWeekend){
   if(status==='worked') return {color:'#10b981',label:'Worked ✓'};
   if(status==='holiday') return {color:'#fbbf24',label:'Holiday'};
   if(status==='off') return {color:'#fca5a5',label:'Day off'};
   // auto
+  if(isWeekend) return {color:'#d1d5db',label:'Weekend'};
   return hasLog?{color:'#10b981',label:'Worked ✓'}:{color:'#fca5a5',label:'Day off'};
 }
 function updateAttendCounters(wrap,mid){
@@ -1990,12 +2014,21 @@ function memberAttendWidget(mid){
     var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
     var color,cls='attend-dot',onclick='',tip;
     if(isFuture){color='#e5e7eb';cls+=' no-click';tip=ds;}
-    else if(isWeekend){color='#d1d5db';cls+=' no-click';tip=ds+' — Weekend';}
+    else if(isWeekend){
+      var st=getDayStatus(mid,ds);
+      var info=dayStatusInfo(st,false,true);
+      color=info.color;
+      var n=getDayNote(mid,ds);
+      tip=ds+' — '+info.label+(n?' — '+n:'');
+      onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\',false,this,true)"';
+    }
     else{
       var st=getDayStatus(mid,ds);
       var info=dayStatusInfo(st,hasLog);
-      color=info.color;tip=ds+' — '+info.label;
-      onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\','+(hasLog?'true':'false')+',this)"';
+      color=info.color;
+      var n=getDayNote(mid,ds);
+      tip=ds+' — '+info.label+(n?' — '+n:'');
+      onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\','+(hasLog?'true':'false')+',this,false)"';
       if(info.label.startsWith('Worked')) worked++;
       else if(info.label==='Holiday') holidays++;
       else off++;
@@ -2179,7 +2212,7 @@ function drawMemberChart(mid){
   var datasets=memberBrands.map(function(b){
     var data=days.map(function(date){
       var logs=getLogs(mid).filter(function(l){return l.brandId===b.id&&l.date===date;});
-      return logs.reduce(function(s,l){return s+(+l.kols_contacted||0)+(+l.confirmed||0)+(+l.vids_published||0);},0);
+      return logs.reduce(function(s,l){return s+(+l.kols_contacted||0)+(+l.kols_followedup||0);},0);
     });
     return {label:b.name,data:data,borderColor:b.color,backgroundColor:b.color+'22',tension:.35,fill:true,pointRadius:2,pointHoverRadius:5};
   });
@@ -2190,7 +2223,7 @@ function drawMemberChart(mid){
     options:{
       responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10,padding:12}}},
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:10,padding:12}},tooltip:{callbacks:{footer:function(){return 'Contacted + Follow-ups';}}}},
       scales:{
         x:{ticks:{font:{size:9},maxRotation:45,color:'#9aa0b0'},grid:{display:false}},
         y:{beginAtZero:true,ticks:{font:{size:9},color:'#9aa0b0'},grid:{color:'rgba(0,0,0,.04)'}},
@@ -3532,12 +3565,21 @@ function attendanceWidget(){
     var hasAct=info.who.length>0;
     var color,cls='attend-dot',onclick='',tip;
     if(isFuture){color='#e5e7eb';cls+=' no-click';tip=ds;}
-    else if(isWeekend){color='#d1d5db';cls+=' no-click';tip=ds+' — Weekend';}
+    else if(isWeekend){
+      var st=getDayStatus(null,ds);
+      var si=dayStatusInfo(st,false,true);
+      color=si.color;
+      var n=getDayNote(null,ds);
+      tip=ds+' — '+si.label+(n?' — '+n:'');
+      onclick=' onclick="cycleDayStatus(null,\''+ds+'\',false,this,true)"';
+    }
     else{
       var st=getDayStatus(null,ds);
       var si=dayStatusInfo(st,hasAct);
-      color=si.color;tip=ds+(hasAct?' — '+info.who.join(', '):'')+(st?' ['+si.label+']':'');
-      onclick=' onclick="cycleDayStatus(null,\''+ds+'\','+(hasAct?'true':'false')+',this)"';
+      color=si.color;
+      var n=getDayNote(null,ds);
+      tip=ds+(hasAct?' — '+info.who.join(', '):'')+(st?' ['+si.label+']':'')+( n?' — '+n:'');
+      onclick=' onclick="cycleDayStatus(null,\''+ds+'\','+(hasAct?'true':'false')+',this,false)"';
       if(si.label.startsWith('Worked')) worked++;
       else if(si.label==='Holiday') holidays++;
       else off++;
