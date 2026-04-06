@@ -2019,7 +2019,7 @@ function updateAttendCounters(wrap,mid){
   for(var d=1;d<=daysInMonth;d++){
     if(d>today) continue;
     var ds=year+'-'+monthStr+'-'+(d<10?'0'+d:''+d);
-    var dow=new Date(ds).getDay();
+    var dow=new Date(year,month,d).getDay(); // local timezone fix
     if(dow===0||dow===6) continue;
     var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
     var st=getDayStatus(mid,ds);
@@ -2035,6 +2035,9 @@ function updateAttendCounters(wrap,mid){
     '<span style="width:1px;height:12px;background:var(--border);margin:0 4px"></span><span style="font-size:12px;color:#dc2626;font-weight:800">'+off+'x</span><span style="font-size:10px;color:var(--text-s)">off</span>';
 }
 
+var PT_DAYS=['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+function fmtBR(ds){var p=ds.split('-');return PT_DAYS[new Date(+p[0],+p[1]-1,+p[2]).getDay()]+', '+p[2]+'/'+p[1];}
+
 function memberAttendWidget(mid){
   var now=new Date();
   var year=now.getFullYear();
@@ -2045,40 +2048,42 @@ function memberAttendWidget(mid){
   var worked=0,off=0,holidays=0,dots='';
   for(var d=1;d<=daysInMonth;d++){
     var ds=year+'-'+monthStr+'-'+(d<10?'0'+d:''+d);
-    var dow=new Date(ds).getDay();
+    var dow=new Date(year,month,d).getDay(); // local timezone fix
     var isWeekend=dow===0||dow===6;
     var isFuture=d>todayD;
     var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
-    var color,cls='attend-dot',onclick='',tip;
-    if(isFuture){color='#e5e7eb';cls+=' no-click';tip=ds;}
+    var color,cls='attend-dot',onclick='',tip,extraStyle='';
+    if(isFuture){color='#e5e7eb';cls+=' no-click';tip=fmtBR(ds);}
     else if(isWeekend){
       var st=getDayStatus(mid,ds);
       var info=dayStatusInfo(st,false,true);
       color=info.color;
       var n=getDayNote(mid,ds);
-      tip=ds+' — '+info.label+(n?' — '+n:'');
+      tip=fmtBR(ds)+' — FDS'+(info.label!=='Weekend'?' ('+info.label+')':'')+(n?' — '+n:'');
       onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\',false,this,true)"';
+      extraStyle=';border-radius:3px;outline:1.5px dashed #b0b5c0;outline-offset:1px';
     }
     else{
       var st=getDayStatus(mid,ds);
       var info=dayStatusInfo(st,hasLog);
       color=info.color;
       var n=getDayNote(mid,ds);
-      tip=ds+' — '+info.label+(n?' — '+n:'');
+      tip=fmtBR(ds)+' — '+info.label+(n?' — '+n:'');
       onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\','+(hasLog?'true':'false')+',this,false)"';
       if(info.label.startsWith('Worked')) worked++;
       else if(info.label==='Holiday') holidays++;
       else off++;
     }
-    dots+='<div class="'+cls+'" style="background:'+color+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
+    dots+='<div class="'+cls+'" style="background:'+color+extraStyle+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
   }
   var widId='aw-'+mid;
   return '<div data-aw="'+widId+'" style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;flex-shrink:0;margin-left:auto">'+
     '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working days</div>'+
     '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;font-size:9px;color:var(--text-s)">'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Worked &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Holiday &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Trab &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Feriado &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:3px;background:#d1d5db;outline:1.5px dashed #b0b5c0;outline-offset:1px;display:inline-block"></span> FDS'+
     '</div>'+
     '<div class="attend-grid" style="max-width:168px">'+dots+'</div>'+
     '<div data-aw-ctr style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
@@ -3654,7 +3659,8 @@ function attendanceWidget(){
       var hasLog=getLogs(m.id).some(function(l){return l.date===dateStr;});
       if(hasLog) who.push(m.name.split(' ')[0]);
     });
-    logsByDate[dateStr]={who:who,dow:new Date(dateStr).getDay()};
+    var p=dateStr.split('-');
+    logsByDate[dateStr]={who:who,dow:new Date(+p[0],+p[1]-1,+p[2]).getDay()}; // local timezone fix
   }
 
   var worked=0,off=0,holidays=0;
@@ -3666,36 +3672,38 @@ function attendanceWidget(){
     var isWeekend=dow===0||dow===6;
     var isFuture=d>today;
     var hasAct=info.who.length>0;
-    var color,cls='attend-dot',onclick='',tip;
-    if(isFuture){color='#e5e7eb';cls+=' no-click';tip=ds;}
+    var color,cls='attend-dot',onclick='',tip,extraStyle='';
+    if(isFuture){color='#e5e7eb';cls+=' no-click';tip=fmtBR(ds);}
     else if(isWeekend){
       var st=getDayStatus(null,ds);
       var si=dayStatusInfo(st,false,true);
       color=si.color;
       var n=getDayNote(null,ds);
-      tip=ds+' — '+si.label+(n?' — '+n:'');
+      tip=fmtBR(ds)+' — FDS'+(si.label!=='Weekend'?' ('+si.label+')':'')+(n?' — '+n:'');
       onclick=' onclick="cycleDayStatus(null,\''+ds+'\',false,this,true)"';
+      extraStyle=';border-radius:3px;outline:1.5px dashed #b0b5c0;outline-offset:1px';
     }
     else{
       var st=getDayStatus(null,ds);
       var si=dayStatusInfo(st,hasAct);
       color=si.color;
       var n=getDayNote(null,ds);
-      tip=ds+(hasAct?' — '+info.who.join(', '):'')+(st?' ['+si.label+']':'')+( n?' — '+n:'');
+      tip=fmtBR(ds)+(hasAct?' — '+info.who.join(', '):'')+(st?' ['+si.label+']':'')+( n?' — '+n:'');
       onclick=' onclick="cycleDayStatus(null,\''+ds+'\','+(hasAct?'true':'false')+',this,false)"';
       if(si.label.startsWith('Worked')) worked++;
       else if(si.label==='Holiday') holidays++;
       else off++;
     }
-    dots+='<div class="'+cls+'" style="background:'+color+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
+    dots+='<div class="'+cls+'" style="background:'+color+extraStyle+(isFuture?';opacity:.35':'')+'"'+onclick+' title="'+tip+'"></div>';
   }
 
   return '<div data-aw="admin" style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:180px">'+
     '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Working days</div>'+
     '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px;font-size:9px;color:var(--text-s)">'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Worked &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Holiday &nbsp;'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#10b981;display:inline-block"></span> Trab &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block"></span> Feriado &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:#fca5a5;display:inline-block"></span> Off &nbsp;'+
+      '<span style="width:10px;height:10px;border-radius:3px;background:#d1d5db;outline:1.5px dashed #b0b5c0;outline-offset:1px;display:inline-block"></span> FDS'+
     '</div>'+
     '<div class="attend-grid">'+dots+'</div>'+
     '<div data-aw-ctr style="display:flex;gap:6px;margin-top:10px;align-items:center">'+
