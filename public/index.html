@@ -1150,16 +1150,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <input class="ff-inp" id="ec-samples" type="number" min="0" placeholder="0"/>
     </div>
     <div class="ff" style="margin-bottom:14px">
-      <label class="ff-lbl">&#128666; Shipment Status</label>
-      <select class="ff-inp" id="ec-shipment-status" style="cursor:pointer">
-        <option value="">— Not set —</option>
-        <option value="pending">⏳ Pending</option>
-        <option value="preparing">📦 Preparing</option>
-        <option value="shipped">🚚 Shipped</option>
-        <option value="in_transit">✈️ In transit</option>
-        <option value="delivered">✅ Delivered</option>
-        <option value="issue">⚠️ Issue / Returned</option>
-      </select>
+      <label class="ff-lbl">&#128666; Shipped (units sent)</label>
+      <input class="ff-inp" id="ec-shipment-status" type="number" min="0" placeholder="0"/>
     </div>
     <button class="save-btn" onclick="saveEditCampaign()">Save Changes</button>
   </div>
@@ -3128,7 +3120,7 @@ function openEditCampaign(campId,brandId){
   document.getElementById('ec-start').value=c.startDate||'';
   document.getElementById('ec-end').value=c.endDate||'';
   document.getElementById('ec-samples').value=c.samples||0;
-  document.getElementById('ec-shipment-status').value=c.shipmentStatus||'';
+  document.getElementById('ec-shipment-status').value=c.shipmentStatus||0;
   openOv('ov-edit-campaign');
 }
 function renderCampCustomFieldRow(container,label,value,idx){
@@ -3154,7 +3146,7 @@ function saveEditCampaign(){
   const startDate=document.getElementById('ec-start').value||null;
   const endDate=document.getElementById('ec-end').value||null;
   const samples=+(document.getElementById('ec-samples').value)||0;
-  const shipmentStatus=document.getElementById('ec-shipment-status').value||'';
+  const shipmentStatus=+(document.getElementById('ec-shipment-status').value)||0;
   const camps=(ST.campaigns&&ST.campaigns[_editCampBrandId])||[];
   const c=camps.find(function(x){return x.id===_editCampId;});
   if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.shipmentStatus=shipmentStatus;}
@@ -3350,14 +3342,14 @@ function renderBrandDetail(brandId){
           '<div class="bd-prog-label"><span>&#127909; Published Videos</span><span>'+campVids+(gV?' / '+gV:'')+'</span></div>'+
           '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pV.toFixed(0)+'%;background:'+bColor+'88"></div></div>'+
         '</div>'+
-        // Shipment status
-        (c.shipmentStatus?function(){
-          var shipLabels={'pending':'⏳ Pending','preparing':'📦 Preparing','shipped':'🚚 Shipped','in_transit':'✈️ In transit','delivered':'✅ Delivered','issue':'⚠️ Issue / Returned'};
-          var shipColors={'pending':'#9ca3af','preparing':'#f59e0b','shipped':'#3b7ef8','in_transit':'#8b5cf6','delivered':'#10b981','issue':'#f87171'};
-          var sc=shipColors[c.shipmentStatus]||'var(--text-m)';
-          return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border)">'+
-            '<span style="font-size:11px;color:var(--text-m)">&#128666; Shipment</span>'+
-            '<span style="font-size:11px;font-weight:600;color:'+sc+'">'+escHtml(shipLabels[c.shipmentStatus]||c.shipmentStatus)+'</span>'+
+        // Shipped count
+        (campSamples>0?function(){
+          var shipped=+(c.shipmentStatus)||0;
+          var pct=Math.min(Math.round(shipped/campSamples*100),100);
+          var sc=pct>=100?'#10b981':pct>0?'#3b7ef8':'#9ca3af';
+          return '<div style="padding:8px 0;border-top:1px solid var(--border)">'+
+            '<div class="bd-prog-label" style="margin-bottom:4px"><span style="color:var(--text-m)">&#128666; Shipped</span><span style="font-weight:700;color:'+sc+'">'+shipped+' / '+campSamples+'</span></div>'+
+            '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pct+'%;background:'+sc+'"></div></div>'+
           '</div>';
         }():'')+
         (admin?
