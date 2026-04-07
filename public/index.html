@@ -4196,9 +4196,13 @@ function exportDashboard(){
   } else if(page==='members'||page==='member'){
     var mid=currentMemberId;
     var m=mid?getMember(mid):null;
+    var _MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var _nowD=new Date();
+    var _monthLabel=_MONTH_NAMES[_nowD.getMonth()]+' '+_nowD.getFullYear();
     var periodName=timeView==='daily'?'Daily':timeView==='weekly'?'Weekly':'Monthly';
-    var periodRange=timeView==='daily'?today:timeView==='weekly'?'Last 7 days':'Last 30 days';
-    title=(m?m.name+' — ':'')+periodName+' Activity Report';
+    var periodRange=timeView==='daily'?today:timeView==='weekly'?'Last 7 days':_monthLabel;
+    var _titlePeriod=timeView==='monthly'?(_monthLabel+' · Monthly'):periodName;
+    title=(m?m.name+' — ':'')+_titlePeriod+' Activity Report';
     if(m){
       var mDays=getDateRange();
       var avUrl=avatarUrl(m);
