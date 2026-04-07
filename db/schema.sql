@@ -93,3 +93,25 @@ INSERT INTO member_brands (member_id, brand_id, role) VALUES
   ('rafael', 'solohour', 'owner'),
   ('raira',  'lydsto',   'owner')
 ON CONFLICT (member_id, brand_id) DO NOTHING;
+
+-- ── Contract Templates ─────────────────────────
+CREATE TABLE IF NOT EXISTS contract_templates (
+  id VARCHAR(50) PRIMARY KEY,
+  brand_id VARCHAR(50) REFERENCES brands(id) ON DELETE CASCADE,
+  name VARCHAR(200) NOT NULL,
+  fields JSONB DEFAULT '[]',
+  body_html TEXT DEFAULT '',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- ── Contracts (generated instances) ────────────
+CREATE TABLE IF NOT EXISTS contracts (
+  id SERIAL PRIMARY KEY,
+  template_id VARCHAR(50) REFERENCES contract_templates(id) ON DELETE SET NULL,
+  brand_id VARCHAR(50) REFERENCES brands(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  values JSONB DEFAULT '{}',
+  body_html TEXT DEFAULT '',
+  created_by INT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
