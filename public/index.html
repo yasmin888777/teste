@@ -758,6 +758,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <button id="dark-toggle" onclick="toggleDark()" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:11px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
     <span id="dark-icon">🌙</span><span id="dark-lbl">Dark Mode</span>
   </button>
+  <button onclick="openChangelog()" style="width:100%;margin-top:4px;padding:6px 12px;border-radius:8px;background:transparent;border:none;color:rgba(255,255,255,.25);font-size:10px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;text-align:left" onmouseover="this.style.color='rgba(255,255,255,.5)'" onmouseout="this.style.color='rgba(255,255,255,.25)'">
+    <span style="font-size:11px">&#128221;</span> System Updates
+  </button>
 </div>
   <div style="padding:8px;border-top:1px solid rgba(255,255,255,.07)">
     <div class="sb-item" id="sb-account-btn" style="font-size:11px;color:rgba(255,255,255,.5);gap:8px" onclick="openAccount()">
@@ -1266,6 +1269,50 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     </div>
     <div id="acct-msg" style="font-size:11px;margin-top:10px;text-align:center"></div>
     <button onclick="doLogout()" style="width:100%;margin-top:16px;padding:10px;background:rgba(248,113,113,.1);color:#f87171;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid rgba(248,113,113,.2);cursor:pointer">Sign Out</button>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: SUMMARY EDIT ══════════════════ -->
+<div class="overlay" id="ov-summary-edit" onclick="ovBg('ov-summary-edit',event)">
+  <div class="modal goals-modal">
+    <div class="modal-hd">
+      <div><div class="modal-title" id="summary-edit-title">Edit Summary</div><div class="modal-sub">Set totals manually — overrides computed values</div></div>
+      <button class="modal-x" onclick="closeOv('ov-summary-edit')">&#10005;</button>
+    </div>
+    <div style="margin-top:4px">
+      <div class="ff" style="margin-bottom:10px">
+        <label class="goal-lbl">&#129309; Confirmed KOLs</label>
+        <input class="goal-inp" type="number" id="se-confirmed" min="0" placeholder="Leave blank to use computed"/>
+      </div>
+      <div class="ff" style="margin-bottom:10px">
+        <label class="goal-lbl">&#127909; Published Videos</label>
+        <input class="goal-inp" type="number" id="se-published" min="0" placeholder="Leave blank to use computed"/>
+      </div>
+      <div class="ff" style="margin-bottom:10px">
+        <label class="goal-lbl">&#128230; Shipped Products</label>
+        <input class="goal-inp" type="number" id="se-shipped" min="0" placeholder="Leave blank to use computed"/>
+      </div>
+      <div class="ff" style="margin-bottom:14px">
+        <label class="goal-lbl">&#9989; Received Products</label>
+        <input class="goal-inp" type="number" id="se-received" min="0" placeholder="Leave blank to use computed"/>
+      </div>
+      <div id="se-note" style="font-size:10px;color:var(--text-s);margin-bottom:12px">Empty fields revert to auto-calculated values from daily logs.</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="save-btn" style="flex:1" onclick="saveSummaryEdit()">Save Overrides</button>
+      <button onclick="clearSummaryOverrides()" style="padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text-m);font-size:12px;font-weight:600;cursor:pointer">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: CHANGELOG ══════════════════ -->
+<div class="overlay" id="ov-changelog" onclick="ovBg('ov-changelog',event)">
+  <div class="modal goals-modal" style="max-height:80vh;display:flex;flex-direction:column">
+    <div class="modal-hd" style="flex-shrink:0">
+      <div><div class="modal-title">&#128221; System Updates</div><div class="modal-sub">History of changes to the dashboard</div></div>
+      <button class="modal-x" onclick="closeOv('ov-changelog')">&#10005;</button>
+    </div>
+    <div id="changelog-body" style="overflow-y:auto;flex:1;padding-top:8px"></div>
   </div>
 </div>
 
@@ -2484,6 +2531,89 @@ function saveProfileUser(){
 }
 
 /* ══════════════════════════════════════════════
+   SUMMARY OVERRIDES (admin, localStorage)
+══════════════════════════════════════════════ */
+var _summaryEditBrand=null;
+function getSummaryOverride(bid){try{return JSON.parse(localStorage.getItem('dg_sum_ov_'+bid)||'null');}catch(e){return null;}}
+function setSummaryOverride(bid,obj){try{localStorage.setItem('dg_sum_ov_'+bid,JSON.stringify(obj));}catch(e){}}
+function clearSummaryOverride(bid){try{localStorage.removeItem('dg_sum_ov_'+bid);}catch(e){}}
+function openSummaryEdit(bid){
+  _summaryEditBrand=getBrand(bid);if(!_summaryEditBrand)return;
+  var ov=getSummaryOverride(bid)||{};
+  document.getElementById('summary-edit-title').textContent=_summaryEditBrand.name+' — Edit Summary';
+  document.getElementById('se-confirmed').value=ov.confirmed!=null?ov.confirmed:'';
+  document.getElementById('se-published').value=ov.published!=null?ov.published:'';
+  document.getElementById('se-shipped').value=ov.shipped!=null?ov.shipped:'';
+  document.getElementById('se-received').value=ov.received!=null?ov.received:'';
+  openOv('ov-summary-edit');
+}
+function saveSummaryEdit(){
+  if(!_summaryEditBrand)return;
+  var co=document.getElementById('se-confirmed').value.trim();
+  var pu=document.getElementById('se-published').value.trim();
+  var sh=document.getElementById('se-shipped').value.trim();
+  var re=document.getElementById('se-received').value.trim();
+  var obj={};
+  if(co!=='') obj.confirmed=+co;
+  if(pu!=='') obj.published=+pu;
+  if(sh!=='') obj.shipped=+sh;
+  if(re!=='') obj.received=+re;
+  setSummaryOverride(_summaryEditBrand.id,obj);
+  closeOv('ov-summary-edit');
+  renderCampaigns();
+  if(currentPage==='brand'&&_activeBrandId===_summaryEditBrand.id) renderBrandDetail(_activeBrandId);
+}
+function clearSummaryOverrides(){
+  if(!_summaryEditBrand)return;
+  clearSummaryOverride(_summaryEditBrand.id);
+  closeOv('ov-summary-edit');
+  renderCampaigns();
+  if(currentPage==='brand'&&_activeBrandId===_summaryEditBrand.id) renderBrandDetail(_activeBrandId);
+}
+
+/* ══════════════════════════════════════════════
+   CHANGELOG
+══════════════════════════════════════════════ */
+var CHANGELOG=[
+  {date:'Apr 10, 2026',items:[
+    'Weekly Report: pure admin accounts (e.g. Allen) no longer appear in the Team Performance table',
+    'Admin-editable Summary: added "✎ Edit" button on campaign cards and brand detail — allows overriding Confirmed KOLs, Published Videos, Shipped and Received totals',
+    'Brand detail chart fixed: now shows per-member data (no longer relies on campaignId) with goal reference lines for Confirmed and Published Videos',
+    'System Updates panel added to sidebar with full changelog history',
+  ]},
+  {date:'Apr 7, 2026',items:[
+    'Page persistence: last visited page is restored automatically on browser refresh',
+    'Working days: days with no log entry now appear in neutral gray instead of red',
+    'Holidays: marking a holiday for one member syncs it to all members automatically',
+    'Member profile: "Assigned Projects" renamed to "Assigned Brands"; finished/inactive brands hidden',
+    'New "All Brands" page in sidebar with brand cards and notes field per brand',
+    'Sidebar reordered: Campaigns → Team Activity → Weekly Digest; brands sorted A-Z',
+    'Period selector (Daily/Weekly/Monthly) hidden on Campaigns page',
+    'Goals modal: "+ Add New Goal" button to create custom goals per brand (saved in localStorage)',
+  ]},
+  {date:'Apr 6, 2026',items:[
+    'Contract system fully removed (templates, modals, API routes)',
+    'Monthly PDF report: month name added to title — e.g. "Rafael — April 2026 · Monthly Activity Report"',
+  ]},
+];
+function openChangelog(){
+  var body=document.getElementById('changelog-body');
+  if(body){
+    body.innerHTML=CHANGELOG.map(function(release){
+      return '<div style="margin-bottom:20px">'+
+        '<div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">'+release.date+'</div>'+
+        '<ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:5px">'+
+          release.items.map(function(item){
+            return '<li style="font-size:12px;color:var(--text-m);line-height:1.5">'+item+'</li>';
+          }).join('')+
+        '</ul>'+
+      '</div>';
+    }).join('');
+  }
+  openOv('ov-changelog');
+}
+
+/* ══════════════════════════════════════════════
    CAMPAIGNS
 ══════════════════════════════════════════════ */
 function renderCampaigns(){
@@ -2500,16 +2630,21 @@ function renderCampaigns(){
   el.innerHTML=brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
 }
 function campaignCardHTML(b,i){
-  const totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+  var _ov=getSummaryOverride(b.id)||{};
+  const _rawCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+  const totCo=_ov.confirmed!=null?_ov.confirmed:_rawCo;
   const gCo=b.goals?.confirmed||0;
   const pCo=gCo>0?Math.min((totCo/gCo)*100,100):0;
   const totVLogs=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'vids_published');},0);
   const campVids=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.videos||0);},0);
-  const totV=totVLogs+campVids;
+  const _rawV=totVLogs+campVids;
+  const totV=_ov.published!=null?_ov.published:_rawV;
   const gV=b.goals?.videos||0;
   const pV=gV>0?Math.min((totV/gV)*100,100):0;
   const totC=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'kols_contacted');},0);
   const rate=totC>0?((totCo/totC)*100).toFixed(1)+'%':'—';
+  const _rawShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
+  const _rawReceived=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.received||0);},0);
 
   const assigned=ST.members.filter(function(m){return m.brands.includes(b.id);});
   const avatars=assigned.map(function(m){
@@ -2530,8 +2665,9 @@ function campaignCardHTML(b,i){
     '</div>';
   }).join('');
 
-  const totShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
-  const totReceived=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.received||0);},0);
+  const totShipped=_ov.shipped!=null?_ov.shipped:_rawShipped;
+  const totReceived=_ov.received!=null?_ov.received:_rawReceived;
+  const _hasOv=Object.keys(_ov).length>0;
 
   const brandCamps=(ST.campaigns&&ST.campaigns[b.id])||[];
   const campListHTML=brandCamps.length?
@@ -2591,18 +2727,21 @@ function campaignCardHTML(b,i){
         }).join('');
         return '<div class="camp-goals-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">'+_fixedBoxes+_customBoxes+'</div>';
       })()+
-      '<div class="camp-funnel-title">Summary</div>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+        '<div class="camp-funnel-title" style="margin-bottom:0">Summary'+(_hasOv?'<span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:#fef3c7;color:#d97706;margin-left:6px;vertical-align:middle">✎ edited</span>':'')+'</div>'+
+        (isAdmin()?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);cursor:pointer">&#9998; Edit</button>':'')+
+      '</div>'+
       [
         {label:'Total KOLs Contacted', val:totC,      icon:'&#128222;'},
-        {label:'Confirmed KOLs',        val:totCo,     icon:'&#129309;'},
-        {label:'Shipped Products',      val:totShipped,icon:'&#128230;'},
-        {label:'Received Products',     val:totReceived,icon:'&#9989;'},
-        {label:'Published Videos',      val:totV,      icon:'&#127909;'},
+        {label:'Confirmed KOLs',        val:totCo,     icon:'&#129309;', ov:_ov.confirmed!=null},
+        {label:'Shipped Products',      val:totShipped,icon:'&#128230;', ov:_ov.shipped!=null},
+        {label:'Received Products',     val:totReceived,icon:'&#9989;',  ov:_ov.received!=null},
+        {label:'Published Videos',      val:totV,      icon:'&#127909;', ov:_ov.published!=null},
         {label:'Videos to be Published',val:gV>0?Math.max(0,gV-totV):'—',icon:'&#127916;'},
       ].map(function(r){
         return '<div class="camp-funnel-row">'+
           '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px"><span>'+r.icon+'</span>'+r.label+'</span>'+
-          '<span style="font-size:14px;font-weight:700">'+r.val+'</span>'+
+          '<span style="font-size:14px;font-weight:700;color:'+(r.ov?'var(--amber)':'var(--text)')+'">'+r.val+(r.ov?'<span style="font-size:9px;margin-left:3px">✎</span>':'')+'</span>'+
         '</div>';
       }).join('')+
     '</div>'+
@@ -3510,13 +3649,17 @@ function renderBrandDetail(brandId){
   var isOngoing=bStatus==='ongoing';
 
   // ── KPI totals for this brand ──────────────────
+  var _bdOv=getSummaryOverride(b.id)||{};
   var totSourced=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'kols_sourced');},0);
   var totContacted=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'kols_contacted');},0);
-  var totConfirmed=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+  var _rawBdCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+  var totConfirmed=_bdOv.confirmed!=null?_bdOv.confirmed:_rawBdCo;
   var totVidsLogs=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'vids_published');},0);
   var totVidsCamp=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.videos||0);},0);
-  var totVids=totVidsLogs+totVidsCamp;
-  var totShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
+  var _rawBdVids=totVidsLogs+totVidsCamp;
+  var totVids=_bdOv.published!=null?_bdOv.published:_rawBdVids;
+  var _rawBdShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
+  var totShipped=_bdOv.shipped!=null?_bdOv.shipped:_rawBdShipped;
   var convRate=totContacted>0?((totConfirmed/totContacted)*100).toFixed(1)+'%':'—';
   var gCo=b.goals&&b.goals.confirmed||0;
   var gV=b.goals&&b.goals.videos||0;
@@ -3602,6 +3745,7 @@ function renderBrandDetail(brandId){
       statusBadge+
       '<div class="brand-detail-actions">'+
         (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
+        (admin?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:'+(_bdOv&&Object.keys(_bdOv).length?'#fef3c7':'var(--bg)')+';color:'+(_bdOv&&Object.keys(_bdOv).length?'#d97706':'var(--text-m)')+';border:1px solid var(--border);cursor:pointer">&#9998; Edit Summary</button>':'') +
         (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">&#9998; Edit Brand</button>':'') +
       '</div>'+
     '</div>'+
@@ -3609,22 +3753,25 @@ function renderBrandDetail(brandId){
   '</div>';
 
   // ── KPI row ───────────────────────────────────
+  var _ovCoLabel=_bdOv.confirmed!=null?'<span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:8px;background:#fef3c7;color:#d97706;margin-left:5px;vertical-align:middle">✎</span>':'';
+  var _ovVLabel=_bdOv.published!=null?'<span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:8px;background:#fef3c7;color:#d97706;margin-left:5px;vertical-align:middle">✎</span>':'';
   var kpiHtml='<div class="bd-kpi-row">'+
     ['<div class="bd-kpi-lbl">KOLs Contacted</div><div class="bd-kpi-val">'+totContacted+'</div><div class="bd-kpi-sub">sourced: '+totSourced+'</div>',
-     '<div class="bd-kpi-lbl">KOLs Confirmed</div><div class="bd-kpi-val">'+(gCo?'<span>'+totConfirmed+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gCo+'</span>':totConfirmed)+'</div><div class="bd-kpi-sub">'+(gCo>0?Math.min(Math.round(totConfirmed/gCo*100),100)+'% of goal':'no goal set')+'</div>',
-     '<div class="bd-kpi-lbl">Videos Published</div><div class="bd-kpi-val">'+(gV?'<span>'+totVids+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gV+'</span>':totVids)+'</div><div class="bd-kpi-sub">'+(gV>0?Math.min(Math.round(totVids/gV*100),100)+'% of goal':'no goal set')+'</div>',
+     '<div class="bd-kpi-lbl">KOLs Confirmed</div><div class="bd-kpi-val">'+(gCo?'<span>'+totConfirmed+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gCo+'</span>':totConfirmed)+_ovCoLabel+'</div><div class="bd-kpi-sub">'+(gCo>0?Math.min(Math.round(totConfirmed/gCo*100),100)+'% of goal':'no goal set')+'</div>',
+     '<div class="bd-kpi-lbl">Videos Published</div><div class="bd-kpi-val">'+(gV?'<span>'+totVids+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gV+'</span>':totVids)+_ovVLabel+'</div><div class="bd-kpi-sub">'+(gV>0?Math.min(Math.round(totVids/gV*100),100)+'% of goal':'no goal set')+'</div>',
      '<div class="bd-kpi-lbl">Conversion Rate</div><div class="bd-kpi-val" style="font-size:20px">'+convRate+'</div><div class="bd-kpi-sub">contacted → confirmed</div>',
     ].map(function(inner){return '<div class="bd-kpi">'+inner+'</div>';}).join('')+
   '</div>';
 
   // ── Chart card ────────────────────────────────
-  var chartHtml='';
-  if(camps.length){
-    chartHtml='<div class="bd-chart-card">'+
-      '<div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:12px">Campaign Overview</div>'+
-      '<div style="position:relative;height:180px"><canvas id="bd-chart-'+b.id+'"></canvas></div>'+
-    '</div>';
-  }
+  var _chartMembers=ST.members.filter(function(m){return m.brands&&m.brands.includes(b.id);});
+  var chartHtml='<div class="bd-chart-card">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:600;color:var(--text-m)">Team Performance — '+escHtml(b.name)+'</div>'+
+      (_chartMembers.length?'':'<span style="font-size:11px;color:var(--text-s)">No members assigned</span>')+
+    '</div>'+
+    '<div style="position:relative;height:200px"><canvas id="bd-chart-'+b.id+'"></canvas></div>'+
+  '</div>';
 
   // ── Campaign cards ────────────────────────────
   var campHtml='<div class="bd-camp-grid">';
@@ -3693,34 +3840,37 @@ function renderBrandDetail(brandId){
   el.innerHTML=headerHtml+kpiHtml+membersBlockHtml+chartHtml+campHtml;
 
   // ── Draw chart ────────────────────────────────
-  if(camps.length){
+  (function(){
     var ctx=document.getElementById('bd-chart-'+b.id);
-    if(ctx){
-      if(_bdChartInstance) _bdChartInstance.destroy();
-      _bdChartInstance=new Chart(ctx,{
-        type:'bar',
-        data:{
-          labels:camps.map(function(c){return c.name;}),
-          datasets:[
-            {label:'Confirmed KOLs',data:camps.map(function(c){
-              var v=0;ST.members.forEach(function(m){var ls=getLogs(m.id).filter(function(l){return l.brandId===b.id&&l.campaignId===c.id;});v+=ls.reduce(function(s,l){return s+(+l.confirmed||0);},0);});return v;
-            }),backgroundColor:bColor+'cc',borderRadius:4},
-            {label:'Published Videos',data:camps.map(function(c){
-              var v=0;ST.members.forEach(function(m){var ls=getLogs(m.id).filter(function(l){return l.brandId===b.id&&l.campaignId===c.id;});v+=ls.reduce(function(s,l){return s+(+l.vids_published||0);},0);});return v;
-            }),backgroundColor:bColor+'55',borderRadius:4},
-          ]
-        },
-        options:{
-          responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
-          scales:{
-            x:{grid:{display:false},ticks:{font:{size:10}}},
-            y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},stepSize:1}}
-          }
-        }
-      });
+    if(!ctx) return;
+    if(_bdChartInstance) _bdChartInstance.destroy();
+    if(!_chartMembers.length){return;}
+    var labels=_chartMembers.map(function(m){return m.name.split(' ')[0];});
+    var confData=_chartMembers.map(function(m){return sumM(m.id,b.id,'confirmed');});
+    var vidsData=_chartMembers.map(function(m){return sumM(m.id,b.id,'vids_published');});
+    var datasets=[
+      {type:'bar',label:'Confirmed KOLs',data:confData,backgroundColor:bColor+'cc',borderRadius:4,order:2},
+      {type:'bar',label:'Published Videos',data:vidsData,backgroundColor:bColor+'44',borderRadius:4,order:3},
+    ];
+    if(gCo>0){
+      datasets.push({type:'line',label:'Goal (Confirmed)',data:labels.map(function(){return gCo;}),borderColor:bColor,borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false,tension:0,order:1});
     }
-  }
+    if(gV>0){
+      datasets.push({type:'line',label:'Goal (Videos)',data:labels.map(function(){return gV;}),borderColor:bColor+'88',borderWidth:2,borderDash:[3,3],pointRadius:0,fill:false,tension:0,order:1});
+    }
+    _bdChartInstance=new Chart(ctx,{
+      type:'bar',
+      data:{labels:labels,datasets:datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{font:{size:11},boxWidth:12,padding:14}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11}}},
+          y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},stepSize:1},beginAtZero:true}
+        }
+      }
+    });
+  })();
 
 }
 
@@ -4286,7 +4436,7 @@ function renderWeeklyReport(){
     '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Confirmed</th>'+
     '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Videos</th>'+
   '</tr></thead><tbody>'+
-  ST.members.map(function(m){
+  ST.members.filter(function(m){var u=_allUsers.find(function(u){return u.member_id===m.id;});return !u||(u.role!=='admin');}).map(function(m){
     var daysActive=days.filter(function(d){return ST.brands.some(function(b){return getLogs(m.id).some(function(l){return l.brandId===b.id&&l.date===d;});});}).length;
     var s=0,c=0,fu=0,co=0,v=0;
     ST.brands.forEach(function(b){var logs=getLogsInRange(m.id,b.id,days);logs.forEach(function(l){s+=(+l.kols_sourced||0);c+=(+l.kols_contacted||0);fu+=(+l.kols_followedup||0);co+=(+l.confirmed||0);v+=(+l.vids_published||0);});});
