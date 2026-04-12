@@ -2727,7 +2727,7 @@ function editSumLabel(key,el){
 /* ══════════════════════════════════════════════
    GOAL BOX ORDER HELPERS
 ══════════════════════════════════════════════ */
-var _DEFAULT_BOX_ORDER=['confirmed','published','convrate'];
+var _DEFAULT_BOX_ORDER=['convrate'];
 function getSumBoxOrder(){try{var o=JSON.parse(localStorage.getItem('dg_box_order'));return(o&&o.length)?o:_DEFAULT_BOX_ORDER.slice();}catch(e){return _DEFAULT_BOX_ORDER.slice();}}
 function setSumBoxOrder(order){try{localStorage.setItem('dg_box_order',JSON.stringify(order));}catch(e){}}
 function initGoalBoxDrag(){
@@ -2765,6 +2765,67 @@ function initGoalBoxDrag(){
         setSumBoxOrder(order);
         renderCampaigns();
         if(currentPage==='brand'&&_activeBrandId)renderBrandDetail(_activeBrandId);
+      });
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   TOP BOX LABEL & MANAGE HELPERS
+══════════════════════════════════════════════ */
+function getBoxLabel(key,def){try{var o=JSON.parse(localStorage.getItem('dg_box_labels')||'{}');return o[key]||def;}catch(e){return def;}}
+function setBoxLabel(key,val){try{var o=JSON.parse(localStorage.getItem('dg_box_labels')||'{}');o[key]=val;localStorage.setItem('dg_box_labels',JSON.stringify(o));}catch(e){}}
+function editBoxLabel(key,el){var cur=el.textContent.trim();var nv=window.prompt('Rename:',cur);if(nv!==null&&nv.trim()){setBoxLabel(key,nv.trim());renderCampaigns();}}
+function removeFromBoxOrder(key){var order=getSumBoxOrder().filter(function(k){return k!==key;});setSumBoxOrder(order);renderCampaigns();}
+function addToBoxOrder(key){var order=getSumBoxOrder();if(order.indexOf(key)<0)order.push(key);setSumBoxOrder(order);renderCampaigns();}
+function openAddBoxSelector(){
+  var _names={confirmed:'Confirmed KOLs',published:'Published Videos',convrate:'Conv. Rate'};
+  var current=getSumBoxOrder();
+  var choices=['confirmed','published','convrate'].filter(function(k){return current.indexOf(k)<0;});
+  if(!choices.length){alert('All built-in blocks are already visible.');return;}
+  var msg='Add which block?\n'+choices.map(function(k,i){return (i+1)+'. '+_names[k];}).join('\n');
+  var v=window.prompt(msg,'1');if(v===null)return;
+  var idx=parseInt(v)-1;if(idx>=0&&idx<choices.length)addToBoxOrder(choices[idx]);
+}
+
+/* ══════════════════════════════════════════════
+   SUMMARY BLOCK MANAGE HELPERS
+══════════════════════════════════════════════ */
+var _SUM_ALL_KEYS=['contacted','confirmed','shipped','received','published'];
+function getSumHidden(bid){try{return JSON.parse(localStorage.getItem('dg_sum_hidden_'+bid)||'[]');}catch(e){return[];}}
+function setSumHidden(bid,arr){try{localStorage.setItem('dg_sum_hidden_'+bid,JSON.stringify(arr));}catch(e){}}
+function hideSumBlock(bid,key){var h=getSumHidden(bid);if(h.indexOf(key)<0)h.push(key);setSumHidden(bid,h);renderCampaigns();}
+function openAddSumBlock(bid){
+  var _names={contacted:'Contacted',confirmed:'Confirmed',shipped:'Shipped',received:'Received',published:'Published'};
+  var hidden=getSumHidden(bid);
+  if(!hidden.length){alert('No hidden blocks to restore.');return;}
+  var msg='Restore which block?\n'+hidden.map(function(k,i){return (i+1)+'. '+(_names[k]||k);}).join('\n');
+  var v=window.prompt(msg,'1');if(v===null)return;
+  var idx=parseInt(v)-1;if(idx>=0&&idx<hidden.length){var key=hidden[idx];var h=hidden.filter(function(k){return k!==key;});setSumHidden(bid,h);renderCampaigns();}
+}
+function getSumBlockOrder(bid){try{var o=JSON.parse(localStorage.getItem('dg_sum_order_'+bid)||'null');return(o&&o.length)?o:_SUM_ALL_KEYS.slice();}catch(e){return _SUM_ALL_KEYS.slice();}}
+function setSumBlockOrder(bid,order){try{localStorage.setItem('dg_sum_order_'+bid,JSON.stringify(order));}catch(e){}}
+function initSumBlockDrag(){
+  var grids=document.querySelectorAll('.sum-blocks-grid[data-bid]');
+  var _dragging=null;
+  grids.forEach(function(grid){
+    var bid=grid.getAttribute('data-bid');
+    var boxes=grid.querySelectorAll('.sum-block[data-skey]');
+    boxes.forEach(function(box){
+      box.addEventListener('dragstart',function(e){_dragging=box;box.style.opacity='0.4';e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',box.getAttribute('data-skey'));});
+      box.addEventListener('dragend',function(){box.style.opacity='1';_dragging=null;document.querySelectorAll('.sum-block').forEach(function(b){b.style.outline='';});});
+      box.addEventListener('dragover',function(e){e.preventDefault();if(_dragging&&_dragging!==box)box.style.outline='2px dashed rgba(0,0,0,.15)';});
+      box.addEventListener('dragleave',function(){box.style.outline='';});
+      box.addEventListener('drop',function(e){
+        e.preventDefault();box.style.outline='';
+        if(!_dragging||_dragging===box)return;
+        var fromKey=_dragging.getAttribute('data-skey');
+        var toKey=box.getAttribute('data-skey');
+        var order=getSumBlockOrder(bid);
+        var fi=order.indexOf(fromKey),ti=order.indexOf(toKey);
+        if(fi<0||ti<0)return;
+        order.splice(fi,1);order.splice(ti,0,fromKey);
+        setSumBlockOrder(bid,order);renderCampaigns();
       });
     });
   });
@@ -2827,6 +2888,7 @@ function renderCampaigns(){
   }
   el.innerHTML=brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
   initGoalBoxDrag();
+  initSumBlockDrag();
 }
 function campaignCardHTML(b,i){
   var _ov=getSummaryOverride(b.id)||{};
@@ -2855,7 +2917,7 @@ function campaignCardHTML(b,i){
     const role=(m.roles&&m.roles[b.id])||'';
     var badge='';
     if(role==='owner') badge='<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1" title="Owner">&#128081;</span>';
-    else if(role) badge='<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1" title="Support">&#127911;</span>';
+    else if(role) badge='<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1" title="Support">&#129309;</span>';
     return '<div style="position:relative;margin-left:4px;padding-top:8px" title="'+m.name+(role?' ('+role+')':'')+'">'+
       badge+
       '<div class="mem-av-img av-sm" style="border:2px solid var(--card)">'+
@@ -2906,22 +2968,27 @@ function campaignCardHTML(b,i){
     '<div class="camp-card-body">'+
       campListHTML+
       (function(){
+        var _adm=isAdmin();
+        var _xBtn=function(fn){return _adm?'<button onclick="'+fn+';event.stopPropagation()" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'';};
         var _cg=getCustomGoals(b.id);
         var _boxMap={
-          confirmed:'<div class="camp-goal-box" draggable="true" data-gkey="confirmed" style="cursor:grab">'+
-            '<div class="camp-goal-lbl">Confirmed</div>'+
+          confirmed:'<div class="camp-goal-box" draggable="true" data-gkey="confirmed" style="cursor:grab;position:relative">'+
+            _xBtn('removeFromBoxOrder(\'confirmed\')')+
+            '<div class="camp-goal-lbl" ondblclick="editBoxLabel(\'confirmed\',this)" title="Double-click to rename" style="padding-right:'+(_adm?'18px':'0')+'">'+getBoxLabel('confirmed','Confirmed')+'</div>'+
             '<div class="camp-goal-val">'+totCo+'<span class="camp-goal-target">/ '+(gCo||'—')+'</span></div>'+
             '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pCo+'%;background:'+b.color+'"></div></div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pCo.toFixed(0)+'%</div>'+
           '</div>',
-          published:'<div class="camp-goal-box" draggable="true" data-gkey="published" style="cursor:grab">'+
-            '<div class="camp-goal-lbl">Published</div>'+
+          published:'<div class="camp-goal-box" draggable="true" data-gkey="published" style="cursor:grab;position:relative">'+
+            _xBtn('removeFromBoxOrder(\'published\')')+
+            '<div class="camp-goal-lbl" ondblclick="editBoxLabel(\'published\',this)" title="Double-click to rename" style="padding-right:'+(_adm?'18px':'0')+'">'+getBoxLabel('published','Published')+'</div>'+
             '<div class="camp-goal-val">'+totV+'<span class="camp-goal-target">/ '+(gV||'—')+'</span></div>'+
             '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pV+'%;background:'+b.color+'88"></div></div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pV.toFixed(0)+'%</div>'+
           '</div>',
-          convrate:'<div class="camp-goal-box" draggable="true" data-gkey="convrate" style="cursor:grab">'+
-            '<div class="camp-goal-lbl">Conv. Rate</div>'+
+          convrate:'<div class="camp-goal-box" draggable="true" data-gkey="convrate" style="cursor:grab;position:relative">'+
+            _xBtn('removeFromBoxOrder(\'convrate\')')+
+            '<div class="camp-goal-lbl" ondblclick="editBoxLabel(\'convrate\',this)" title="Double-click to rename" style="padding-right:'+(_adm?'18px':'0')+'">'+getBoxLabel('convrate','Conv. Rate')+'</div>'+
             '<div class="camp-goal-val" style="font-size:18px">'+rate+'</div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:6px">'+totC+' contacted</div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:2px">'+totCo+' confirmed</div>'+
@@ -2930,44 +2997,58 @@ function campaignCardHTML(b,i){
         var _order=getSumBoxOrder();
         var _fixedBoxes=_order.map(function(k){return _boxMap[k]||'';}).join('');
         var _customBoxes=_cg.filter(function(g){return g.label;}).map(function(g){
-          return '<div class="camp-goal-box">'+
+          return '<div class="camp-goal-box" style="position:relative">'+
+            (_adm?'<button onclick="var cg=getCustomGoals(\''+b.id+'\');setCustomGoals(\''+b.id+'\',cg.filter(function(x){return x.label!==\''+escHtml(g.label)+'\'}));renderCampaigns();" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'')+
             '<div class="camp-goal-lbl">'+escHtml(g.label)+'</div>'+
             '<div class="camp-goal-val">'+(g.value||0)+'</div>'+
           '</div>';
         }).join('');
-        return '<div class="camp-goals-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">'+_fixedBoxes+_customBoxes+'</div>';
+        var _addBtn=_adm?'<div class="camp-goal-box" onclick="openAddBoxSelector()" style="border:1.5px dashed var(--border);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;min-height:80px;gap:4px">'+
+          '<div style="font-size:18px;color:var(--text-s)">+</div>'+
+          '<div style="font-size:9px;color:var(--text-s);font-weight:600;text-transform:uppercase;letter-spacing:.08em">Add</div>'+
+        '</div>':'';
+        return '<div class="camp-goals-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">'+_fixedBoxes+_customBoxes+_addBtn+'</div>';
       })()+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
         '<div class="camp-funnel-title" style="margin-bottom:0">Summary</div>'+
       '</div>'+
       (function(){
+        var _adm=isAdmin();
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
-        var rows=[
-          {key:'contacted', label:getSumLabel('contacted','Contacted'),      val:totC,        goal:0,          icon:'&#128222;'},
-          {key:'confirmed', label:getSumLabel('confirmed','Confirmed'),       val:totCo,       goal:gCo,        icon:'&#129309;'},
-          {key:'shipped',   label:getSumLabel('shipped','Shipped'),           val:totShipped,  goal:totSamples, icon:'&#128230;'},
-          {key:'received',  label:getSumLabel('received','Received'),         val:totReceived, goal:totSamples, icon:'&#9989;'},
-          {key:'published', label:getSumLabel('published','Published'),       val:totV,        goal:gV,         icon:'&#127909;'},
-          {key:'remaining', label:getSumLabel('remaining','To Publish'),      val:gV>0?Math.max(0,gV-totV):'—',goal:0,icon:'&#127916;'},
-        ];
-        return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'+
-          rows.map(function(r){
-            var numVal=(typeof r.val==='number')?r.val:0;
-            var pct=r.goal>0?Math.min((numVal/r.goal)*100,100):0;
-            return '<div class="camp-goal-box">'+
-              '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;flex-wrap:wrap">'+
-                '<span>'+r.icon+'</span>'+
-                '<span ondblclick="editSumLabel(\''+r.key+'\',this)" title="Double-click to rename" style="cursor:pointer">'+r.label+'</span>'+
-              '</div>'+
-              '<div class="camp-goal-val" style="font-size:16px;margin-top:6px">'+
-                (r.goal>0?r.val+'<span class="camp-goal-target">/ '+r.goal+'</span>':r.val)+
-              '</div>'+
-              (r.goal>0?
-                '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pct.toFixed(0)+'%;background:'+b.color+'88"></div></div>'+
-                '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pct.toFixed(0)+'%</div>':
-              '')+
-            '</div>';
-          }).join('')+
+        var _allRows={
+          contacted:{label:getSumLabel('contacted','Contacted'), val:totC,        goal:0,          icon:'&#128222;'},
+          confirmed:{label:getSumLabel('confirmed','Confirmed'),  val:totCo,       goal:gCo,        icon:'&#129309;'},
+          shipped:  {label:getSumLabel('shipped','Shipped'),      val:totShipped,  goal:totSamples, icon:'&#128230;'},
+          received: {label:getSumLabel('received','Received'),    val:totReceived, goal:totSamples, icon:'&#9989;'},
+          published:{label:getSumLabel('published','Published'),  val:totV,        goal:gV,         icon:'&#127909;'},
+        };
+        var _hidden=getSumHidden(b.id);
+        var _order=getSumBlockOrder(b.id).filter(function(k){return _allRows[k]&&_hidden.indexOf(k)<0;});
+        var _blocks=_order.map(function(key){
+          var r=_allRows[key];
+          var numVal=(typeof r.val==='number')?r.val:0;
+          var pct=r.goal>0?Math.min((numVal/r.goal)*100,100):0;
+          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab">'+
+            (_adm?'<button onclick="hideSumBlock(\''+b.id+'\',\''+key+'\');event.stopPropagation()" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'')+
+            '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding-right:'+(_adm?'18px':'0')+'">'+
+              '<span>'+r.icon+'</span>'+
+              '<span ondblclick="editSumLabel(\''+key+'\',this)" title="Double-click to rename" style="cursor:text">'+r.label+'</span>'+
+            '</div>'+
+            '<div class="camp-goal-val" style="font-size:16px;margin-top:6px">'+
+              (r.goal>0?r.val+'<span class="camp-goal-target">/ '+r.goal+'</span>':r.val)+
+            '</div>'+
+            (r.goal>0?
+              '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pct.toFixed(0)+'%;background:'+b.color+'88"></div></div>'+
+              '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pct.toFixed(0)+'%</div>':
+            '')+
+          '</div>';
+        }).join('');
+        var _addSumBtn=_adm&&_hidden.length?'<div class="camp-goal-box" onclick="openAddSumBlock(\''+b.id+'\')" style="border:1.5px dashed var(--border);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;min-height:80px;gap:4px">'+
+          '<div style="font-size:18px;color:var(--text-s)">+</div>'+
+          '<div style="font-size:9px;color:var(--text-s);font-weight:600;text-transform:uppercase;letter-spacing:.08em">Restore</div>'+
+        '</div>':'';
+        return '<div class="sum-blocks-grid" data-bid="'+b.id+'" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'+
+          _blocks+_addSumBtn+
         '</div>';
       })()+
     '</div>'+
