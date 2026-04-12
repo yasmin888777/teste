@@ -99,7 +99,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   font-size:9px;letter-spacing:.16em;text-transform:uppercase;
   color:rgba(255,255,255,.25);font-weight:600;
 }
-.sb-nav{padding:0 8px 2px}
+.sb-nav{padding:0 8px}
 .sb-item{
   display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;
   font-size:12px;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;margin-bottom:2px;
@@ -1677,12 +1677,12 @@ function renderSidebar(){
   var _abActive=currentPage==='all-brands';
   document.getElementById('sb-brands-list').innerHTML=
     '<div class="sb-pill'+(_abActive?' sb-pill-active':'')+'" onclick="navTo(\'all-brands\',null)" style="font-weight:600">'+
-      '<div class="sb-dot2" style="background:var(--text-s)"></div>'+
+      '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
       '<span>All Brands</span>'+
     '</div>'+
     ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(b=>
       '<div class="sb-pill'+(b.id===_activeBrandId&&currentPage==='brand'?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
-        '<div class="sb-dot2" style="background:'+b.color+'"></div>'+
+        '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
         '<span>'+b.name+'</span>'+
       '</div>').join('');
 
