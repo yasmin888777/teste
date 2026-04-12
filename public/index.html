@@ -2969,87 +2969,39 @@ function campaignCardHTML(b,i){
       campListHTML+
       (function(){
         var _adm=isAdmin();
-        var _xBtn=function(fn){return _adm?'<button onclick="'+fn+';event.stopPropagation()" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'';};
-        var _cg=getCustomGoals(b.id);
-        var _boxMap={
-          confirmed:'<div class="camp-goal-box" draggable="true" data-gkey="confirmed" style="cursor:grab;position:relative">'+
-            _xBtn('removeFromBoxOrder(\'confirmed\')')+
-            '<div class="camp-goal-lbl" ondblclick="editBoxLabel(\'confirmed\',this)" title="Double-click to rename" style="padding-right:'+(_adm?'18px':'0')+'">'+getBoxLabel('confirmed','Confirmed')+'</div>'+
-            '<div class="camp-goal-val">'+totCo+'<span class="camp-goal-target">/ '+(gCo||'—')+'</span></div>'+
-            '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pCo+'%;background:'+b.color+'"></div></div>'+
-            '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pCo.toFixed(0)+'%</div>'+
-          '</div>',
-          published:'<div class="camp-goal-box" draggable="true" data-gkey="published" style="cursor:grab;position:relative">'+
-            _xBtn('removeFromBoxOrder(\'published\')')+
-            '<div class="camp-goal-lbl" ondblclick="editBoxLabel(\'published\',this)" title="Double-click to rename" style="padding-right:'+(_adm?'18px':'0')+'">'+getBoxLabel('published','Published')+'</div>'+
-            '<div class="camp-goal-val">'+totV+'<span class="camp-goal-target">/ '+(gV||'—')+'</span></div>'+
-            '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pV+'%;background:'+b.color+'88"></div></div>'+
-            '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pV.toFixed(0)+'%</div>'+
-          '</div>',
-          convrate:'<div class="camp-goal-box" draggable="true" data-gkey="convrate" style="cursor:grab;position:relative">'+
-            _xBtn('removeFromBoxOrder(\'convrate\')')+
-            '<div class="camp-goal-lbl" ondblclick="editBoxLabel(\'convrate\',this)" title="Double-click to rename" style="padding-right:'+(_adm?'18px':'0')+'">'+getBoxLabel('convrate','Conv. Rate')+'</div>'+
-            '<div class="camp-goal-val" style="font-size:18px">'+rate+'</div>'+
-            '<div style="font-size:10px;color:var(--text-s);margin-top:6px">'+totC+' contacted</div>'+
-            '<div style="font-size:10px;color:var(--text-s);margin-top:2px">'+totCo+' confirmed</div>'+
-          '</div>'
-        };
-        var _order=getSumBoxOrder();
-        var _fixedBoxes=_order.map(function(k){return _boxMap[k]||'';}).join('');
-        var _customBoxes=_cg.filter(function(g){return g.label;}).map(function(g){
-          return '<div class="camp-goal-box" style="position:relative">'+
-            (_adm?'<button onclick="var cg=getCustomGoals(\''+b.id+'\');setCustomGoals(\''+b.id+'\',cg.filter(function(x){return x.label!==\''+escHtml(g.label)+'\'}));renderCampaigns();" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'')+
-            '<div class="camp-goal-lbl">'+escHtml(g.label)+'</div>'+
-            '<div class="camp-goal-val">'+(g.value||0)+'</div>'+
-          '</div>';
-        }).join('');
-        var _addBtn=_adm?'<div class="camp-goal-box" onclick="openAddBoxSelector()" style="border:1.5px dashed var(--border);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;min-height:80px;gap:4px">'+
-          '<div style="font-size:18px;color:var(--text-s)">+</div>'+
-          '<div style="font-size:9px;color:var(--text-s);font-weight:600;text-transform:uppercase;letter-spacing:.08em">Add</div>'+
-        '</div>':'';
-        return '<div class="camp-goals-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">'+_fixedBoxes+_customBoxes+_addBtn+'</div>';
-      })()+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-        '<div class="camp-funnel-title" style="margin-bottom:0">Summary</div>'+
-      '</div>'+
-      (function(){
-        var _adm=isAdmin();
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
+        var _convPct=totC>0?Math.min((totCo/totC)*100,100):0;
         var _allRows={
-          contacted:{label:getSumLabel('contacted','Contacted'), val:totC,        goal:0,          icon:'&#128222;'},
-          confirmed:{label:getSumLabel('confirmed','Confirmed'),  val:totCo,       goal:gCo,        icon:'&#129309;'},
-          shipped:  {label:getSumLabel('shipped','Shipped'),      val:totShipped,  goal:totSamples, icon:'&#128230;'},
-          received: {label:getSumLabel('received','Received'),    val:totReceived, goal:totSamples, icon:'&#9989;'},
-          published:{label:getSumLabel('published','Published'),  val:totV,        goal:gV,         icon:'&#127909;'},
+          convrate: {label:getSumLabel('convrate','Conv. Rate'), valStr:rate,     icon:'',         hasPct:true,  pct:_convPct,  sub:totC+' contacted · '+totCo+' confirmed'},
+          contacted:{label:getSumLabel('contacted','Contacted'),  valStr:''+totC, icon:'&#128222;', hasPct:false, pct:0},
+          confirmed:{label:getSumLabel('confirmed','Confirmed'),  valStr:gCo?totCo+' / '+gCo:''+totCo, icon:'&#129309;', hasPct:!!gCo, pct:gCo>0?Math.min((totCo/gCo)*100,100):0},
+          shipped:  {label:getSumLabel('shipped','Shipped'),      valStr:totSamples?totShipped+' / '+totSamples:''+totShipped, icon:'&#128230;', hasPct:!!totSamples, pct:totSamples>0?Math.min((totShipped/totSamples)*100,100):0},
+          received: {label:getSumLabel('received','Received'),    valStr:totSamples?totReceived+' / '+totSamples:''+totReceived, icon:'&#9989;', hasPct:!!totSamples, pct:totSamples>0?Math.min((totReceived/totSamples)*100,100):0},
+          published:{label:getSumLabel('published','Published'),  valStr:gV?totV+' / '+gV:''+totV, icon:'&#127909;', hasPct:!!gV, pct:gV>0?Math.min((totV/gV)*100,100):0},
         };
         var _hidden=getSumHidden(b.id);
-        var _order=getSumBlockOrder(b.id).filter(function(k){return _allRows[k]&&_hidden.indexOf(k)<0;});
+        var _baseOrder=['convrate','contacted','confirmed','shipped','received','published'];
+        var _stored=getSumBlockOrder(b.id);
+        var _order=_baseOrder.sort(function(a,c2){
+          var ai=_stored.indexOf(a),ci=_stored.indexOf(c2);
+          return(ai<0?999:ai)-(ci<0?999:ci);
+        }).filter(function(k){return _allRows[k]&&_hidden.indexOf(k)<0;});
         var _blocks=_order.map(function(key){
           var r=_allRows[key];
-          var numVal=(typeof r.val==='number')?r.val:0;
-          var pct=r.goal>0?Math.min((numVal/r.goal)*100,100):0;
-          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab">'+
+          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab;display:flex;flex-direction:column;flex:1;min-width:90px">'+
             (_adm?'<button onclick="hideSumBlock(\''+b.id+'\',\''+key+'\');event.stopPropagation()" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'')+
-            '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;padding-right:'+(_adm?'18px':'0')+'">'+
-              '<span>'+r.icon+'</span>'+
+            '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;padding-right:'+(_adm?'18px':'0')+'">'+
+              (r.icon?'<span>'+r.icon+'</span>':'')+
               '<span ondblclick="editSumLabel(\''+key+'\',this)" title="Double-click to rename" style="cursor:text">'+r.label+'</span>'+
             '</div>'+
-            '<div class="camp-goal-val" style="font-size:16px;margin-top:6px">'+
-              (r.goal>0?r.val+'<span class="camp-goal-target">/ '+r.goal+'</span>':r.val)+
-            '</div>'+
-            (r.goal>0?
-              '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pct.toFixed(0)+'%;background:'+b.color+'88"></div></div>'+
-              '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pct.toFixed(0)+'%</div>':
-            '')+
+            '<div style="font-size:15px;font-weight:700;color:var(--text);margin-top:6px;line-height:1.2">'+r.valStr+'</div>'+
+            (r.sub?'<div style="font-size:9px;color:var(--text-s);margin-top:3px">'+r.sub+'</div>':'')+
+            '<div style="flex:1;min-height:4px"></div>'+
+            '<div class="prog-bar" style="margin-top:6px'+(r.hasPct?'':';visibility:hidden')+'"><div class="prog-fill" style="width:'+r.pct.toFixed(0)+'%;background:#3b7ef8"></div></div>'+
+            '<div style="font-size:10px;color:var(--text-s);margin-top:3px'+(r.hasPct?'':';visibility:hidden')+'">'+r.pct.toFixed(0)+'%</div>'+
           '</div>';
         }).join('');
-        var _addSumBtn=_adm&&_hidden.length?'<div class="camp-goal-box" onclick="openAddSumBlock(\''+b.id+'\')" style="border:1.5px dashed var(--border);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;min-height:80px;gap:4px">'+
-          '<div style="font-size:18px;color:var(--text-s)">+</div>'+
-          '<div style="font-size:9px;color:var(--text-s);font-weight:600;text-transform:uppercase;letter-spacing:.08em">Restore</div>'+
-        '</div>':'';
-        return '<div class="sum-blocks-grid" data-bid="'+b.id+'" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'+
-          _blocks+_addSumBtn+
-        '</div>';
+        return '<div class="sum-blocks-grid" data-bid="'+b.id+'" style="display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto">'+_blocks+'</div>';
       })()+
     '</div>'+
   '</div>';
