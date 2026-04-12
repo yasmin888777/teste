@@ -2972,7 +2972,7 @@ function campaignCardHTML(b,i){
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
         var _convPct=totC>0?Math.min((totCo/totC)*100,100):0;
         var _allRows={
-          convrate: {label:getSumLabel('convrate','Conv. Rate'), valStr:rate,     icon:'',         hasPct:true,  pct:_convPct,  sub:totC+' contacted · '+totCo+' confirmed'},
+          convrate: {label:getSumLabel('convrate','Conv. Rate'), valStr:rate,     icon:'',         hasPct:true,  pct:_convPct},
           contacted:{label:getSumLabel('contacted','Contacted'),  valStr:''+totC, icon:'&#128222;', hasPct:false, pct:0},
           confirmed:{label:getSumLabel('confirmed','Confirmed'),  valStr:gCo?totCo+' / '+gCo:''+totCo, icon:'&#129309;', hasPct:!!gCo, pct:gCo>0?Math.min((totCo/gCo)*100,100):0},
           shipped:  {label:getSumLabel('shipped','Shipped'),      valStr:totSamples?totShipped+' / '+totSamples:''+totShipped, icon:'&#128230;', hasPct:!!totSamples, pct:totSamples>0?Math.min((totShipped/totSamples)*100,100):0},
@@ -2988,17 +2988,16 @@ function campaignCardHTML(b,i){
         }).filter(function(k){return _allRows[k]&&_hidden.indexOf(k)<0;});
         var _blocks=_order.map(function(key){
           var r=_allRows[key];
-          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab;display:flex;flex-direction:column;flex:1;min-width:90px">'+
-            (_adm?'<button onclick="hideSumBlock(\''+b.id+'\',\''+key+'\');event.stopPropagation()" style="position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:4px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:10px;cursor:pointer;padding:0;line-height:16px;text-align:center">&#10005;</button>':'')+
-            '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;padding-right:'+(_adm?'18px':'0')+'">'+
+          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab;display:flex;flex-direction:column;flex:1;min-width:70px;padding:8px 10px">'+
+            (_adm?'<button onclick="hideSumBlock(\''+b.id+'\',\''+key+'\');event.stopPropagation()" style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:3px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:9px;cursor:pointer;padding:0;line-height:14px;text-align:center">&#10005;</button>':'')+
+            '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;padding-right:'+(_adm?'16px':'0')+'">'+
               (r.icon?'<span>'+r.icon+'</span>':'')+
               '<span ondblclick="editSumLabel(\''+key+'\',this)" title="Double-click to rename" style="cursor:text">'+r.label+'</span>'+
             '</div>'+
-            '<div style="font-size:15px;font-weight:700;color:var(--text);margin-top:6px;line-height:1.2">'+r.valStr+'</div>'+
-            (r.sub?'<div style="font-size:9px;color:var(--text-s);margin-top:3px">'+r.sub+'</div>':'')+
-            '<div style="flex:1;min-height:4px"></div>'+
-            '<div class="prog-bar" style="margin-top:6px'+(r.hasPct?'':';visibility:hidden')+'"><div class="prog-fill" style="width:'+r.pct.toFixed(0)+'%;background:#3b7ef8"></div></div>'+
-            '<div style="font-size:10px;color:var(--text-s);margin-top:3px'+(r.hasPct?'':';visibility:hidden')+'">'+r.pct.toFixed(0)+'%</div>'+
+            '<div style="font-size:13px;font-weight:700;color:var(--text);margin-top:5px;line-height:1.2">'+r.valStr+'</div>'+
+            '<div style="flex:1;min-height:3px"></div>'+
+            '<div class="prog-bar" style="margin-top:5px'+(r.hasPct?'':';visibility:hidden')+'"><div class="prog-fill" style="width:'+r.pct.toFixed(0)+'%;background:#3b7ef8"></div></div>'+
+            '<div style="font-size:9px;color:var(--text-s);margin-top:2px'+(r.hasPct?'':';visibility:hidden')+'">'+r.pct.toFixed(0)+'%</div>'+
           '</div>';
         }).join('');
         return '<div class="sum-blocks-grid" data-bid="'+b.id+'" style="display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto">'+_blocks+'</div>';
