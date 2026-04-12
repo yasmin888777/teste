@@ -2923,7 +2923,8 @@ function campaignCardHTML(b,i){
           convrate:'<div class="camp-goal-box" draggable="true" data-gkey="convrate" style="cursor:grab">'+
             '<div class="camp-goal-lbl">Conv. Rate</div>'+
             '<div class="camp-goal-val" style="font-size:18px">'+rate+'</div>'+
-            '<div style="font-size:10px;color:var(--text-s);margin-top:8px">contacted &rarr; confirmed</div>'+
+            '<div style="font-size:10px;color:var(--text-s);margin-top:6px">'+totC+' contacted</div>'+
+            '<div style="font-size:10px;color:var(--text-s);margin-top:2px">'+totCo+' confirmed</div>'+
           '</div>'
         };
         var _order=getSumBoxOrder();
@@ -2942,20 +2943,32 @@ function campaignCardHTML(b,i){
       (function(){
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
         var rows=[
-          {key:'contacted', label:getSumLabel('contacted','Total KOLs Contacted'), val:totC,        goal:0,          icon:'&#128222;'},
-          {key:'confirmed', label:getSumLabel('confirmed','Confirmed KOLs'),        val:totCo,       goal:gCo,        icon:'&#129309;'},
-          {key:'shipped',   label:getSumLabel('shipped','Shipped Products'),         val:totShipped,  goal:totSamples, icon:'&#128230;'},
-          {key:'received',  label:getSumLabel('received','Received Products'),       val:totReceived, goal:totSamples, icon:'&#9989;'},
-          {key:'published', label:getSumLabel('published','Published Videos'),       val:totV,        goal:gV,         icon:'&#127909;'},
-          {key:'remaining', label:getSumLabel('remaining','Videos to be Published'), val:gV>0?Math.max(0,gV-totV):'—',goal:0,icon:'&#127916;'},
+          {key:'contacted', label:getSumLabel('contacted','Contacted'),      val:totC,        goal:0,          icon:'&#128222;'},
+          {key:'confirmed', label:getSumLabel('confirmed','Confirmed'),       val:totCo,       goal:gCo,        icon:'&#129309;'},
+          {key:'shipped',   label:getSumLabel('shipped','Shipped'),           val:totShipped,  goal:totSamples, icon:'&#128230;'},
+          {key:'received',  label:getSumLabel('received','Received'),         val:totReceived, goal:totSamples, icon:'&#9989;'},
+          {key:'published', label:getSumLabel('published','Published'),       val:totV,        goal:gV,         icon:'&#127909;'},
+          {key:'remaining', label:getSumLabel('remaining','To Publish'),      val:gV>0?Math.max(0,gV-totV):'—',goal:0,icon:'&#127916;'},
         ];
-        return rows.map(function(r){
-          var display=r.goal>0?(r.val+' / '+r.goal):r.val;
-          return '<div class="camp-funnel-row">'+
-            '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px;cursor:pointer" title="Double-click to rename" ondblclick="editSumLabel(\''+r.key+'\',this)"><span>'+r.icon+'</span>'+r.label+'</span>'+
-            '<span style="font-size:11px;color:var(--text)">'+display+'</span>'+
-          '</div>';
-        }).join('');
+        return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">'+
+          rows.map(function(r){
+            var numVal=(typeof r.val==='number')?r.val:0;
+            var pct=r.goal>0?Math.min((numVal/r.goal)*100,100):0;
+            return '<div class="camp-goal-box">'+
+              '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;flex-wrap:wrap">'+
+                '<span>'+r.icon+'</span>'+
+                '<span ondblclick="editSumLabel(\''+r.key+'\',this)" title="Double-click to rename" style="cursor:pointer">'+r.label+'</span>'+
+              '</div>'+
+              '<div class="camp-goal-val" style="font-size:16px;margin-top:6px">'+
+                (r.goal>0?r.val+'<span class="camp-goal-target">/ '+r.goal+'</span>':r.val)+
+              '</div>'+
+              (r.goal>0?
+                '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pct.toFixed(0)+'%;background:'+b.color+'88"></div></div>'+
+                '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pct.toFixed(0)+'%</div>':
+              '')+
+            '</div>';
+          }).join('')+
+        '</div>';
       })()+
     '</div>'+
   '</div>';
@@ -3985,7 +3998,7 @@ function renderBrandDetail(brandId){
         owners.map(function(m){return memberPillSmall(m,'var(--primary)',sumM(m.id,b.id,'confirmed'),'confirmed');}).join('')+
       '</div>':'')+
       (supporters.length?'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
-        '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--amber)">&#128222; Support</span>'+
+        '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--amber)">&#129309; Support</span>'+
         supporters.map(function(m){return memberPillSmall(m,'var(--amber)',sumM(m.id,b.id,'kols_followedup'),'follow-ups');}).join('')+
       '</div>':'')+
     '</div>';
