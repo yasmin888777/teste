@@ -95,11 +95,11 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .sb-app-sub{font-size:9px;color:rgba(255,255,255,.35);margin-top:2px;letter-spacing:.08em}
 
 .sb-sep{
-  padding:16px 16px 5px;
+  padding:14px 16px 4px;
   font-size:9px;letter-spacing:.16em;text-transform:uppercase;
   color:rgba(255,255,255,.25);font-weight:600;
 }
-.sb-nav{padding:0 8px 6px}
+.sb-nav{padding:0 8px 2px}
 .sb-item{
   display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;
   font-size:12px;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;margin-bottom:2px;
@@ -710,7 +710,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="sb-sep">Member</div>
     <nav class="sb-nav">
       <div class="sb-item" id="sbi-member-home" onclick="navTo('member-home',this)">
-        <div class="sb-dot" style="background:var(--green)"></div> Home
+        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Home
       </div>
     </nav>
   </div>
@@ -719,13 +719,13 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="sb-sep">Admin</div>
     <nav class="sb-nav">
       <div class="sb-item" id="sbi-admin-home" onclick="navTo('admin-home',this)">
-        <div class="sb-dot" style="background:var(--green)"></div> Home
+        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Home
       </div>
       <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
-        <div class="sb-dot" style="background:var(--purple)"></div> Documents
+        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Documents
       </div>
       <div class="sb-item" id="sbi-report" onclick="navTo('report',this)">
-        <div class="sb-dot" style="background:var(--amber)"></div> Weekly Report
+        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Weekly Report
       </div>
     </nav>
   </div>
@@ -733,17 +733,17 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <div class="sb-sep" id="sb-nav-sep">Navigation</div>
   <nav class="sb-nav">
     <div class="sb-item" id="sbi-campaigns" onclick="navTo('campaigns',this)">
-      <div class="sb-dot" style="background:var(--green)"></div> Campaigns
+      <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Campaigns
     </div>
   </nav>
   <nav class="sb-nav" id="sb-nav-admin-items">
     <div class="sb-item" id="sbi-team-activity" onclick="navTo('members',this)">
-      <div class="sb-dot" style="background:var(--pink)"></div> Team Activity
+      <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Team Activity
     </div>
   </nav>
   <nav class="sb-nav" id="sb-nav-member-items">
     <div class="sb-item" id="sbi-digest" onclick="navTo('digest',this)">
-      <div class="sb-dot" style="background:var(--amber)"></div> Weekly Digest
+      <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Weekly Digest
     </div>
   </nav>
 
@@ -2571,6 +2571,63 @@ function clearSummaryOverrides(){
 }
 
 /* ══════════════════════════════════════════════
+   SUMMARY LABEL HELPERS
+══════════════════════════════════════════════ */
+function getSumLabel(key,def){try{var o=JSON.parse(localStorage.getItem('dg_sum_labels')||'{}');return o[key]||def;}catch(e){return def;}}
+function setSumLabel(key,val){try{var o=JSON.parse(localStorage.getItem('dg_sum_labels')||'{}');o[key]=val;localStorage.setItem('dg_sum_labels',JSON.stringify(o));}catch(e){}}
+function editSumLabel(key,el){
+  var cur=el.textContent.trim();
+  var nv=window.prompt('Rename label:',cur);
+  if(nv!==null&&nv.trim()){setSumLabel(key,nv.trim());renderCampaigns();if(currentPage==='brand'&&_activeBrandId)renderBrandDetail(_activeBrandId);}
+}
+
+/* ══════════════════════════════════════════════
+   GOAL BOX ORDER HELPERS
+══════════════════════════════════════════════ */
+var _DEFAULT_BOX_ORDER=['confirmed','published','convrate'];
+function getSumBoxOrder(){try{var o=JSON.parse(localStorage.getItem('dg_box_order'));return(o&&o.length)?o:_DEFAULT_BOX_ORDER.slice();}catch(e){return _DEFAULT_BOX_ORDER.slice();}}
+function setSumBoxOrder(order){try{localStorage.setItem('dg_box_order',JSON.stringify(order));}catch(e){}}
+function initGoalBoxDrag(){
+  var grids=document.querySelectorAll('.camp-goals-grid');
+  var _dragging=null;
+  grids.forEach(function(grid){
+    var boxes=grid.querySelectorAll('.camp-goal-box[data-gkey]');
+    boxes.forEach(function(box){
+      box.addEventListener('dragstart',function(e){
+        _dragging=box;
+        box.style.opacity='0.4';
+        e.dataTransfer.effectAllowed='move';
+        e.dataTransfer.setData('text/plain',box.getAttribute('data-gkey'));
+      });
+      box.addEventListener('dragend',function(){
+        box.style.opacity='1';
+        _dragging=null;
+        document.querySelectorAll('.camp-goal-box[data-gkey]').forEach(function(b){b.style.outline='';});
+      });
+      box.addEventListener('dragover',function(e){
+        e.preventDefault();
+        if(_dragging&&_dragging!==box){box.style.outline='2px dashed rgba(255,255,255,.4)';}
+      });
+      box.addEventListener('dragleave',function(){box.style.outline='';});
+      box.addEventListener('drop',function(e){
+        e.preventDefault();
+        box.style.outline='';
+        if(!_dragging||_dragging===box)return;
+        var fromKey=_dragging.getAttribute('data-gkey');
+        var toKey=box.getAttribute('data-gkey');
+        var order=getSumBoxOrder();
+        var fi=order.indexOf(fromKey),ti=order.indexOf(toKey);
+        if(fi<0||ti<0)return;
+        order.splice(fi,1);order.splice(ti,0,fromKey);
+        setSumBoxOrder(order);
+        renderCampaigns();
+        if(currentPage==='brand'&&_activeBrandId)renderBrandDetail(_activeBrandId);
+      });
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
    CHANGELOG
 ══════════════════════════════════════════════ */
 var CHANGELOG=[
@@ -2626,6 +2683,7 @@ function renderCampaigns(){
     return;
   }
   el.innerHTML=brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
+  initGoalBoxDrag();
 }
 function campaignCardHTML(b,i){
   var _ov=getSummaryOverride(b.id)||{};
@@ -2706,24 +2764,27 @@ function campaignCardHTML(b,i){
       campListHTML+
       (function(){
         var _cg=getCustomGoals(b.id);
-        var _fixedBoxes=
-          '<div class="camp-goal-box">'+
+        var _boxMap={
+          confirmed:'<div class="camp-goal-box" draggable="true" data-gkey="confirmed" style="cursor:grab">'+
             '<div class="camp-goal-lbl">Confirmed</div>'+
             '<div class="camp-goal-val">'+totCo+'<span class="camp-goal-target">/ '+(gCo||'—')+'</span></div>'+
             '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pCo+'%;background:'+b.color+'"></div></div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pCo.toFixed(0)+'%</div>'+
-          '</div>'+
-          '<div class="camp-goal-box">'+
+          '</div>',
+          published:'<div class="camp-goal-box" draggable="true" data-gkey="published" style="cursor:grab">'+
             '<div class="camp-goal-lbl">Published</div>'+
             '<div class="camp-goal-val">'+totV+'<span class="camp-goal-target">/ '+(gV||'—')+'</span></div>'+
             '<div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:'+pV+'%;background:'+b.color+'88"></div></div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pV.toFixed(0)+'%</div>'+
-          '</div>'+
-          '<div class="camp-goal-box">'+
+          '</div>',
+          convrate:'<div class="camp-goal-box" draggable="true" data-gkey="convrate" style="cursor:grab">'+
             '<div class="camp-goal-lbl">Conv. Rate</div>'+
             '<div class="camp-goal-val" style="font-size:18px">'+rate+'</div>'+
             '<div style="font-size:10px;color:var(--text-s);margin-top:8px">contacted &rarr; confirmed</div>'+
-          '</div>';
+          '</div>'
+        };
+        var _order=getSumBoxOrder();
+        var _fixedBoxes=_order.map(function(k){return _boxMap[k]||'';}).join('');
         var _customBoxes=_cg.filter(function(g){return g.label;}).map(function(g){
           return '<div class="camp-goal-box">'+
             '<div class="camp-goal-lbl">'+escHtml(g.label)+'</div>'+
@@ -2733,24 +2794,24 @@ function campaignCardHTML(b,i){
         return '<div class="camp-goals-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">'+_fixedBoxes+_customBoxes+'</div>';
       })()+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-        '<div class="camp-funnel-title" style="margin-bottom:0">Summary'+(_hasOv?'<span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:#fef3c7;color:#d97706;margin-left:6px;vertical-align:middle">✎ edited</span>':'')+'</div>'+
+        '<div class="camp-funnel-title" style="margin-bottom:0">Summary</div>'+
         (isAdmin()?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);cursor:pointer">&#9998; Edit</button>':'')+
       '</div>'+
       (function(){
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
         var rows=[
-          {label:'Total KOLs Contacted', val:totC,        goal:0,          icon:'&#128222;'},
-          {label:'Confirmed KOLs',        val:totCo,       goal:gCo,        icon:'&#129309;', ov:_ov.confirmed!=null},
-          {label:'Shipped Products',      val:totShipped,  goal:totSamples, icon:'&#128230;', ov:_ov.shipped!=null},
-          {label:'Received Products',     val:totReceived, goal:totSamples, icon:'&#9989;',   ov:_ov.received!=null},
-          {label:'Published Videos',      val:totV,        goal:gV,         icon:'&#127909;', ov:_ov.published!=null},
-          {label:'Videos to be Published',val:gV>0?Math.max(0,gV-totV):'—',goal:0,           icon:'&#127916;'},
+          {key:'contacted', label:getSumLabel('contacted','Total KOLs Contacted'), val:totC,        goal:0,          icon:'&#128222;'},
+          {key:'confirmed', label:getSumLabel('confirmed','Confirmed KOLs'),        val:totCo,       goal:gCo,        icon:'&#129309;'},
+          {key:'shipped',   label:getSumLabel('shipped','Shipped Products'),         val:totShipped,  goal:totSamples, icon:'&#128230;'},
+          {key:'received',  label:getSumLabel('received','Received Products'),       val:totReceived, goal:totSamples, icon:'&#9989;'},
+          {key:'published', label:getSumLabel('published','Published Videos'),       val:totV,        goal:gV,         icon:'&#127909;'},
+          {key:'remaining', label:getSumLabel('remaining','Videos to be Published'), val:gV>0?Math.max(0,gV-totV):'—',goal:0,icon:'&#127916;'},
         ];
         return rows.map(function(r){
           var display=r.goal>0?(r.val+' / '+r.goal):r.val;
           return '<div class="camp-funnel-row">'+
-            '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px"><span>'+r.icon+'</span>'+r.label+'</span>'+
-            '<span style="font-size:14px;font-weight:700;color:'+(r.ov?'var(--amber)':'var(--text)')+'">'+display+(r.ov?'<span style="font-size:9px;margin-left:3px">✎</span>':'')+'</span>'+
+            '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px;cursor:pointer" title="Double-click to rename" ondblclick="editSumLabel(\''+r.key+'\',this)"><span>'+r.icon+'</span>'+r.label+'</span>'+
+            '<span style="font-size:11px;color:var(--text)">'+display+'</span>'+
           '</div>';
         }).join('');
       })()+
@@ -3753,7 +3814,7 @@ function renderBrandDetail(brandId){
 
   var supportersHtml=supporters.length?
     '<div>'+
-      '<div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">&#128222; Follow up Agent</div>'+
+      '<div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin-bottom:6px">&#129309; Follow up Agent</div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
         supporters.map(function(m){
           var v=sumM(m.id,b.id,'kols_followedup');
