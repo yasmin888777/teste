@@ -721,11 +721,17 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div class="sb-item" id="sbi-admin-home" onclick="navTo('admin-home',this)">
         <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Home
       </div>
+      <div class="sb-item" id="sbi-admin-team" onclick="navTo('admin-team',this)">
+        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Team Activity
+      </div>
       <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
         <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Documents
       </div>
       <div class="sb-item" id="sbi-report" onclick="navTo('report',this)">
         <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Weekly Report
+      </div>
+      <div class="sb-item" id="sbi-settings" onclick="navTo('settings',this)">
+        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Settings
       </div>
     </nav>
   </div>
@@ -842,11 +848,20 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <!-- ── ADMIN HOME ── -->
     <div class="page" id="page-admin-home">
       <div id="admin-home-content"></div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="page" id="page-settings">
+      <div id="settings-content"></div>
+    </div>
+
+    <!-- ── ADMIN TEAM ACTIVITY ── -->
+    <div class="page" id="page-admin-team">
+      <div id="admin-team-content"></div>
       <div id="admin-overview-section">
-        <div class="kpi-row" id="kpi-overview"></div>
         <div class="mb16">
           <div class="card">
-            <div class="sec"><div class="sec-t">Activity Trend <span class="sec-s">last 14 days — Contacted + Follow-ups</span></div></div>
+            <div class="sec" style="display:flex;align-items:center;justify-content:space-between"><div class="sec-t">Activity Trend <span class="sec-s" id="trend-period-label">last 14 days</span></div><select id="trend-period-sel" onchange="setTrendPeriod(this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);color:var(--text);cursor:pointer"><option value="14">Last 14 days</option><option value="30">Last 30 days</option><option value="60">Last 60 days</option></select></div>
             <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
             <div class="legend-row" id="legend-trend"></div>
           </div>
@@ -1365,6 +1380,15 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <button class="save-btn" onclick="saveAccountPassword()" style="margin-top:8px">Update Password</button>
     </div>
     <div id="acct-msg" style="font-size:11px;margin-top:10px;text-align:center"></div>
+    <div id="acct-devmode-section" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:600;color:var(--text-m);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px">Developer Mode</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="acct-devmode-toggle" onclick="toggleDevMode()" style="width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0">
+          <div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+        </div>
+        <span id="acct-devmode-lbl" style="font-size:12px;font-weight:600"></span>
+      </div>
+    </div>
     <button onclick="doLogout()" style="width:100%;margin-top:16px;padding:10px;background:rgba(248,113,113,.1);color:#f87171;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid rgba(248,113,113,.2);cursor:pointer">Sign Out</button>
   </div>
 </div>
@@ -1511,6 +1535,8 @@ async function loadState(){
         openMemberDetail(_savedNav.memberId);
       } else if(_sp==='admin-home'&&isAdmin()){
         navTo('admin-home',document.getElementById('sbi-admin-home'));
+      } else if(_sp==='admin-team'&&isAdmin()){
+        navTo('admin-team',document.getElementById('sbi-admin-team'));
       } else if(_sp==='member-home'){
         navTo('member-home',document.getElementById('sbi-member-home'));
       } else if(_sp==='members'||_sp==='campaigns'||_sp==='digest'||_sp==='links'||_sp==='report'){
@@ -1657,7 +1683,8 @@ function loadAdminData(){
         renderMembers();
         if(currentMemberId) renderMemberPage(currentMemberId);
         // Re-render home + trend now that user roles are known (fixes pure-admin filtering)
-        if(currentPage==='admin-home'){renderAdminHome();drawTrend();}
+        if(currentPage==='admin-home') renderAdminHome();
+        if(currentPage==='admin-team'){renderAdminTeam();drawTrend();}
       }
     });
 }
@@ -1682,22 +1709,26 @@ function navTo(page,el,brandId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','member-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail',report:'Weekly Report','all-brands':'All Brands'};
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','admin-team':'Team Activity','member-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail',report:'Weekly Report','all-brands':'All Brands','settings':'Settings'};
   if(page==='brand'&&_activeBrandId){const b=getBrand(_activeBrandId);document.getElementById('tb-title').textContent=b?b.name:'Brand Detail';}
   else document.getElementById('tb-title').textContent=T[page]||page;
   // Hide period selector on pages that don't need it
-  var _noperiod=['campaigns','links','report','all-brands','admin-home','member-home','brand'];
+  var _noperiod=['campaigns','links','report','all-brands','admin-home','admin-team','member-home','brand','settings'];
   var _tbView=document.querySelector('.tb-view');
   if(_tbView) _tbView.style.display=_noperiod.includes(page)?'none':'';
+  var _tbExport=document.querySelector('.tb-btn.export');
+  if(_tbExport) _tbExport.style.display=(page==='admin-home'||page==='member-home')?'none':'';
   if(page==='overview') drawTrend();
   if(page==='digest') renderDigest();
   if(page==='campaigns') renderCampaigns();
   if(page==='members') renderMembers();
-  if(page==='admin-home'){renderAdminHome();drawTrend();}
+  if(page==='admin-home') renderAdminHome();
+  if(page==='admin-team'){renderAdminTeam();drawTrend();}
   if(page==='member-home') renderMemberHome();
   if(page==='links') renderLinks();
   if(page==='brand') renderBrandDetail(_activeBrandId);
   if(page==='report') renderWeeklyReport();
+  if(page==='settings') renderSettings();
   if(page==='all-brands') renderAllBrands();
   saveNavState();
 }
@@ -1733,7 +1764,9 @@ function renderAll(){
   renderBrandProgress();
   renderMembers();
   renderCampaigns();
-  if(currentPage==='overview'||currentPage==='admin-home') drawTrend();
+  if(currentPage==='overview'||currentPage==='admin-team') drawTrend();
+  if(currentPage==='admin-home') renderAdminHome();
+  if(currentPage==='admin-team') renderAdminTeam();
   if(currentPage==='digest') renderDigest();
   if(currentMemberId && document.getElementById('page-member').classList.contains('active')) renderMemberPage(currentMemberId);
   if(currentPage==='brand'&&_activeBrandId) renderBrandDetail(_activeBrandId);
@@ -1762,11 +1795,12 @@ function renderAll(){
   ['sb-brands-sep','sb-brands-list','sb-team-sep','sb-team-list'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display='';
   });
-  // Topbar export hidden for members (but Daily/Weekly/Monthly stays visible)
+  // Topbar view + export: hidden for members, and hidden on home/no-period pages
+  var _noPeriodPages=['campaigns','links','report','all-brands','admin-home','admin-team','member-home','brand','settings'];
   var tbView=document.querySelector('.tb-view');
-  if(tbView) tbView.style.display='';
+  if(tbView) tbView.style.display=_noPeriodPages.includes(currentPage)?'none':'';
   var tbExport=document.querySelector('.tb-btn.export');
-  if(tbExport) tbExport.style.display=pureMember?'none':'';
+  if(tbExport) tbExport.style.display=(pureMember||currentPage==='admin-home'||currentPage==='member-home')?'none':'';
   updateAccountUI();
 }
 
@@ -1915,39 +1949,24 @@ function renderConvTable(){
 /* Brand Progress */
 function renderBrandProgress(){
   const el=document.getElementById('brand-progress-row');if(!el)return;
-  const cards=ST.brands.map(function(b,i){
-    const totCo=ST.members.reduce((s,m)=>s+sumM(m.id,b.id,'confirmed'),0);
-    const gCo=b.goals?.confirmed||0;
-    const pCo=gCo>0?Math.min((totCo/gCo)*100,100):0;
-    const totV=ST.members.reduce((s,m)=>s+sumM(m.id,b.id,'vids_published'),0);
-    const campVids=(ST.campLogs[b.id]||[]).reduce((s,l)=>s+(+l.videos||0),0);
-    const allVids=totV+campVids;
-    const gV=b.goals?.videos||0;
-    const pV=gV>0?Math.min((allVids/gV)*100,100):0;
-    return '<div class="card" style="animation-delay:'+i*55+'ms">'+
-      '<div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border)">'+
-        '<div style="width:10px;height:10px;border-radius:50%;background:'+b.color+'"></div>'+
-        '<span style="font-size:13px;font-weight:700">'+b.name+'</span>'+
-      '</div>'+
-      '<div class="prog-wrap">'+
-        '<div class="prog-top"><span class="prog-lbl">Confirmed Partners</span><span class="prog-vals"><strong>'+totCo+'</strong> / '+(gCo||'—')+'</span></div>'+
-        '<div class="prog-bar"><div class="prog-fill" style="width:'+pCo+'%;background:'+b.color+'"></div></div>'+
-      '</div>'+
-      '<div class="prog-wrap" style="margin-top:4px">'+
-        '<div class="prog-top"><span class="prog-lbl">Published Videos</span><span class="prog-vals"><strong>'+allVids+'</strong> / '+(gV||'—')+'</span></div>'+
-        '<div class="prog-bar"><div class="prog-fill" style="width:'+pV+'%;background:'+b.color+'55"></div></div>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-  el.innerHTML='<div class="sec"><div class="sec-t">Campaign Progress by Brand</div></div><div class="g3">'+cards+'</div>';
+  const cards=ST.brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
+  el.innerHTML='<div class="sec"><div class="sec-t">Campaign Progress by Brand</div></div><div style="display:flex;flex-direction:column;gap:20px">'+cards+'</div>';
+  initSumBlockDrag();
 }
 
 /* TREND CHART */
+var _trendDays=14;
+function setTrendPeriod(v){
+  _trendDays=parseInt(v)||14;
+  var lbl=document.getElementById('trend-period-label');
+  if(lbl) lbl.textContent='last '+_trendDays+' days';
+  drawTrend();
+}
 function drawTrend(){
   const cv=document.getElementById('chart-trend');if(!cv)return;
   if(trendChart){trendChart.destroy();trendChart=null;}
   const days=[];
-  for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+  for(let i=(_trendDays-1);i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
   const labels=days.map(function(d){const[,m,dd]=d.split('-');return(+m).toString().padStart(2,'0')+'/'+(+dd).toString().padStart(2,'0');});
   const trackableMembers=ST.members.filter(function(mem){
     var u=_allUsers.find(function(u){return u.member_id===mem.id;});
@@ -2988,19 +3007,51 @@ function campaignCardHTML(b,i){
     '<div class="camp-card-body">'+
       campListHTML+
       (function(){
-        var _adm=isAdmin();
+        var _adm=isAdmin()&&isDevMode();
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
         var _convPct=totC>0?Math.min((totCo/totC)*100,100):0;
+        var _memberData=sortedAssigned.map(function(m){
+          var role=(m.roles&&m.roles[b.id])||'';
+          var mContacted=sumM(m.id,b.id,'kols_contacted');
+          var mConfirmed=sumM(m.id,b.id,'confirmed');
+          var mPublished=sumM(m.id,b.id,'vids_published');
+          var mRate=mContacted>0?((mConfirmed/mContacted)*100).toFixed(1)+'%':'—';
+          var isActive=role==='owner'||role==='support';
+          var avUrl=avatarUrl(m);
+          var col=memberColor(m);
+          var avHtml='<div style="width:16px;height:16px;border-radius:50%;overflow:hidden;background:'+col+';display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;'+(isActive?'':'filter:grayscale(1);opacity:.4')+'">'+
+            (avUrl?'<img src="'+avUrl+'" style="width:100%;height:100%;object-fit:cover">':'<span style="font-size:6px;font-weight:700;color:#fff">'+ini(m.name)+'</span>')+
+          '</div>';
+          return {m:m,role:role,isActive:isActive,avHtml:avHtml,contacted:mContacted,confirmed:mConfirmed,published:mPublished,rate:mRate};
+        });
+        function _membBreakdown(getVal){
+          return '<div style="margin-top:7px;padding-top:6px;border-top:1px solid var(--border)">'+
+            _memberData.map(function(md){
+              return '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">'+
+                md.avHtml+
+                '<span style="font-size:9px;color:var(--text-s);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+md.m.name.split(' ')[0]+'</span>'+
+                '<span style="font-size:9px;font-weight:600;color:var(--text)">'+getVal(md)+'</span>'+
+              '</div>';
+            }).join('')+
+          '</div>';
+        }
         var _allRows={
-          convrate: {label:getSumLabel('convrate','Conv. Rate'), valStr:rate,     icon:'',         hasPct:true,  pct:_convPct},
-          contacted:{label:getSumLabel('contacted','Contacted'),  valStr:''+totC, icon:'&#128222;', hasPct:false, pct:0},
-          confirmed:{label:getSumLabel('confirmed','Confirmed'),  valStr:gCo?totCo+' / '+gCo:''+totCo, icon:'&#129309;', hasPct:!!gCo, pct:gCo>0?Math.min((totCo/gCo)*100,100):0},
-          shipped:  {label:getSumLabel('shipped','Shipped'),      valStr:totSamples?totShipped+' / '+totSamples:''+totShipped, icon:'&#128230;', hasPct:!!totSamples, pct:totSamples>0?Math.min((totShipped/totSamples)*100,100):0},
-          received: {label:getSumLabel('received','Received'),    valStr:totSamples?totReceived+' / '+totSamples:''+totReceived, icon:'&#9989;', hasPct:!!totSamples, pct:totSamples>0?Math.min((totReceived/totSamples)*100,100):0},
-          published:{label:getSumLabel('published','Published'),  valStr:gV?totV+' / '+gV:''+totV, icon:'&#127909;', hasPct:!!gV, pct:gV>0?Math.min((totV/gV)*100,100):0},
+          convrate: {label:getSumLabel('convrate','Conv. Rate'), valStr:rate,     icon:'',         hasPct:true,  pct:_convPct, breakdown:_membBreakdown(function(md){return md.rate;})},
+          contacted:{label:getSumLabel('contacted','Contacted'),  valStr:''+totC, icon:'&#128222;', hasPct:false, pct:0,        breakdown:_membBreakdown(function(md){return md.contacted+'/'+totC;})},
+          confirmed:{label:getSumLabel('confirmed','Confirmed'),  valStr:gCo?totCo+' / '+gCo:''+totCo, icon:'&#129309;', hasPct:!!gCo, pct:gCo>0?Math.min((totCo/gCo)*100,100):0, breakdown:_membBreakdown(function(md){return md.confirmed+(gCo?'/'+gCo:'');})},
+          shipments:{label:'Shipments', icon:'&#128230;', hasPct:!!totSamples,
+            pct:totSamples>0?Math.min((totReceived/totSamples)*100,100):0,
+            valStr:'',
+            customHTML:'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:5px">'+
+              '<div><div style="font-size:9px;font-weight:600;color:var(--text-s);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">sent</div>'+
+                '<div style="font-size:13px;font-weight:700;color:var(--text)">'+( totSamples?totShipped+' / '+totSamples:''+totShipped)+'</div></div>'+
+              '<div><div style="font-size:9px;font-weight:600;color:var(--text-s);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">RECEIVED</div>'+
+                '<div style="font-size:13px;font-weight:700;color:var(--text)">'+( totSamples?totReceived+' / '+totSamples:''+totReceived)+'</div></div>'+
+            '</div>'},
+          published:{label:getSumLabel('published','Published'),  valStr:gV?totV+' / '+gV:''+totV, icon:'&#127909;', hasPct:!!gV, pct:gV>0?Math.min((totV/gV)*100,100):0, breakdown:_membBreakdown(function(md){return md.published+(gV?'/'+gV:'');})},
         };
         var _hidden=getSumHidden(b.id);
-        var _baseOrder=['convrate','contacted','confirmed','shipped','received','published'];
+        var _baseOrder=['convrate','contacted','confirmed','shipments','published'];
         var _stored=getSumBlockOrder(b.id);
         var _order=_baseOrder.sort(function(a,c2){
           var ai=_stored.indexOf(a),ci=_stored.indexOf(c2);
@@ -3008,13 +3059,13 @@ function campaignCardHTML(b,i){
         }).filter(function(k){return _allRows[k]&&_hidden.indexOf(k)<0;});
         var _blocks=_order.map(function(key){
           var r=_allRows[key];
-          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab;display:flex;flex-direction:column;flex:1;min-width:70px;padding:8px 10px">'+
+          return '<div class="camp-goal-box sum-block" draggable="true" data-skey="'+key+'" style="position:relative;cursor:grab;display:flex;flex-direction:column;flex:1;min-width:90px;padding:8px 10px">'+
             (_adm?'<button onclick="hideSumBlock(\''+b.id+'\',\''+key+'\');event.stopPropagation()" style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:3px;background:rgba(220,38,38,.1);border:none;color:#dc2626;font-size:9px;cursor:pointer;padding:0;line-height:14px;text-align:center">&#10005;</button>':'')+
             '<div class="camp-goal-lbl" style="display:flex;align-items:center;gap:3px;padding-right:'+(_adm?'16px':'0')+'">'+
               (r.icon?'<span>'+r.icon+'</span>':'')+
               '<span ondblclick="editSumLabel(\''+key+'\',this)" title="Double-click to rename" style="cursor:text">'+r.label+'</span>'+
             '</div>'+
-            '<div style="font-size:13px;font-weight:700;color:var(--text);margin-top:5px;line-height:1.2">'+r.valStr+'</div>'+
+            (r.customHTML||'<div style="font-size:13px;font-weight:700;color:var(--text);margin-top:5px;line-height:1.2">'+r.valStr+'</div>'+(r.breakdown||''))+
             '<div style="flex:1;min-height:3px"></div>'+
             '<div class="prog-bar" style="margin-top:5px'+(r.hasPct?'':';visibility:hidden')+'"><div class="prog-fill" style="width:'+r.pct.toFixed(0)+'%;background:#3b7ef8"></div></div>'+
             '<div style="font-size:9px;color:var(--text-s);margin-top:2px'+(r.hasPct?'':';visibility:hidden')+'">'+r.pct.toFixed(0)+'%</div>'+
@@ -3631,7 +3682,18 @@ function openAccount(){
   document.getElementById('acct-new-pwd').value='';
   document.getElementById('acct-conf-pwd').value='';
   document.getElementById('acct-msg').textContent='';
+  // Dev mode section — only for admins
+  var dmSec=document.getElementById('acct-devmode-section');
+  if(dmSec) dmSec.style.display=isAdmin()?'':'none';
+  _refreshAcctDevMode();
   openOv('ov-account');
+}
+function _refreshAcctDevMode(){
+  var devOn=isDevMode();
+  var tog=document.getElementById('acct-devmode-toggle');
+  var lbl=document.getElementById('acct-devmode-lbl');
+  if(tog){tog.style.background=devOn?'var(--primary)':'var(--border)';tog.firstElementChild.style.left=devOn?'22px':'2px';}
+  if(lbl){lbl.textContent=devOn?'Enabled — editing active':'Disabled — read-only';lbl.style.color=devOn?'var(--primary)':'var(--text-s)';}
 }
 
 function saveAccountEmail(){
@@ -4229,71 +4291,465 @@ function renderBrandDetail(brandId){
 /* ══════════════════════════════════════════════
    MEMBER HOME
 ══════════════════════════════════════════════ */
-function renderMemberHome(){
-  var el=document.getElementById('member-home-content');
-  if(!el)return;
-  var mid=currentUser&&currentUser.memberId;
-  var m=mid?getMember(mid):null;
-  var h=new Date().getHours();
-  var greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-  var uname=m?m.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'');
+/* ══════════════════════════════════════════════
+   HOME PAGE — DAILY TASKS
+══════════════════════════════════════════════ */
+var _HOME_TASKS=[
+  {section:'1. CH team updates',key:'s1',isSection:true},
+  {key:'1.1',label:'Verificar mensagens no Lark',indent:0},
+  {key:'1.2',label:'Verificar mensagens nos grupos do WhatsApp',indent:0},
+  {section:'2. Follow-ups',key:'s2',isSection:true},
+  {key:'s2note',label:'Note: Follow our online spreadsheet kols order, so you dont get lost.',isNote:true},
+  {key:'2.1',label:'Follow-up with confirmed kols',indent:0},
+  {key:'2.1.1',label:'Check the shipment status for all kols',indent:1},
+  {key:'2.1.2',label:'Update the status on sheets and inform kols',indent:1},
+  {key:'2.1.3',label:'Check the content production status, push kols, approve contents and update the status on sheets.',indent:1},
+  {key:'2.1.4',label:'Ask if kols have doubts abou the current proccess',indent:1},
+  {key:'2.1.5',label:'Check if there is any docs that need to be signed',indent:1},
+  {key:'2.1.6',label:'Check if there is payments that need to made',indent:1},
+  {key:'2.1.7',label:'Check invoices and update payment table with the doc link',indent:1},
+  {key:'2.1.8',label:'Keep daily contact with kol',indent:1},
+  {section:'3. Unfinished tasks',key:'s3',isSection:true},
+  {key:'3.1',label:'Check and reply your new emails',indent:0},
+  {key:'3.2',label:'Check kols in negotiation and make new collabs',indent:0},
+  {key:'3.3',label:'Send new emails (if necessary)',indent:0},
+  {key:'3.4',label:'Search new kols (if necessary)',indent:0},
+  {section:'4. Daily report',key:'s4',isSection:true},
+  {key:'4.1',label:'Register your daily report on system',indent:0},
+  {key:'4.2',label:'Send your daily report and important notes on Lark and WhatsApp group no update CH team.',indent:0},
+  {key:'4.3',label:'Send your daily report and important notes on Lark and WhatsApp group and update CH team.',indent:0},
+  {section:'5. Check your next project',key:'s5',isSection:true},
+  {key:'s5note',label:'Note: Quando finalizar as principais tasks para uma campanha, va para as tasks da proxima campanha.',isNote:true},
+  {section:'6. Support',key:'s6',isSection:true},
+  {key:'s6note',label:'Note: Caso voce tenha finalizado as tasks de todas as suas campanhas que voce e dono, please verifique suas campanhas de suporte e pergunte se o seu colega precisa de ajuda.',isNote:true}
+];
+var _homeDonutChart=null,_homeWeeklyChart=null;
+
+function _homeUid(){return currentUser?currentUser.email:'guest';}
+function _homeTaskKey(bid,date){return 'dg_task_status_'+_homeUid()+'_'+bid+'_'+date;}
+function _getHomeStatuses(bid,date){try{return JSON.parse(localStorage.getItem(_homeTaskKey(bid,date))||'{}');}catch(e){return {};}}
+function _setHomeStatuses(bid,date,obj){try{localStorage.setItem(_homeTaskKey(bid,date),JSON.stringify(obj));}catch(e){}}
+
+function toggleHomeTask(bid,key){
   var today=todayStr();
-  var assignedBrands=(m?m.brands:[]).map(getBrand).filter(Boolean);
-  var days=getDateRange();
-  var periodLabel=timeView==='daily'?'Today':timeView==='weekly'?'This week':'Last 30 days';
+  var s=_getHomeStatuses(bid,today);
+  s[key]=s[key]==='green'?'red':'green';
+  _setHomeStatuses(bid,today,s);
+  renderHomeTasks();
+}
 
-  var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">'+
-    '<div>'+
-      '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
-      '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
-    '</div>'+
-    (mid?'<div>'+memberAttendWidget(mid)+'</div>':'')+
-  '</div>';
-
-  // Quick daily log button
-  if(mid){
-    html+='<div class="card mb16" style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px">'+
-      '<div>'+
-        '<div style="font-size:14px;font-weight:700">Daily Activity Log</div>'+
-        '<div style="font-size:11px;color:var(--text-s);margin-top:2px">Log your KOL outreach for today</div>'+
-      '</div>'+
-      '<button onclick="openLog(\''+mid+'\')" style="padding:10px 22px;background:var(--primary);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:13px;font-weight:700">+ Log Activity</button>'+
-    '</div>';
-  }
-
-  // Assigned brands summary
-  if(assignedBrands.length){
-    html+='<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">My Campaigns <span style="font-size:11px;font-weight:400;color:var(--text-s)">— '+periodLabel+'</span></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px">'+
-    assignedBrands.map(function(b){
-      var role=(m.roles&&m.roles[b.id])||'';
-      var periodLogs=getLogsInRange(mid,b.id,days);
-      var totCont=periodLogs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
-      var totConf=periodLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
-      var todayLog=getLogs(mid).find(function(l){return l.brandId===b.id&&l.date===today;});
-      return '<div style="padding:14px;background:var(--card);border-radius:12px;border:1.5px solid '+(b.color+'44')+';border-left:4px solid '+b.color+'">'+
-        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">'+
-          '<div style="width:9px;height:9px;border-radius:50%;background:'+b.color+'"></div>'+
-          '<span style="font-size:13px;font-weight:700">'+b.name+'</span>'+
-          (role?'<span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:'+b.color+'22;color:'+b.color+'">'+role+'</span>':'')+
-        '</div>'+
-        '<div style="display:flex;gap:16px;font-size:11px;color:var(--text-m)">'+
-          '<span>&#128222; <strong>'+totCont+'</strong> contacted</span>'+
-          '<span>&#129309; <strong>'+totConf+'</strong> confirmed</span>'+
-        '</div>'+
-        (timeView==='daily'?(todayLog?'<div style="font-size:10px;color:var(--green);margin-top:6px">&#10003; Logged today</div>':'<div style="font-size:10px;color:var(--amber);margin-top:6px">&#9888; No log yet today</div>'):'')+
-      '</div>';
-    }).join('')+
-    '</div>';
-  }
-
-  html+='<div style="text-align:center;padding:20px;color:var(--text-s);font-size:11px">More features coming soon &#128640;</div>';
-  el.innerHTML=html;
-  if(mid){setTimeout(function(){drawMemberChart(mid);},50);}
+function _myBrands(){
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  if(!userM) return ST.brands;
+  // Only show brands where the member is owner
+  return ST.brands.filter(function(b){
+    return (userM.brands||[]).includes(b.id)&&(userM.roles&&userM.roles[b.id])==='owner';
+  });
+}
+function _myAllBrands(){
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  if(!userM) return ST.brands;
+  return ST.brands.filter(function(b){return (userM.brands||[]).includes(b.id);});
 }
 
 function renderAdminHome(){
   var el=document.getElementById('admin-home-content');
+  if(!el) return;
+  _renderHomeContent(el);
+}
+
+function renderMemberHome(){
+  var el=document.getElementById('member-home-content');
+  if(!el) return;
+  _renderHomeContent(el);
+}
+
+function _renderHomeContent(el){
+  var today=todayStr();
+  var h=new Date().getHours();
+  var greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  var uname=userM?userM.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'');
+  var myB=_myBrands();
+
+  // Build task columns: left = sections 1-2, right = sections 3-6
+  var leftSections=['s1','1.1','1.2','s2','s2note','2.1','2.1.1','2.1.2','2.1.3','2.1.4','2.1.5','2.1.6','2.1.7','2.1.8'];
+  var rightSections=['s3','3.1','3.2','3.3','3.4','s4','4.1','4.2','4.3','s5','s5note','s6','s6note'];
+  function taskColHTML(keys,bid){
+    var today=todayStr();
+    var s=_getHomeStatuses(bid,today);
+    return keys.map(function(k){
+      var t=_HOME_TASKS.find(function(x){return x.key===k;});
+      if(!t) return '';
+      if(t.isSection) return '<div style="font-size:11px;font-weight:700;color:var(--text);margin:12px 0 5px">'+t.section+'</div>';
+      if(t.isNote) return '<div style="font-size:10px;color:var(--text-s);font-style:italic;margin-bottom:6px;line-height:1.5">'+t.label+'</div>';
+      var st=s[t.key]||'red';
+      var pad=(t.indent||0)*14+2;
+      return '<div style="display:flex;align-items:flex-start;gap:7px;margin-bottom:5px;padding-left:'+pad+'px">'+
+        '<div onclick="toggleHomeTask(\''+bid+'\',\''+t.key+'\')" style="width:11px;height:11px;border-radius:50%;background:'+(st==='green'?'#27ae60':'#e74c3c')+';flex-shrink:0;margin-top:3px;cursor:pointer;transition:background .2s" title="Toggle"></div>'+
+        '<span style="font-size:11px;color:var(--text);line-height:1.5">'+t.key+' '+t.label+'</span>'+
+      '</div>';
+    }).join('');
+  }
+
+  var brandOptsHTML=myB.map(function(b){return '<option value="'+b.id+'">'+b.name+'</option>';}).join('');
+
+  // Project cards
+  var projHTML=_myAllBrands().map(function(b){
+    var meta=getBrandMeta(b.id);
+    var status=meta.status||b.status||'ongoing';
+    var badgeColor=status==='ongoing'?'#27ae60':'#888';
+    var myRole=(userM&&userM.roles&&userM.roles[b.id])||'';
+    var roleLabel=myRole==='owner'?'Owner':myRole==='support'?'Support':'Member';
+    var roleColor=myRole==='owner'?'var(--primary)':myRole==='support'?'var(--amber)':'var(--text-s)';
+    var roleBg=myRole==='owner'?'var(--primary-d)':myRole==='support'?'var(--amber-d)':'var(--bg)';
+    // Support = member with role 'support' for this brand, or fallback to any other member
+    var supportM=ST.members.find(function(m){return m.id!==(userM&&userM.id)&&(m.brands||[]).includes(b.id)&&(m.roles&&m.roles[b.id]==='support');});
+    if(!supportM) supportM=ST.members.find(function(m){return m.id!==(userM&&userM.id)&&(m.brands||[]).includes(b.id);});
+    var supportAv='';
+    if(supportM){
+      var avUrl=avatarUrl(supportM);
+      var col=memberColor(supportM);
+      supportAv='<div style="width:22px;height:22px;border-radius:50%;overflow:hidden;background:'+col+';display:inline-flex;align-items:center;justify-content:center;margin-right:5px;flex-shrink:0">'+
+        (avUrl?'<img src="'+avUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">':'<span style="font-size:8px;font-weight:700;color:#fff">'+ini(supportM.name)+'</span>')+
+      '</div>';
+    }
+    return '<div class="card" style="padding:14px;min-width:200px;flex:1;cursor:pointer;border-left:4px solid '+b.color+'" onclick="navTo(\'brand\',null,\''+b.id+'\')">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--text)">'+b.name+'</div>'+
+        '<button onclick="event.stopPropagation();navTo(\'brand\',null,\''+b.id+'\')" style="font-size:10px;padding:3px 9px;background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text-s)">See details</button>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">'+
+        '<div style="display:inline-block;font-size:10px;font-weight:600;color:'+badgeColor+';background:'+badgeColor+'18;padding:2px 8px;border-radius:10px">&#9679; '+(status==='ongoing'?'In Progress':'Finished')+'</div>'+
+        (myRole?'<div style="display:inline-block;font-size:9px;font-weight:700;color:'+roleColor+';background:'+roleBg+';padding:2px 7px;border-radius:10px;letter-spacing:.04em">'+roleLabel+'</div>':'')+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'+
+        '<div><div style="font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">My role</div><div style="color:var(--text)">'+roleLabel+'</div></div>'+
+        '<div><div style="font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Support</div>'+
+          '<div style="display:flex;align-items:center">'+supportAv+'<span style="color:var(--text)">'+(supportM?supportM.name.split(' ')[0]:'—')+'</span></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  var firstBid=myB.length?myB[0].id:'';
+
+  el.innerHTML=
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">'+
+      '<div>'+
+        '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
+        '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start">'+
+      // LEFT COLUMN
+      '<div>'+
+        '<div class="card mb16">'+
+          '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">My daily tasks</div>'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-alt);border:1px solid var(--border);border-radius:8px;margin-bottom:10px">'+
+            '<div style="display:flex;align-items:center;gap:8px">'+
+              '<span style="font-size:11px;font-weight:600;color:var(--text-s)">Brand name</span>'+
+              '<select id="home-brand-sel" onchange="renderHomeTasks()" style="font-size:12px;font-weight:600;color:var(--text);background:transparent;border:none;outline:none;cursor:pointer;max-width:180px">'+brandOptsHTML+'</select>'+
+            '</div>'+
+            '<button onclick="(function(){var mid=currentUser&&currentUser.memberId;if(mid)openLog(mid);})()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">+ Log Activity</button>'+
+          '</div>'+
+          '<div id="home-camp-label" style="font-size:10px;color:var(--text-s);margin-bottom:12px"></div>'+
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="home-task-grid">'+
+            '<div id="home-tasks-left"></div>'+
+            '<div id="home-tasks-right"></div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="card">'+
+          '<div class="sec"><div class="sec-t">My projects</div></div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:12px">'+projHTML+'</div>'+
+        '</div>'+
+      '</div>'+
+      // RIGHT COLUMN
+      '<div>'+
+        '<div class="card mb16">'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">my weekly progress</div>'+
+          '<div style="position:relative;height:80px"><canvas id="chart-home-weekly"></canvas></div>'+
+        '</div>'+
+        '<div class="card mb16">'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">daily progress</div>'+
+          '<div style="display:flex;align-items:center;justify-content:center;padding:8px 0">'+
+            '<canvas id="chart-home-donut" width="150" height="150"></canvas>'+
+          '</div>'+
+          '<div id="home-donut-label" style="text-align:center;font-size:11px;color:var(--text-s);margin-top:4px"></div>'+
+        '</div>'+
+        '<div class="card mb16">'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+            '<div style="font-size:13px;font-weight:700;color:var(--text)">Check list</div>'+
+            '<button onclick="addHomeCheckItem()" style="font-size:11px;color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600">+ add new check list</button>'+
+          '</div>'+
+          '<div id="home-checklist"></div>'+
+        '</div>'+
+        '<div class="card mb16">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Notes</div>'+
+          '<textarea id="home-notes" oninput="saveHomeNotes()" placeholder="Write your notes here..." style="width:100%;min-height:80px;background:var(--bg-alt);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:12px;color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit;outline:none"></textarea>'+
+        '</div>'+
+        '<div class="card">'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Working Days</div>'+
+          '<div id="home-working-cal"></div>'+
+          '<div id="home-working-stats" style="margin-top:8px;font-size:11px;color:var(--text-s)"></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+
+  // Init sub-components
+  if(firstBid) renderHomeTasks();
+  renderHomeChecklist();
+  renderHomeWorkingCal();
+  renderHomeWeeklyChart();
+  var savedNotes=localStorage.getItem('dg_home_notes_'+_homeUid())||'';
+  var notesEl=document.getElementById('home-notes');
+  if(notesEl) notesEl.value=savedNotes;
+}
+
+function renderHomeTasks(){
+  var sel=document.getElementById('home-brand-sel');
+  var bid=sel?sel.value:(_myBrands()[0]?_myBrands()[0].id:'');
+  if(!bid) return;
+  var today=todayStr();
+  var s=_getHomeStatuses(bid,today);
+
+  // Group tasks into sections
+  var sections=[];var cur=null;
+  _HOME_TASKS.forEach(function(t){
+    if(t.isSection){cur={title:t.section,notes:[],items:[]};sections.push(cur);}
+    else if(t.isNote&&cur){cur.notes.push(t.label);}
+    else if(cur){cur.items.push(t);}
+  });
+
+  function renderSection(sec){
+    var done=sec.items.filter(function(t){return s[t.key]==='green';}).length;
+    var total=sec.items.length;
+    var allDone=total>0&&done===total;
+    var html='<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden">';
+    // Section header
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-alt);border-bottom:'+(sec.items.length||sec.notes.length?'1px solid var(--border)':'none')+'">'+
+      '<span style="font-size:11px;font-weight:700;color:var(--text)">'+sec.title+'</span>'+
+      (total>0?'<span style="font-size:10px;font-weight:600;color:'+(allDone?'#27ae60':'var(--text-s)')+'">'+done+'/'+total+'</span>':'')+
+    '</div>';
+    // Notes
+    sec.notes.forEach(function(n){
+      html+='<div style="padding:6px 12px;font-size:10px;color:var(--text-s);font-style:italic;line-height:1.4;border-bottom:1px solid var(--border)">'+n+'</div>';
+    });
+    // Task rows
+    sec.items.forEach(function(t,i){
+      var isDone=s[t.key]==='green';
+      var pad=12+(t.indent||0)*16;
+      var isLast=i===sec.items.length-1;
+      html+='<div onclick="toggleHomeTask(\''+bid+'\',\''+t.key+'\')" style="display:flex;align-items:center;gap:10px;padding:7px 12px;padding-left:'+pad+'px;cursor:pointer;'+(isLast?'':'border-bottom:1px solid var(--border)')+';transition:background .1s" onmouseover="this.style.background=\'var(--bg-alt)\'" onmouseout="this.style.background=\'\'">'+
+        '<div style="width:17px;height:17px;border-radius:50%;border:2px solid '+(isDone?'#27ae60':'var(--border)')+';background:'+(isDone?'#27ae60':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s">'+
+          (isDone?'<svg width="8" height="6" viewBox="0 0 8 6"><polyline points="1,3 3,5 7,1" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')+
+        '</div>'+
+        '<span style="font-size:11.5px;line-height:1.4;color:'+(isDone?'var(--text-s)':'var(--text)')+';'+(isDone?'text-decoration:line-through;opacity:.6;':'')+'flex:1">'+t.label+'</span>'+
+      '</div>';
+    });
+    html+='</div>';
+    return html;
+  }
+
+  var lEl=document.getElementById('home-tasks-left');
+  var rEl=document.getElementById('home-tasks-right');
+  if(lEl) lEl.innerHTML=sections.slice(0,2).map(renderSection).join('');
+  if(rEl) rEl.innerHTML=sections.slice(2).map(renderSection).join('');
+  updateHomeDailyProgress();
+}
+
+function updateHomeDailyProgress(){
+  var today=todayStr();
+  var myB=_myBrands();
+  var taskItems=_HOME_TASKS.filter(function(t){return !t.isSection&&!t.isNote;});
+  var total=taskItems.length*Math.max(myB.length,1);
+  var done=0;
+  myB.forEach(function(b){
+    var s=_getHomeStatuses(b.id,today);
+    taskItems.forEach(function(t){if(s[t.key]==='green') done++;});
+  });
+  var pct=total>0?Math.round((done/total)*100):0;
+  renderHomeDonut(pct,done,total);
+}
+
+function renderHomeDonut(pct,done,total){
+  var cv=document.getElementById('chart-home-donut');
+  if(!cv) return;
+  if(_homeDonutChart){try{_homeDonutChart.destroy();}catch(e){}  _homeDonutChart=null;}
+  var isDark=document.body.classList.contains('dark');
+  var textColor=isDark?'#e2e8f0':'#1a1f2e';
+  _homeDonutChart=new Chart(cv,{
+    type:'doughnut',
+    data:{datasets:[{data:[pct,Math.max(100-pct,0)],backgroundColor:['#27ae60',isDark?'#2a2f3d':'#e8f5e9'],borderWidth:0}]},
+    options:{cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}},
+    plugins:[{id:'cht',afterDraw:function(chart){
+      var ctx=chart.ctx,ca=chart.chartArea;
+      var cx=ca.left+(ca.right-ca.left)/2,cy=ca.top+(ca.bottom-ca.top)/2;
+      ctx.save();
+      ctx.font='bold 22px Inter,sans-serif';ctx.fillStyle=textColor;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(pct+'%',cx,cy-7);
+      ctx.font='11px Inter,sans-serif';ctx.fillStyle='#888';
+      ctx.fillText('progress',cx,cy+12);ctx.restore();
+    }}]
+  });
+  var lbl=document.getElementById('home-donut-label');
+  if(lbl) lbl.textContent=done+' of '+total+' tasks completed';
+}
+
+var _homeWeeklyChart=null;
+function renderHomeWeeklyChart(){
+  var cv=document.getElementById('chart-home-weekly');
+  if(!cv) return;
+  if(_homeWeeklyChart){try{_homeWeeklyChart.destroy();}catch(e){} _homeWeeklyChart=null;}
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  if(!userM) return;
+  var days=[];
+  for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+  var labels=days.map(function(d){var p=d.split('-');return(+p[1]).toString().padStart(2,'0')+'/'+(+p[2]).toString().padStart(2,'0');});
+  var data=days.map(function(d){
+    return ST.brands.reduce(function(s,b){
+      var e=getLogs(userM.id).find(function(l){return l.date===d&&l.brandId===b.id;});
+      return s+(e?((+e.kols_contacted||0)+(+e.kols_followedup||0)):0);
+    },0);
+  });
+  _homeWeeklyChart=new Chart(cv,{
+    type:'line',
+    data:{labels:labels,datasets:[{data:data,borderColor:'#3b7ef8',backgroundColor:'rgba(59,126,248,.12)',fill:true,tension:.4,pointRadius:2,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888'}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:9},color:'#888',maxTicksLimit:4}}}}
+  });
+}
+
+function _getWdOv(uid,ym){try{return JSON.parse(localStorage.getItem('dg_wd_ov_'+uid+'_'+ym)||'{}');}catch(e){return {};}}
+function _setWdOv(uid,ym,ov){try{localStorage.setItem('dg_wd_ov_'+uid+'_'+ym,JSON.stringify(ov));}catch(e){}}
+function toggleWdDay(day){
+  var uid=_homeUid();
+  var now=new Date();
+  var ym=now.getFullYear()+'-'+(now.getMonth()+1<10?'0'+(now.getMonth()+1):''+(now.getMonth()+1));
+  var ov=_getWdOv(uid,ym);
+  if(ov[day]==='worked') ov[day]='off';
+  else if(ov[day]==='off') delete ov[day];
+  else ov[day]='worked';
+  _setWdOv(uid,ym,ov);
+  renderHomeWorkingCal();
+}
+function renderHomeWorkingCal(){
+  var container=document.getElementById('home-working-cal');
+  var statsEl=document.getElementById('home-working-stats');
+  if(!container) return;
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  var now=new Date();
+  var year=now.getFullYear(),month=now.getMonth(),today=now.getDate();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var monthStr=(month+1<10?'0'+(month+1):''+( month+1));
+  var monthName=['January','February','March','April','May','June','July','August','September','October','November','December'][month];
+  var loggedDays=new Set();
+  if(userM){
+    for(var d=1;d<=daysInMonth;d++){
+      var ds=(year+'-'+monthStr+'-'+(d<10?'0'+d:''+d));
+      if(getLogs(userM.id).some(function(l){return l.date===ds;})) loggedDays.add(d);
+    }
+  }
+  var canEdit=currentUser&&(currentUser.role==='admin'||currentUser.role==='member+admin');
+  var ym=year+'-'+(monthStr);
+  var wdOv=canEdit?_getWdOv(_homeUid(),ym):{};
+  var firstDow=new Date(year,month,1).getDay();
+  var html='<div style="text-align:center;font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text)">'+monthName+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center">';
+  ['S','M','T','W','T','F','S'].forEach(function(h){html+='<div style="font-size:9px;font-weight:700;color:var(--text-s);padding:2px 0">'+h+'</div>';});
+  for(var i=0;i<firstDow;i++) html+='<div></div>';
+  var worked=0,off=0;
+  for(var d=1;d<=daysInMonth;d++){
+    var dow=new Date(year,month,d).getDay();
+    var isWeekend=dow===0||dow===6,isFuture=d>today,hasLog=loggedDays.has(d);
+    if(wdOv[d]!=null){if(wdOv[d]==='worked'){hasLog=true;}else{hasLog=false;}}
+    var isToday=(d===today);
+    var bg='transparent',color='var(--text-s)',brd='none';
+    if(isToday) brd='2px solid var(--primary)';
+    if(!isFuture&&!isWeekend){if(hasLog){bg='#27ae60';color='#fff';worked++;}else{bg='#fee2e2';color='#e74c3c';off++;}}
+    else if(isWeekend){color='var(--border)';}
+    var clickAttr=(canEdit&&!isFuture&&!isWeekend)?' onclick="toggleWdDay('+d+')" style="font-size:10px;padding:3px 1px;border-radius:4px;background:'+bg+';color:'+color+';border:'+brd+';box-sizing:border-box;cursor:pointer"':' style="font-size:10px;padding:3px 1px;border-radius:4px;background:'+bg+';color:'+color+';border:'+brd+';box-sizing:border-box"';
+    html+='<div'+clickAttr+'>'+d+'</div>';
+  }
+  html+='</div>';
+  container.innerHTML=html;
+  if(statsEl) statsEl.innerHTML='<span style="color:#27ae60;font-weight:700">'+worked+'x</span> worked &nbsp;<span style="color:#e74c3c;font-weight:700">'+off+'x</span> off';
+}
+
+function getHomeChecklist(){try{return JSON.parse(localStorage.getItem('dg_home_cl_'+_homeUid())||'[]');}catch(e){return [];}}
+function setHomeChecklist(arr){try{localStorage.setItem('dg_home_cl_'+_homeUid(),JSON.stringify(arr));}catch(e){}}
+function renderHomeChecklist(){
+  var container=document.getElementById('home-checklist');if(!container) return;
+  var items=getHomeChecklist();
+  if(!items.length){container.innerHTML='<div style="font-size:11px;color:var(--text-s);padding:4px 0">No items yet</div>';return;}
+  container.innerHTML=items.map(function(item,i){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'+
+      '<input type="checkbox" '+(item.done?'checked':'')+' onchange="toggleCheckItem('+i+')" style="cursor:pointer;accent-color:var(--primary);width:14px;height:14px;flex-shrink:0">'+
+      '<span style="font-size:12px;color:var(--text);flex:1;'+(item.done?'text-decoration:line-through;opacity:.5':'')+'" ondblclick="editCheckItem('+i+',this)">'+item.text+'</span>'+
+      '<span onclick="removeCheckItem('+i+')" style="cursor:pointer;color:var(--text-s);font-size:12px;padding:0 3px;line-height:1" title="Remove">&#10005;</span>'+
+    '</div>';
+  }).join('');
+}
+function addHomeCheckItem(){
+  var text=prompt('New checklist item:');if(!text||!text.trim()) return;
+  var arr=getHomeChecklist();arr.push({text:text.trim(),done:false});setHomeChecklist(arr);renderHomeChecklist();
+}
+function toggleCheckItem(i){var arr=getHomeChecklist();if(arr[i])arr[i].done=!arr[i].done;setHomeChecklist(arr);renderHomeChecklist();}
+function removeCheckItem(i){var arr=getHomeChecklist();arr.splice(i,1);setHomeChecklist(arr);renderHomeChecklist();}
+function editCheckItem(i,el){
+  var cur=getHomeChecklist()[i];if(!cur) return;
+  var v=prompt('Edit item:',cur.text);if(!v||!v.trim()) return;
+  var arr=getHomeChecklist();arr[i].text=v.trim();setHomeChecklist(arr);renderHomeChecklist();
+}
+function saveHomeNotes(){
+  var el=document.getElementById('home-notes');
+  if(el) try{localStorage.setItem('dg_home_notes_'+_homeUid(),el.value);}catch(e){}
+}
+
+function drawHiveChart(days, trackableMembers){
+  var cv=document.getElementById('chart-hive');
+  if(!cv) return;
+  var ctx=cv.getContext('2d');
+  var W=cv.offsetWidth||cv.width;
+  var H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  var numMembers=trackableMembers.length;
+  if(!numMembers) return;
+  var r=8;
+  var colW=r*2+3;
+  var rowH=r*2+3;
+  var cols=days.length;
+  var totalW=cols*colW;
+  var totalH=numMembers*rowH;
+  var offsetX=(W-totalW)/2;
+  var offsetY=(H-totalH)/2;
+  days.forEach(function(d,ci){
+    trackableMembers.forEach(function(mem,ri){
+      var activity=ST.brands.reduce(function(s,b){
+        var e=getLogs(mem.id).find(function(l){return l.date===d&&l.brandId===b.id;});
+        return s+(e?((+e.kols_contacted||0)+(+e.kols_followedup||0)):0);
+      },0);
+      var col=memberColor(mem);
+      var alpha=activity>0?Math.min(0.2+activity/40,1):0.08;
+      ctx.beginPath();
+      var cx=offsetX+ci*colW+r+(ri%2===0?0:r);
+      var cy=offsetY+ri*rowH+r;
+      ctx.arc(cx,cy,r-1,0,Math.PI*2);
+      ctx.fillStyle=col;
+      ctx.globalAlpha=alpha;
+      ctx.fill();
+      ctx.globalAlpha=1;
+    });
+  });
+}
+var _hivePeriodDays=30;
+function setHivePeriod(v){
+  _hivePeriodDays=parseInt(v)||30;
+  renderAdminTeam();
+  drawTrend();
+}
+function renderAdminTeam(){
+  var el=document.getElementById('admin-team-content');
   if(!el) return;
   var today=todayStr();
   var h=new Date().getHours();
@@ -4320,10 +4776,6 @@ function renderAdminHome(){
   });
 
   var activeCount=membersStatus.filter(function(s){return s.hasLogged;}).length;
-  var totSourced=membersStatus.reduce(function(s,x){return s+x.tots.sourced;},0);
-  var totContacted=membersStatus.reduce(function(s,x){return s+x.tots.contacted;},0);
-  var totConfirmed=membersStatus.reduce(function(s,x){return s+x.tots.confirmed;},0);
-  var totVids=membersStatus.reduce(function(s,x){return s+x.tots.vids;},0);
 
   var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px">'+
     '<div>'+
@@ -4333,41 +4785,75 @@ function renderAdminHome(){
     '<div>'+attendanceWidget()+'</div>'+
   '</div>';
 
-  html+='<div class="admin-kpi-row">'+
-    adminKpiCard('Active Today',activeCount+' / '+teamMembers.length,activeCount===teamMembers.length?'var(--green)':'var(--amber)','&#128101;')+
-    adminKpiCard('Ongoing Projects',ST.brands.length,'var(--primary)','&#127919;')+
-    adminKpiCard('Confirmed Today',totConfirmed,'var(--green)','&#129309;')+
-    adminKpiCard('Videos Published',totVids,'var(--purple)','&#127916;')+
-  '</div>';
+  // Build SVG hive inline
+  var _hiveDays=[];
+  for(var _hi=_hivePeriodDays-1;_hi>=0;_hi--){var _hd=new Date();_hd.setDate(_hd.getDate()-_hi);_hiveDays.push(_hd.toISOString().split('T')[0]);}
+  var _hR=9,_hW=_hR*2,_hH=_hR*Math.sqrt(3);
+  var _hColW=_hW*0.77,_hRowH=_hH+2;
+  var _nM=teamMembers.length,_nD=_hiveDays.length;
+  var _svgW=Math.ceil(_nD*_hColW+_hR*2);
+  var _svgH=Math.ceil(_nM*_hRowH+_hR);
+  var _hexPath=function(cx,cy){var pts=[];for(var a=0;a<6;a++){var ang=Math.PI/180*(60*a-30);pts.push((cx+_hR*Math.cos(ang)).toFixed(1)+','+(cy+_hR*Math.sin(ang)).toFixed(1));}return pts.join(' ');};
+  var _svgParts=[];
+  _hiveDays.forEach(function(d,di){
+    teamMembers.forEach(function(m,mi){
+      var act=ST.brands.reduce(function(s,b){var e=getLogs(m.id).find(function(l){return l.date===d&&l.brandId===b.id;});return s+(e?((+e.kols_contacted||0)+(+e.kols_followedup||0)):0);},0);
+      var col=memberColor(m);
+      var alpha=act>0?Math.min(0.18+act/25,1):0.07;
+      var cx=_hR+di*_hColW+(mi%2===1?_hColW/2:0);
+      var cy=_hR+mi*_hRowH;
+      _svgParts.push('<polygon points="'+_hexPath(cx,cy)+'" fill="'+col+'" opacity="'+alpha.toFixed(2)+'"/>');
+    });
+  });
+  var _hiveLegs=teamMembers.map(function(m){return '<div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;border-radius:2px;background:'+memberColor(m)+'"></div><span style="font-size:10px;color:var(--text-s)">'+m.name.split(' ')[0]+'</span></div>';}).join('');
+  var _hiveSvg='<svg width="'+_svgW+'" height="'+_svgH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+_svgParts.join('')+'</svg>';
+  var _hivePeriodSel='<select onchange="setHivePeriod(this.value)" style="font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg-alt);color:var(--text);cursor:pointer">'+
+    '<option value="30"'+(_hivePeriodDays===30?' selected':'')+'>Last 30 days</option>'+
+    '<option value="14"'+(_hivePeriodDays===14?' selected':'')+'>Last 14 days</option>'+
+    '<option value="60"'+(_hivePeriodDays===60?' selected':'')+'>Last 60 days</option>'+
+  '</select>';
 
-  html+='<div class="card mb16">'+
-    '<div class="sec"><div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
-    (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
-     activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
-     '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
+  html+='<div class="card mb16" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">'+
+    // Left: Team Status
+    '<div>'+
+      '<div class="sec"><div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
+      (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
+       activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
+       '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
+      '</div>'+
+      '<div class="team-status-grid">'+
+      membersStatus.map(function(s){
+        var m=s.m;
+        var avUrl=avatarUrl(m);
+        var avHtml='<div class="mem-av-img av-sm" style="flex-shrink:0">'+
+          (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
+        '</div>';
+        var streak=calcStreak(m.id);
+        return '<div class="team-status-card '+(s.hasLogged?'ts-active':'ts-idle')+'" onclick="openMemberDetail(\''+m.id+'\')" title="View '+m.name+'\'s page">'+
+          avHtml+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:12px;font-weight:600;color:var(--text)">'+m.name+'</div>'+
+            (s.hasLogged?
+              '<div style="font-size:10px;color:var(--green);font-weight:500">&#10003; Logged today</div>'+
+              '<div style="font-size:10px;color:var(--text-s)">'+s.tots.sourced+' sourced &middot; '+s.tots.confirmed+' conf</div>':
+              '<div style="font-size:10px;color:var(--text-s)">No activity yet</div>'+
+              (streak?'<div style="font-size:10px;color:var(--amber)">&#128293; '+streak+'d streak</div>':''))+
+          '</div>'+
+          '<div class="ts-dot '+(s.hasLogged?'active':'idle')+'"></div>'+
+        '</div>';
+      }).join('')+
+      '</div>'+
     '</div>'+
-    '<div class="team-status-grid">'+
-    membersStatus.map(function(s){
-      var m=s.m;
-      var avUrl=avatarUrl(m);
-      var avHtml='<div class="mem-av-img av-sm" style="flex-shrink:0">'+
-        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
-      '</div>';
-      var streak=calcStreak(m.id);
-      return '<div class="team-status-card '+(s.hasLogged?'ts-active':'ts-idle')+'" onclick="openMemberDetail(\''+m.id+'\')" title="View '+m.name+'\'s page">'+
-        avHtml+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:12px;font-weight:600;color:var(--text)">'+m.name+'</div>'+
-          (s.hasLogged?
-            '<div style="font-size:10px;color:var(--green);font-weight:500">&#10003; Logged today</div>'+
-            '<div style="font-size:10px;color:var(--text-s)">'+s.tots.sourced+' sourced &middot; '+s.tots.confirmed+' conf</div>':
-            '<div style="font-size:10px;color:var(--text-s)">No activity yet</div>'+
-            (streak?'<div style="font-size:10px;color:var(--amber)">&#128293; '+streak+'d streak</div>':''))+
-        '</div>'+
-        '<div class="ts-dot '+(s.hasLogged?'active':'idle')+'"></div>'+
-      '</div>';
-    }).join('')+
-    '</div></div>';
+    // Right: Hive
+    '<div style="min-width:220px;max-width:280px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.4px">Team Hive</div>'+
+        _hivePeriodSel+
+      '</div>'+
+      '<div style="margin-bottom:6px;display:flex;gap:10px;flex-wrap:wrap">'+_hiveLegs+'</div>'+
+      _hiveSvg+
+    '</div>'+
+  '</div>';
 
   el.innerHTML=html;
 }
@@ -5096,6 +5582,46 @@ function renderReportHistory(){
 
 
 
+
+/* ══════════════════════════════════════════════
+   SETTINGS & DEVELOPER MODE
+══════════════════════════════════════════════ */
+function isDevMode(){return localStorage.getItem('dg_devmode')==='on'&&isAdmin();}
+
+function renderSettings(){
+  var el=document.getElementById('settings-content');
+  if(!el) return;
+  var devOn=isDevMode();
+  el.innerHTML=
+    '<div style="max-width:600px">'+
+    '<div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:20px">Settings</div>'+
+    '<div class="card mb16">'+
+      '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Developer Mode</div>'+
+      '<div style="font-size:12px;color:var(--text-s);margin-bottom:16px">When enabled, admins can edit content, delete items, and access advanced controls across the entire dashboard. Disable for day-to-day use to prevent accidental changes.</div>'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<div onclick="toggleDevMode()" style="width:48px;height:26px;border-radius:13px;background:'+(devOn?'var(--primary)':'var(--border)')+';position:relative;cursor:pointer;transition:background .2s;flex-shrink:0">'+
+          '<div style="width:22px;height:22px;border-radius:50%;background:#fff;position:absolute;top:2px;'+(devOn?'right:2px':'left:2px')+';transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>'+
+        '</div>'+
+        '<span style="font-size:13px;font-weight:600;color:'+(devOn?'var(--primary)':'var(--text-s)')+'">'+( devOn?'Enabled — editing is active':'Disabled — read-only mode')+'</span>'+
+      '</div>'+
+    '</div>'+
+    (devOn?'<div class="card" style="border:1px solid rgba(220,38,38,.2);background:rgba(220,38,38,.04)">'+
+      '<div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:6px">&#9888; Developer mode is active</div>'+
+      '<div style="font-size:11px;color:var(--text-s)">Delete buttons and text editing are enabled across all pages. Disable this mode when not performing maintenance.</div>'+
+    '</div>':'<div class="card" style="border:1px solid rgba(39,174,96,.2);background:rgba(39,174,96,.04)">'+
+      '<div style="font-size:12px;font-weight:700;color:#27ae60;margin-bottom:6px">&#10003; Read-only mode active</div>'+
+      '<div style="font-size:11px;color:var(--text-s)">Data is protected. Enable developer mode only when you need to make structural changes.</div>'+
+    '</div>')+
+    '</div>';
+}
+
+function toggleDevMode(){
+  var cur=localStorage.getItem('dg_devmode')==='on';
+  localStorage.setItem('dg_devmode',cur?'off':'on');
+  _refreshAcctDevMode();
+  if(currentPage==='settings') renderSettings();
+  renderAll();
+}
 
 /* ══════════════════════════════════════════════
    BOOT
