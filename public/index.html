@@ -1022,14 +1022,34 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <input type="color" id="nb-custom-color" style="width:28px;height:28px;border-radius:6px;border:1.5px solid var(--border);cursor:pointer;padding:1px" onchange="pickCustomColor(this)"/>
       </div>
     </div>
-    <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Confirmed Partnerships Goal</label><input class="ff-inp goal-inp" id="nb-goal-conf" type="number" placeholder="e.g. 20"/></div>
-    <div class="ff" style="margin-bottom:10px"><label class="ff-lbl">Published Videos Goal</label><input class="ff-inp goal-inp" id="nb-goal-vid" type="number" placeholder="e.g. 15"/></div>
-    <div class="ff" id="nb-status-row" style="margin-bottom:10px;display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff"><label class="ff-lbl">Confirmed KOLs Goal</label><input class="ff-inp goal-inp" id="nb-goal-conf" type="number" placeholder="e.g. 20"/></div>
+      <div class="ff"><label class="ff-lbl">Published Videos Goal</label><input class="ff-inp goal-inp" id="nb-goal-vid" type="number" placeholder="e.g. 15"/></div>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
       <label class="ff-lbl">Status</label>
       <select class="ff-inp" id="nb-status" style="cursor:pointer">
         <option value="ongoing">● Ongoing</option>
         <option value="finished">○ Finished</option>
       </select>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Platforms</label>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px" id="nb-platforms">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Instagram"> Instagram</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="TikTok"> TikTok</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Youtube"> Youtube</label>
+      </div>
+    </div>
+    <div class="ff" style="margin-bottom:14px">
+      <label class="ff-lbl">Format</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px" id="nb-formats">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Short video"> Short video</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Long video"> Long video</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Long video insertion"> Long video insertion</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Stories"> Stories</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Link in bio"> Link in bio</label>
+      </div>
     </div>
     <button class="save-btn" id="nb-save-btn" onclick="saveBrand()">Create Brand</button>
     <button id="nb-delete-btn" style="display:none;width:100%;margin-top:8px;padding:10px;border-radius:10px;background:transparent;border:1.5px solid #fca5a5;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer" onclick="deleteBrand()">🗑 Delete Brand</button>
@@ -3224,6 +3244,22 @@ function saveGoals(){
    ADD BRAND
 ══════════════════════════════════════════════ */
 var _editingBrandId=null;
+function _nbClearMeta(){
+  document.querySelectorAll('#nb-platforms input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+  document.querySelectorAll('#nb-formats input[type=checkbox]').forEach(function(cb){cb.checked=false;});
+}
+function _nbLoadMeta(bid){
+  var meta=getBrandMeta(bid);
+  var pl=meta.platforms||[];
+  document.querySelectorAll('#nb-platforms input[type=checkbox]').forEach(function(cb){cb.checked=pl.indexOf(cb.value)>=0;});
+  var fm=meta.formats||[];
+  document.querySelectorAll('#nb-formats input[type=checkbox]').forEach(function(cb){cb.checked=fm.indexOf(cb.value)>=0;});
+}
+function _nbSaveMeta(bid){
+  var pl=[];document.querySelectorAll('#nb-platforms input[type=checkbox]:checked').forEach(function(cb){pl.push(cb.value);});
+  var fm=[];document.querySelectorAll('#nb-formats input[type=checkbox]:checked').forEach(function(cb){fm.push(cb.value);});
+  var meta=getBrandMeta(bid);meta.platforms=pl;meta.formats=fm;setBrandMeta(bid,meta);
+}
 function openAddBrand(){
   _editingBrandId=null;
   newBrandColor='#3b7ef8';
@@ -3231,11 +3267,13 @@ function openAddBrand(){
   document.getElementById('nb-modal-sub').textContent='Create a new brand / campaign';
   document.getElementById('nb-save-btn').textContent='Create Brand';
   document.getElementById('nb-delete-btn').style.display='none';
-  document.getElementById('nb-status-row').style.display='none';
   document.getElementById('nb-name').value='';
   document.getElementById('nb-goal-conf').value='';
   document.getElementById('nb-goal-vid').value='';
+  document.getElementById('nb-status').value='ongoing';
   document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.c==='#3b7ef8');});
+  document.getElementById('nb-custom-color').value='#3b7ef8';
+  _nbClearMeta();
   openOv('ov-brand');
   setTimeout(function(){document.getElementById('nb-name').focus();},100);
 }
@@ -3244,17 +3282,16 @@ function openEditBrand(brandId){
   _editingBrandId=brandId;
   newBrandColor=b.color||'#3b7ef8';
   document.getElementById('nb-modal-title').textContent='Edit Brand';
-  document.getElementById('nb-modal-sub').textContent='Update name, color or goals';
+  document.getElementById('nb-modal-sub').textContent='Update name, color, goals or settings';
   document.getElementById('nb-save-btn').textContent='Save Changes';
   document.getElementById('nb-delete-btn').style.display='';
   document.getElementById('nb-name').value=b.name||'';
-  document.getElementById('nb-goal-conf').value=b.goals?.confirmed||'';
-  document.getElementById('nb-goal-vid').value=b.goals?.videos||'';
+  document.getElementById('nb-goal-conf').value=b.goals&&b.goals.confirmed?b.goals.confirmed:'';
+  document.getElementById('nb-goal-vid').value=b.goals&&b.goals.videos?b.goals.videos:'';
   document.getElementById('nb-status').value=b.status||'ongoing';
-  document.getElementById('nb-status-row').style.display='';
-  // Select matching swatch or none
   document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.toggle('active',s.dataset.c===b.color);});
   document.getElementById('nb-custom-color').value=b.color||'#3b7ef8';
+  _nbLoadMeta(brandId);
   openOv('ov-brand');
   setTimeout(function(){document.getElementById('nb-name').focus();},100);
 }
@@ -3275,11 +3312,13 @@ function saveBrand(){
     var b=getBrand(_editingBrandId);
     if(b){b.name=name;b.color=newBrandColor;b.goals=goals;b.status=newStatus;}
     apiPut('/api/brands/'+_editingBrandId,{name:name,color:newBrandColor,goals:goals,status:newStatus});
+    _nbSaveMeta(_editingBrandId);
     renderAll();closeOv('ov-brand');
   } else {
     const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
-    ST.brands.push({id:id,name:name,color:newBrandColor,goals:goals,status:'ongoing'});
+    ST.brands.push({id:id,name:name,color:newBrandColor,goals:goals,status:newStatus});
     apiPost('/api/brands',{id:id,name:name,color:newBrandColor,goals:goals});
+    _nbSaveMeta(id);
     renderAll();closeOv('ov-brand');
     document.getElementById('nb-name').value='';
   }
@@ -3884,7 +3923,10 @@ function renderAllBrands(){
   var allBrands=ST.brands.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   if(!allBrands.length){el.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--text-s)">No brands yet.</div>';return;}
 
-  var html='<div class="sec" style="margin-bottom:20px"><div class="sec-t">All Brands <span class="sec-s">'+allBrands.length+' brands</span></div></div>';
+  var html='<div class="sec" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">'+
+    '<div class="sec-t" style="margin-bottom:0">All Brands <span class="sec-s">'+allBrands.length+' brands</span></div>'+
+    (isAdmin()?'<button onclick="openAddBrand()" style="padding:8px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">&#43; Add New Brand</button>':'')+
+  '</div>';
   html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">';
 
   allBrands.forEach(function(b){
