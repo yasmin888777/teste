@@ -826,10 +826,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <div style="display:flex;align-items:center;gap:8px">
           <select id="camp-status-filter" onchange="renderCampaigns()" style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;cursor:pointer;outline:none">
             <option value="ongoing">Ongoing</option>
-            <option value="all">All brands</option>
             <option value="finished">Finished</option>
           </select>
-          <button class="sec-btn" id="btn-add-brand" onclick="openAddBrand()">+ Add Brand</button>
+          <button class="sec-btn" id="btn-new-campaign" onclick="openNewCampaignModal()">+ New Campaign</button>
         </div>
       </div>
       <div class="g2" id="campaign-cards"></div>
@@ -2620,11 +2619,10 @@ function renderCampaigns(){
   const el=document.getElementById('campaign-cards');if(!el)return;
   var statusFilter=(document.getElementById('camp-status-filter')||{}).value||'ongoing';
   var brands=ST.brands.filter(function(b){
-    if(statusFilter==='all') return true;
     return (b.status||'ongoing')===statusFilter;
   });
   if(!brands.length){
-    el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s);grid-column:1/-1">'+(statusFilter==='finished'?'No finished brands yet.':'No ongoing brands. Change filter to see all.')+'</div>';
+    el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s);grid-column:1/-1">'+(statusFilter==='finished'?'No finished brands yet.':'No ongoing brands.')+'</div>';
     return;
   }
   el.innerHTML=brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
@@ -2646,14 +2644,22 @@ function campaignCardHTML(b,i){
   const _rawShipped=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.shipped||0);},0);
   const _rawReceived=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.received||0);},0);
 
-  const assigned=ST.members.filter(function(m){return m.brands.includes(b.id);});
-  const avatars=assigned.map(function(m){
+  const allAssigned=ST.members.filter(function(m){return m.brands.includes(b.id);});
+  const sortedAssigned=allAssigned.slice().sort(function(a,b2){
+    var ra=(a.roles&&a.roles[b.id])||'';
+    var rb=(b2.roles&&b2.roles[b.id])||'';
+    return (ra==='owner'?0:1)-(rb==='owner'?0:1);
+  });
+  const avatars=sortedAssigned.map(function(m){
     const role=(m.roles&&m.roles[b.id])||'';
-    return '<div style="position:relative;margin-left:-5px" title="'+m.name+(role?' ('+role+')':'')+'">'+
-      '<div class="mem-av-img av-sm" style="border:2px solid white">'+
+    var badge='';
+    if(role==='owner') badge='<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1" title="Owner">&#128081;</span>';
+    else if(role) badge='<span style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1" title="Support">&#127911;</span>';
+    return '<div style="position:relative;margin-left:4px;padding-top:8px" title="'+m.name+(role?' ('+role+')':'')+'">'+
+      badge+
+      '<div class="mem-av-img av-sm" style="border:2px solid var(--card)">'+
         (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
       '</div>'+
-      (role?'<span style="position:absolute;bottom:-3px;right:-3px;font-size:7px;font-weight:700;padding:1px 3px;border-radius:3px;background:'+(role==='owner'?'var(--primary)':'var(--amber)')+';color:#fff;text-transform:uppercase">'+role[0]+'</span>':'')+
     '</div>';
   }).join('');
 
@@ -2692,10 +2698,9 @@ function campaignCardHTML(b,i){
       '<div class="camp-card-dot" style="background:'+b.color+'"></div>'+
       '<span class="camp-card-name">'+b.name+'</span>'+
       statusBadge+
-      '<div style="display:flex;margin-left:8px">'+avatars+'</div>'+
+      '<div style="display:flex;align-items:flex-end;margin-left:8px;padding-top:6px">'+avatars+'</div>'+
       '<button style="margin-left:auto;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--primary);background:var(--primary-d);border:1px solid rgba(59,126,248,.15);cursor:pointer;margin-right:6px" onclick="openAddCampaign(\''+b.id+'\')">+ Campaign</button>'+
-      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer;margin-right:4px" onclick="openGoals(\''+b.id+'\')">Goals</button>'+
-      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openEditBrand(\''+b.id+'\')">&#9998; Edit</button>'+
+      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openEditBrand(\''+b.id+'\')">&#9881; Edit</button>'+
     '</div>'+
     '<div class="camp-card-body">'+
       campListHTML+
@@ -2731,19 +2736,24 @@ function campaignCardHTML(b,i){
         '<div class="camp-funnel-title" style="margin-bottom:0">Summary'+(_hasOv?'<span style="font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:#fef3c7;color:#d97706;margin-left:6px;vertical-align:middle">✎ edited</span>':'')+'</div>'+
         (isAdmin()?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);cursor:pointer">&#9998; Edit</button>':'')+
       '</div>'+
-      [
-        {label:'Total KOLs Contacted', val:totC,      icon:'&#128222;'},
-        {label:'Confirmed KOLs',        val:totCo,     icon:'&#129309;', ov:_ov.confirmed!=null},
-        {label:'Shipped Products',      val:totShipped,icon:'&#128230;', ov:_ov.shipped!=null},
-        {label:'Received Products',     val:totReceived,icon:'&#9989;',  ov:_ov.received!=null},
-        {label:'Published Videos',      val:totV,      icon:'&#127909;', ov:_ov.published!=null},
-        {label:'Videos to be Published',val:gV>0?Math.max(0,gV-totV):'—',icon:'&#127916;'},
-      ].map(function(r){
-        return '<div class="camp-funnel-row">'+
-          '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px"><span>'+r.icon+'</span>'+r.label+'</span>'+
-          '<span style="font-size:14px;font-weight:700;color:'+(r.ov?'var(--amber)':'var(--text)')+'">'+r.val+(r.ov?'<span style="font-size:9px;margin-left:3px">✎</span>':'')+'</span>'+
-        '</div>';
-      }).join('')+
+      (function(){
+        var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
+        var rows=[
+          {label:'Total KOLs Contacted', val:totC,        goal:0,          icon:'&#128222;'},
+          {label:'Confirmed KOLs',        val:totCo,       goal:gCo,        icon:'&#129309;', ov:_ov.confirmed!=null},
+          {label:'Shipped Products',      val:totShipped,  goal:totSamples, icon:'&#128230;', ov:_ov.shipped!=null},
+          {label:'Received Products',     val:totReceived, goal:totSamples, icon:'&#9989;',   ov:_ov.received!=null},
+          {label:'Published Videos',      val:totV,        goal:gV,         icon:'&#127909;', ov:_ov.published!=null},
+          {label:'Videos to be Published',val:gV>0?Math.max(0,gV-totV):'—',goal:0,           icon:'&#127916;'},
+        ];
+        return rows.map(function(r){
+          var display=r.goal>0?(r.val+' / '+r.goal):r.val;
+          return '<div class="camp-funnel-row">'+
+            '<span style="font-size:11px;color:var(--text-m);display:flex;align-items:center;gap:5px"><span>'+r.icon+'</span>'+r.label+'</span>'+
+            '<span style="font-size:14px;font-weight:700;color:'+(r.ov?'var(--amber)':'var(--text)')+'">'+display+(r.ov?'<span style="font-size:9px;margin-left:3px">✎</span>':'')+'</span>'+
+          '</div>';
+        }).join('');
+      })()+
     '</div>'+
   '</div>';
 }
@@ -3481,6 +3491,55 @@ function toggleBrandStatus(brandId, currentStatus){
     });
 }
 
+/* ── New Campaign Modal (campaigns page) ── */
+var _ncBrandId=null;
+function openNewCampaignModal(){
+  var sel=document.getElementById('nnc-brand-sel');
+  sel.innerHTML='<option value="">Select a brand...</option>'+
+    ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).map(function(b){
+      return '<option value="'+b.id+'">'+escHtml(b.name)+'</option>';
+    }).join('');
+  document.getElementById('nnc-camp-name').value='';
+  document.getElementById('nnc-period').value='';
+  document.getElementById('nnc-start').value='';
+  document.getElementById('nnc-end').value='';
+  document.getElementById('nnc-samples').value='';
+  document.getElementById('nnc-goal-conf').value='';
+  document.getElementById('nnc-goal-vid').value='';
+  sel.onchange=function(){
+    var b=getBrand(sel.value);
+    if(b&&b.goals){
+      document.getElementById('nnc-goal-conf').value=b.goals.confirmed||'';
+      document.getElementById('nnc-goal-vid').value=b.goals.videos||'';
+    } else {
+      document.getElementById('nnc-goal-conf').value='';
+      document.getElementById('nnc-goal-vid').value='';
+    }
+  };
+  openOv('ov-new-campaign');
+}
+function saveNewCampaignFull(){
+  var brandId=document.getElementById('nnc-brand-sel').value;
+  if(!brandId){alert('Please select a brand');return;}
+  var name=document.getElementById('nnc-camp-name').value.trim();
+  if(!name){alert('Please enter a campaign name');return;}
+  var period=document.getElementById('nnc-period').value.trim();
+  var startDate=document.getElementById('nnc-start').value||null;
+  var endDate=document.getElementById('nnc-end').value||null;
+  var samples=+(document.getElementById('nnc-samples').value)||0;
+  var gConf=+(document.getElementById('nnc-goal-conf').value)||0;
+  var gVid=+(document.getElementById('nnc-goal-vid').value)||0;
+  var id='camp_'+Date.now();
+  if(!ST.campaigns) ST.campaigns={};
+  if(!ST.campaigns[brandId]) ST.campaigns[brandId]=[];
+  ST.campaigns[brandId].push({id:id,brandId:brandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,shipmentStatus:''});
+  apiPost('/api/campaigns',{id:id,brandId:brandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples});
+  var b=getBrand(brandId);
+  if(b){b.goals={confirmed:gConf,videos:gVid};apiPut('/api/brands/'+brandId,{goals:b.goals});}
+  renderAll();
+  closeOv('ov-new-campaign');
+}
+
 var _addCampBrandId=null;
 function openAddCampaign(brandId){
   _addCampBrandId=brandId;
@@ -3746,7 +3805,7 @@ function renderBrandDetail(brandId){
       '<div class="brand-detail-actions">'+
         (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
         (admin?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:'+(_bdOv&&Object.keys(_bdOv).length?'#fef3c7':'var(--bg)')+';color:'+(_bdOv&&Object.keys(_bdOv).length?'#d97706':'var(--text-m)')+';border:1px solid var(--border);cursor:pointer">&#9998; Edit Summary</button>':'') +
-        (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">&#9998; Edit Brand</button>':'') +
+        (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.25);cursor:pointer">&#9881;&#65039; Edit Brand</button>':'') +
       '</div>'+
     '</div>'+
     headerTeamHtml+
@@ -4754,6 +4813,62 @@ function renderReportHistory(){
 initDark();
 loadState();
 </script>
+
+<!-- NEW CAMPAIGN MODAL -->
+<div class="overlay" id="ov-new-campaign" onclick="ovBg('ov-new-campaign',event)">
+  <div class="modal goals-modal" style="max-width:500px;max-height:90vh;overflow-y:auto">
+    <div class="modal-hd">
+      <div style="font-size:22px">&#127919;</div>
+      <div><div class="modal-title">New Campaign</div><div class="modal-sub">Select brand &amp; create campaign</div></div>
+      <button class="modal-x" onclick="closeOv('ov-new-campaign')">&#10005;</button>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Brand</label>
+      <select id="nnc-brand-sel" class="ff-inp" style="cursor:pointer"></select>
+    </div>
+    <div class="ff" style="margin-bottom:10px">
+      <label class="ff-lbl">Campaign Name *</label>
+      <input id="nnc-camp-name" class="ff-inp" placeholder="e.g. Summer Launch Y1"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Period</label>
+        <input id="nnc-period" class="ff-inp" placeholder="e.g. Q2 2026"/>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Samples</label>
+        <input id="nnc-samples" class="ff-inp" type="number" placeholder="0"/>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Start Date</label>
+        <input id="nnc-start" class="ff-inp" type="date"/>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">End Date</label>
+        <input id="nnc-end" class="ff-inp" type="date"/>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Brand Goals</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="ff">
+          <label class="ff-lbl">Confirmed KOLs Goal</label>
+          <input id="nnc-goal-conf" class="ff-inp" type="number" placeholder="e.g. 20"/>
+        </div>
+        <div class="ff">
+          <label class="ff-lbl">Published Videos Goal</label>
+          <input id="nnc-goal-vid" class="ff-inp" type="number" placeholder="e.g. 15"/>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="save-btn" style="background:var(--bg);color:var(--text-m);border:1.5px solid var(--border);flex:0 0 auto;width:auto;padding:11px 18px" onclick="closeOv('ov-new-campaign')">Cancel</button>
+      <button class="save-btn" style="flex:1" onclick="saveNewCampaignFull()">Create Campaign</button>
+    </div>
+  </div>
+</div>
 
 <!-- NOTE SIDE PANEL -->
 <div id="note-panel" style="position:fixed;top:0;right:-360px;width:320px;height:100vh;background:var(--card);border-left:1.5px solid var(--border);z-index:1200;padding:0;transition:right .25s cubic-bezier(.4,0,.2,1);box-shadow:-12px 0 40px rgba(0,0,0,.12);display:flex;flex-direction:column">
