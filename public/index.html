@@ -1203,6 +1203,84 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </div>
 </div>
 
+<!-- ══════════════════ MODAL: EDIT CAMPAIGN INFO ══════════════════ -->
+<div class="overlay" id="ov-camp-info" onclick="ovBg('ov-camp-info',event)">
+  <div class="modal goals-modal" style="max-width:440px">
+    <div class="modal-hd">
+      <div style="font-size:22px">&#9998;</div>
+      <div><div class="modal-title" id="ci-title">Edit Campaign</div><div class="modal-sub" id="ci-sub"></div></div>
+      <button class="modal-x" onclick="closeOv('ov-camp-info')">&#10005;</button>
+    </div>
+    <!-- Status -->
+    <div class="ff" style="margin-bottom:12px">
+      <label class="ff-lbl">Status</label>
+      <div style="display:flex;gap:20px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--text)">
+          <input type="radio" name="ci-status" id="ci-status-ongoing" value="ongoing"> Ongoing
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--text)">
+          <input type="radio" name="ci-status" id="ci-status-finished" value="finished"> Finished
+        </label>
+      </div>
+    </div>
+    <!-- Goals -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="ff">
+        <label class="ff-lbl">Confirmed KOLs Goal</label>
+        <input class="ff-inp" id="ci-goal-conf" type="number" min="0" placeholder="0"/>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Published Videos Goal</label>
+        <input class="ff-inp" id="ci-goal-vid" type="number" min="0" placeholder="0"/>
+      </div>
+    </div>
+    <!-- Platforms -->
+    <div class="ff" style="margin-bottom:12px">
+      <label class="ff-lbl">Platforms</label>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px" id="ci-platforms">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Instagram"> Instagram</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="TikTok"> TikTok</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Youtube"> Youtube</label>
+      </div>
+    </div>
+    <!-- Format -->
+    <div class="ff" style="margin-bottom:16px">
+      <label class="ff-lbl">Format</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px" id="ci-formats">
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Short video"> Short video</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Long video"> Long video</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Long video insertion"> Long video insertion</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Stories"> Stories</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;color:var(--text)"><input type="checkbox" value="Link in bio"> Link in bio</label>
+      </div>
+    </div>
+    <!-- Progress overrides -->
+    <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Progress <span style="font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-s)">&nbsp;— leave blank to use calculated values</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="ff">
+          <label class="ff-lbl">Total KOLs Contacted</label>
+          <input class="ff-inp" id="ci-ov-contacted" type="number" min="0" placeholder="auto"/>
+        </div>
+        <div class="ff">
+          <label class="ff-lbl">Total KOLs Confirmed</label>
+          <input class="ff-inp" id="ci-ov-confirmed" type="number" min="0" placeholder="auto"/>
+        </div>
+        <div class="ff">
+          <label class="ff-lbl">Shipped</label>
+          <input class="ff-inp" id="ci-ov-shipped" type="number" min="0" placeholder="auto"/>
+        </div>
+        <div class="ff">
+          <label class="ff-lbl">Published Videos</label>
+          <input class="ff-inp" id="ci-ov-published" type="number" min="0" placeholder="auto"/>
+        </div>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveCampInfo()">Save Changes</button>
+    <button style="width:100%;margin-top:8px;padding:10px;border-radius:10px;background:transparent;border:1.5px solid #fca5a5;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer" onclick="deleteBrandFromCI()">&#128465; Delete Brand</button>
+  </div>
+</div>
+
 <!-- ══════════════════ MODAL: EDIT PROFILE (Roles) ══════════════════ -->
 <div class="overlay" id="ov-profile" onclick="ovBg('ov-profile',event)">
   <div class="modal goals-modal">
@@ -2571,6 +2649,71 @@ function clearSummaryOverrides(){
 }
 
 /* ══════════════════════════════════════════════
+   EDIT CAMPAIGN INFO MODAL
+══════════════════════════════════════════════ */
+var _campInfoBrandId=null;
+function getBrandMeta(bid){try{return JSON.parse(localStorage.getItem('dg_brand_meta_'+bid)||'null')||{};}catch(e){return {};}}
+function setBrandMeta(bid,meta){try{localStorage.setItem('dg_brand_meta_'+bid,JSON.stringify(meta));}catch(e){}}
+function openEditCampInfo(brandId){
+  var b=getBrand(brandId);if(!b)return;
+  _campInfoBrandId=brandId;
+  document.getElementById('ci-title').textContent=b.name;
+  document.getElementById('ci-sub').textContent='Campaign settings';
+  var status=b.status||'ongoing';
+  document.getElementById('ci-status-ongoing').checked=(status==='ongoing');
+  document.getElementById('ci-status-finished').checked=(status==='finished');
+  document.getElementById('ci-goal-conf').value=b.goals&&b.goals.confirmed?b.goals.confirmed:'';
+  document.getElementById('ci-goal-vid').value=b.goals&&b.goals.videos?b.goals.videos:'';
+  var meta=getBrandMeta(brandId);
+  var platforms=meta.platforms||[];
+  document.querySelectorAll('#ci-platforms input[type=checkbox]').forEach(function(cb){cb.checked=platforms.indexOf(cb.value)>=0;});
+  var formats=meta.formats||[];
+  document.querySelectorAll('#ci-formats input[type=checkbox]').forEach(function(cb){cb.checked=formats.indexOf(cb.value)>=0;});
+  var ov=getSummaryOverride(brandId)||{};
+  document.getElementById('ci-ov-contacted').value=ov.contacted!=null?ov.contacted:'';
+  document.getElementById('ci-ov-confirmed').value=ov.confirmed!=null?ov.confirmed:'';
+  document.getElementById('ci-ov-shipped').value=ov.shipped!=null?ov.shipped:'';
+  document.getElementById('ci-ov-published').value=ov.published!=null?ov.published:'';
+  openOv('ov-camp-info');
+}
+function saveCampInfo(){
+  if(!_campInfoBrandId)return;
+  var b=getBrand(_campInfoBrandId);if(!b)return;
+  var statusEl=document.querySelector('input[name="ci-status"]:checked');
+  var status=statusEl?statusEl.value:'ongoing';
+  var confGoal=+document.getElementById('ci-goal-conf').value||0;
+  var vidGoal=+document.getElementById('ci-goal-vid').value||0;
+  b.status=status;b.goals={confirmed:confGoal,videos:vidGoal};
+  apiPut('/api/brands/'+_campInfoBrandId,{status:status,goals:{confirmed:confGoal,videos:vidGoal},color:b.color,name:b.name});
+  var platforms=[];
+  document.querySelectorAll('#ci-platforms input[type=checkbox]:checked').forEach(function(cb){platforms.push(cb.value);});
+  var formats=[];
+  document.querySelectorAll('#ci-formats input[type=checkbox]:checked').forEach(function(cb){formats.push(cb.value);});
+  var meta=getBrandMeta(_campInfoBrandId);meta.platforms=platforms;meta.formats=formats;
+  setBrandMeta(_campInfoBrandId,meta);
+  var co=document.getElementById('ci-ov-contacted').value.trim();
+  var cf=document.getElementById('ci-ov-confirmed').value.trim();
+  var sh=document.getElementById('ci-ov-shipped').value.trim();
+  var pu=document.getElementById('ci-ov-published').value.trim();
+  var obj={};
+  if(co!=='')obj.contacted=+co;
+  if(cf!=='')obj.confirmed=+cf;
+  if(sh!=='')obj.shipped=+sh;
+  if(pu!=='')obj.published=+pu;
+  if(Object.keys(obj).length)setSummaryOverride(_campInfoBrandId,obj);
+  else clearSummaryOverride(_campInfoBrandId);
+  closeOv('ov-camp-info');
+  renderAll();
+  if(currentPage==='brand'&&_activeBrandId===_campInfoBrandId)renderBrandDetail(_activeBrandId);
+}
+function deleteBrandFromCI(){
+  if(!_campInfoBrandId)return;
+  _editingBrandId=_campInfoBrandId;
+  closeOv('ov-camp-info');
+  deleteBrand();
+}
+
+/* ══════════════════════════════════════════════
    SUMMARY LABEL HELPERS
 ══════════════════════════════════════════════ */
 function getSumLabel(key,def){try{var o=JSON.parse(localStorage.getItem('dg_sum_labels')||'{}');return o[key]||def;}catch(e){return def;}}
@@ -2758,7 +2901,7 @@ function campaignCardHTML(b,i){
       statusBadge+
       '<div style="display:flex;align-items:flex-end;margin-left:8px;padding-top:6px">'+avatars+'</div>'+
       '<button style="margin-left:auto;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--primary);background:var(--primary-d);border:1px solid rgba(59,126,248,.15);cursor:pointer;margin-right:6px" onclick="openAddCampaign(\''+b.id+'\')">+ Campaign</button>'+
-      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openEditBrand(\''+b.id+'\')">&#9881; Edit</button>'+
+      '<button style="padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;color:var(--text-m);background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="openEditCampInfo(\''+b.id+'\')">&#9881; Edit</button>'+
     '</div>'+
     '<div class="camp-card-body">'+
       campListHTML+
@@ -2795,7 +2938,6 @@ function campaignCardHTML(b,i){
       })()+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
         '<div class="camp-funnel-title" style="margin-bottom:0">Summary</div>'+
-        (isAdmin()?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);cursor:pointer">&#9998; Edit</button>':'')+
       '</div>'+
       (function(){
         var totSamples=brandCamps.reduce(function(s,c){return s+(c.samples||0);},0);
