@@ -4902,9 +4902,7 @@ function renderAdminTeam(){
     },0);
     var filledCells=Math.min(Math.floor(totalActs/50),TOTAL_CELLS);
 
-    // Member label
-    _svgParts.push('<text x="'+HEX_R+'" y="'+(SVG_H>0?_memberOffsetY+10:10)+'" font-size="10" font-family="Inter,sans-serif" fill="'+col+'" font-weight="700">'+escHtml(m.name.split(' ')[0])+'</text>');
-    _memberOffsetY+=14;
+    // (no member label)
 
     for(var ci=0;ci<TOTAL_CELLS;ci++){
       var col_i=ci%HIVE_COLS;
@@ -4994,15 +4992,15 @@ function renderAdminTeam(){
   // Team Status + Hive
   html+='<div class="card mb16" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">'+
     '<div>'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-        '<div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
-        (isAdmin()?'<button class="sec-btn" onclick="openAddMember()">+ Add Member</button>':'')+
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'+
+        '<div class="sec-t" style="margin:0">Team Status <span class="sec-s">today</span></div>'+
         (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
          activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
          '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
-      '</div>'+
-      '<div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px">'+
-        '<div>'+attendanceWidget()+'</div>'+
+        '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'+
+          attendanceWidget()+
+          (isAdmin()?'<button class="sec-btn" onclick="openAddMember()">+ Add Member</button>':'')+
+        '</div>'+
       '</div>'+
       '<div class="team-status-grid">'+
       membersStatus.map(function(s){
@@ -5027,9 +5025,7 @@ function renderAdminTeam(){
       }).join('')+
       '</div>'+
     '</div>'+
-    '<div style="min-width:260px;max-width:320px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Team Hive</div>'+
-      '<div style="font-size:9px;color:var(--text-s);margin-bottom:8px">Each &#11042; = 50 activities (contacts + follow-ups)</div>'+
+    '<div style="min-width:240px;max-width:300px;display:flex;align-items:center">'+
       _hiveSvg+
     '</div>'+
   '</div>';
