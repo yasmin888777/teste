@@ -4137,6 +4137,7 @@ function renderBrandDetail(brandId){
       '<div class="brand-detail-actions">'+
         (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Campaign</button>':'') +
         (admin?'<button onclick="openSummaryEdit(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:'+(_bdOv&&Object.keys(_bdOv).length?'#fef3c7':'var(--bg)')+';color:'+(_bdOv&&Object.keys(_bdOv).length?'#d97706':'var(--text-m)')+';border:1px solid var(--border);cursor:pointer">&#9998; Edit Summary</button>':'') +
+        (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Add Campaign</button>':'')+
         (admin?'<button onclick="openEditBrand(\''+b.id+'\')" style="padding:6px 12px;border-radius:8px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.25);cursor:pointer">&#9881;&#65039; Edit Brand</button>':'') +
       '</div>'+
     '</div>'+
@@ -4217,24 +4218,13 @@ function renderBrandDetail(brandId){
     '</div>';
   }
 
-  var activeBodyHtml=activeCamps.length
-    ?'<div class="bd-camp-grid">'+activeCamps.map(campCardInner).join('')+'</div>'
-    :'<div style="padding:30px;text-align:center;color:var(--text-s);font-size:12px">No active campaigns.'+(admin?' Click <strong>+ Campaign</strong> to create one.':'')+'</div>';
-
-  var pastBodyHtml=pastCamps.length
-    ?'<div class="bd-camp-grid">'+pastCamps.map(campCardInner).join('')+'</div>'
-    :'<div style="padding:30px;text-align:center;color:var(--text-s);font-size:12px">No past campaigns yet.'+(admin?' Mark a campaign as finished or add past campaign info.':'')+'</div>';
-
-  var campTabsHtml=
-    '<div style="margin-bottom:16px">'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">'+
-        '<button id="'+activeCampTabId+'" onclick="bdSwitchCampTab(\'active\',\''+b.id+'\')" style="padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;background:'+bColor+';color:#fff;border:none;cursor:pointer">Active Campaigns</button>'+
-        '<button id="'+pastCampTabId+'" onclick="bdSwitchCampTab(\'past\',\''+b.id+'\')" style="padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">Past Campaigns</button>'+
-        (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="margin-left:auto;padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Add Campaign</button>':'')+
-      '</div>'+
-      '<div id="'+activeCampBodyId+'">'+activeBodyHtml+'</div>'+
-      '<div id="'+pastCampBodyId+'" style="display:none">'+pastBodyHtml+'</div>'+
-    '</div>';
+  var allCampsHtml='';
+  if(activeCamps.length||pastCamps.length){
+    allCampsHtml='<div class="bd-camp-grid">'+activeCamps.concat(pastCamps).map(campCardInner).join('')+'</div>';
+  } else {
+    allCampsHtml='<div style="padding:30px;text-align:center;color:var(--text-s);font-size:12px">No campaigns yet.'+(admin?' Click <strong>+ Add Campaign</strong> to create one.':'')+'</div>';
+  }
+  var campTabsHtml='<div style="margin-bottom:16px">'+allCampsHtml+'</div>';
 
   // ── Publication Calendar ──────────────────────
   var calHtml=renderPublicationCalendar(b.id, bColor);
