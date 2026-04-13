@@ -727,12 +727,6 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
         <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Documents
       </div>
-      <div class="sb-item" id="sbi-report" onclick="navTo('report',this)">
-        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Weekly Report
-      </div>
-      <div class="sb-item" id="sbi-settings" onclick="navTo('settings',this)">
-        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Settings
-      </div>
     </nav>
   </div>
 
@@ -742,16 +736,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Campaigns
     </div>
   </nav>
-  <nav class="sb-nav" id="sb-nav-admin-items">
-    <div class="sb-item" id="sbi-team-activity" onclick="navTo('members',this)">
-      <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Team Activity
-    </div>
-  </nav>
-  <nav class="sb-nav" id="sb-nav-member-items">
-    <div class="sb-item" id="sbi-digest" onclick="navTo('digest',this)">
-      <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Weekly Digest
-    </div>
-  </nav>
+  <nav class="sb-nav" id="sb-nav-admin-items"></nav>
+  <nav class="sb-nav" id="sb-nav-member-items"></nav>
 
   <div class="sb-sep" id="sb-brands-sep">Brands</div>
   <div class="sb-list" id="sb-brands-list"></div>
@@ -837,7 +823,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
           <button class="sec-btn" id="btn-new-campaign" onclick="openNewCampaignModal()">+ New Campaign</button>
         </div>
       </div>
-      <div class="g2" id="campaign-cards"></div>
+      <div id="campaign-cards"></div>
     </div>
 
     <!-- ── BRAND DETAIL ── -->
@@ -1812,7 +1798,16 @@ function renderSidebar(){
       '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
       '<span>All Brands</span>'+
     '</div>'+
-    ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(b=>
+    ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).slice().sort(function(a,b){
+      // Solohour (Panama) always above Solohour (Guatemala)
+      var an=a.name.toLowerCase(),bn=b.name.toLowerCase();
+      if(an.includes('solohour')&&bn.includes('solohour')){
+        var aPan=an.includes('panam'),bPan=bn.includes('panam');
+        if(aPan&&!bPan) return -1;
+        if(!aPan&&bPan) return 1;
+      }
+      return a.name.localeCompare(b.name);
+    }).map(b=>
       '<div class="sb-pill'+(b.id===_activeBrandId&&currentPage==='brand'?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
         '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
         '<span>'+b.name+'</span>'+
@@ -1946,12 +1941,10 @@ function renderConvTable(){
   '</table>';
 }
 
-/* Brand Progress */
+/* Brand Progress — now rendered in Campaigns page; clear from admin-team */
 function renderBrandProgress(){
   const el=document.getElementById('brand-progress-row');if(!el)return;
-  const cards=ST.brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
-  el.innerHTML='<div class="sec"><div class="sec-t">Campaign Progress by Brand</div></div><div style="display:flex;flex-direction:column;gap:20px">'+cards+'</div>';
-  initSumBlockDrag();
+  el.innerHTML=''; // Content moved to Campaigns page
 }
 
 /* TREND CHART */
@@ -2922,10 +2915,10 @@ function renderCampaigns(){
     return (b.status||'ongoing')===statusFilter;
   });
   if(!brands.length){
-    el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s);grid-column:1/-1">'+(statusFilter==='finished'?'No finished brands yet.':'No ongoing brands.')+'</div>';
+    el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">'+(statusFilter==='finished'?'No finished brands yet.':'No ongoing brands.')+'</div>';
     return;
   }
-  el.innerHTML=brands.map(function(b,i){return campaignCardHTML(b,i);}).join('');
+  el.innerHTML='<div style="display:flex;flex-direction:column;gap:20px">'+brands.map(function(b,i){return campaignCardHTML(b,i);}).join('')+'</div>';
   initGoalBoxDrag();
   initSumBlockDrag();
 }
@@ -3982,63 +3975,50 @@ function setBrandNote(bid,txt){try{var o=JSON.parse(localStorage.getItem('dg_bra
 
 function renderAllBrands(){
   var el=document.getElementById('all-brands-content');if(!el)return;
+  var BRAND_BLUE='#3b7ef8';
   var allBrands=ST.brands.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   if(!allBrands.length){el.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--text-s)">No brands yet.</div>';return;}
 
-  var html='<div class="sec" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">'+
-    '<div class="sec-t" style="margin-bottom:0">All Brands <span class="sec-s">'+allBrands.length+' brands</span></div>'+
-    (isAdmin()?'<button onclick="openAddBrand()" style="padding:8px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">&#43; Add New Brand</button>':'')+
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'+
+    '<div><span style="font-size:16px;font-weight:700;color:var(--text)">All Brands</span><span class="sec-s" style="margin-left:8px">'+allBrands.length+' brands</span></div>'+
+    (isAdmin()?'<button onclick="openAddBrand()" style="padding:8px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer">+ Add New Brand</button>':'')+
   '</div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px">';
 
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">';
   allBrands.forEach(function(b){
     var members=ST.members.filter(function(m){return m.brands&&m.brands.includes(b.id);});
-    var allLogs=[];
-    members.forEach(function(m){(ST.logs[m.id]||[]).forEach(function(l){if(l.brandId===b.id)allLogs.push(l);});});
-    var totC=allLogs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
-    var totCo=allLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
-    var totV=allLogs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
     var isOngoing=(b.status||'ongoing')==='ongoing';
-    var note=getBrandNote(b.id);
     var camps=(ST.campaigns&&ST.campaigns[b.id])||[];
+    var activeCamps=camps.filter(function(c){return (c.status||'ongoing')==='ongoing';});
+    var currentCamp=activeCamps.length?activeCamps[activeCamps.length-1]:null;
 
     html+=
-      '<div class="card" style="border-top:3px solid '+b.color+';display:flex;flex-direction:column;gap:14px">'+
-        '<div style="display:flex;align-items:center;gap:10px">'+
-          '<div style="width:14px;height:14px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>'+
-          '<span style="font-size:16px;font-weight:700;color:var(--text);flex:1">'+escHtml(b.name)+'</span>'+
-          '<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.05em;text-transform:uppercase;'+(isOngoing?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
-            (isOngoing?'● Ongoing':'○ Finished')+
-          '</span>'+
-          (isAdmin()?'<button onclick="openBrandDetail(\''+b.id+'\')" style="font-size:10px;padding:4px 10px;border-radius:6px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.15);cursor:pointer;font-weight:600">Detail →</button>':'')+
+      '<div onclick="openBrandDetail(\''+b.id+'\')" style="background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);border-top:3px solid '+BRAND_BLUE+';padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .18s,transform .15s" '+
+        'onmouseover="this.style.boxShadow=\'var(--shadow-lg)\';this.style.transform=\'translateY(-2px)\'" '+
+        'onmouseout="this.style.boxShadow=\'var(--shadow)\';this.style.transform=\'\'">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+          '<div style="width:12px;height:12px;border-radius:50%;background:'+BRAND_BLUE+';flex-shrink:0"></div>'+
+          '<span style="font-size:15px;font-weight:700;color:var(--text);flex:1">'+escHtml(b.name)+'</span>'+
+          '<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;'+(isOngoing?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
+            (isOngoing?'● Ongoing':'○ Finished')+'</span>'+
         '</div>'+
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
-          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">'+
-            '<div style="font-size:10px;color:var(--text-s);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Contacted</div>'+
-            '<div style="font-size:20px;font-weight:800;color:var(--text)">'+totC+'</div>'+
-          '</div>'+
-          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">'+
-            '<div style="font-size:10px;color:var(--text-s);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Confirmed</div>'+
-            '<div style="font-size:20px;font-weight:800;color:#10b981">'+totCo+'<span style="font-size:11px;font-weight:400;color:var(--text-s);margin-left:3px">/ '+(b.goals&&b.goals.confirmed||'—')+'</span></div>'+
-          '</div>'+
-          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)">'+
-            '<div style="font-size:10px;color:var(--text-s);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Videos</div>'+
-            '<div style="font-size:20px;font-weight:800;color:#8b5cf6">'+totV+'<span style="font-size:11px;font-weight:400;color:var(--text-s);margin-left:3px">/ '+(b.goals&&b.goals.videos||'—')+'</span></div>'+
-          '</div>'+
+        (currentCamp?'<div style="font-size:10px;color:var(--text-s);margin-bottom:8px">&#127919; Current: <strong style="color:var(--text)">'+escHtml(currentCamp.name)+'</strong></div>':'')+
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+
+          members.map(function(m){
+            var role=(m.roles&&m.roles[b.id])||'';
+            var avUrl=avatarUrl(m);
+            return '<div style="display:flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;background:'+BRAND_BLUE+'12;border:1px solid '+BRAND_BLUE+'25">'+
+              '<div style="width:18px;height:18px;border-radius:50%;overflow:hidden;flex-shrink:0;background:'+BRAND_BLUE+'33;display:flex;align-items:center;justify-content:center">'+
+                (avUrl?'<img src="'+avUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">':'<span style="font-size:7px;font-weight:700;color:'+BRAND_BLUE+'">'+ini(m.name)+'</span>')+
+              '</div>'+
+              '<span style="font-size:10px;font-weight:600;color:'+BRAND_BLUE+'">'+escHtml(m.name.split(' ')[0])+'</span>'+
+              (role?'<span style="font-size:8px;color:'+BRAND_BLUE+';opacity:.7">'+role+'</span>':'')+
+            '</div>';
+          }).join('')+
         '</div>'+
-        (members.length?
-          '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
-            '<span style="font-size:10px;color:var(--text-s);font-weight:600">Team:</span>'+
-            members.map(function(m){var role=(m.roles&&m.roles[b.id])||'';return '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:'+b.color+'15;color:'+b.color+';border:1px solid '+b.color+'30">'+escHtml(m.name)+(role?' · '+role:'')+'</span>';}).join('')+
-          '</div>':''+
-        (camps.length?'<div style="font-size:11px;color:var(--text-s)">📁 '+camps.length+' campaign'+(camps.length>1?'s':'')+'</div>':''))+
-        '<div>'+
-          '<div style="font-size:10px;font-weight:600;color:var(--text-s);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px">Notes</div>'+
-          '<textarea id="bn-'+b.id+'" oninput="setBrandNote(\''+b.id+'\',this.value)" style="width:100%;min-height:60px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;font-family:inherit;resize:vertical;outline:none" placeholder="Add notes about this brand...">'+escHtml(note)+'</textarea>'+
-        '</div>'+
+        '<div style="font-size:10px;color:var(--text-s)">'+camps.length+' campaign'+(camps.length!==1?'s':'')+' &middot; click to open &rarr;</div>'+
       '</div>';
   });
-
   html+='</div>';
   el.innerHTML=html;
 }
@@ -4163,16 +4143,23 @@ function renderBrandDetail(brandId){
     headerTeamHtml+
   '</div>';
 
-  // ── KPI row ───────────────────────────────────
-  var _ovCoLabel=_bdOv.confirmed!=null?'<span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:8px;background:#fef3c7;color:#d97706;margin-left:5px;vertical-align:middle">✎</span>':'';
-  var _ovVLabel=_bdOv.published!=null?'<span style="font-size:9px;font-weight:600;padding:1px 5px;border-radius:8px;background:#fef3c7;color:#d97706;margin-left:5px;vertical-align:middle">✎</span>':'';
-  var kpiHtml='<div class="bd-kpi-row">'+
-    ['<div class="bd-kpi-lbl">KOLs Contacted</div><div class="bd-kpi-val">'+totContacted+'</div><div class="bd-kpi-sub">sourced: '+totSourced+'</div>',
-     '<div class="bd-kpi-lbl">KOLs Confirmed</div><div class="bd-kpi-val">'+(gCo?'<span>'+totConfirmed+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gCo+'</span>':totConfirmed)+_ovCoLabel+'</div><div class="bd-kpi-sub">'+(gCo>0?Math.min(Math.round(totConfirmed/gCo*100),100)+'% of goal':'no goal set')+'</div>',
-     '<div class="bd-kpi-lbl">Videos Published</div><div class="bd-kpi-val">'+(gV?'<span>'+totVids+'</span><span style="font-size:14px;color:var(--text-s);font-weight:400"> / '+gV+'</span>':totVids)+_ovVLabel+'</div><div class="bd-kpi-sub">'+(gV>0?Math.min(Math.round(totVids/gV*100),100)+'% of goal':'no goal set')+'</div>',
-     '<div class="bd-kpi-lbl">Conversion Rate</div><div class="bd-kpi-val" style="font-size:20px">'+convRate+'</div><div class="bd-kpi-sub">contacted → confirmed</div>',
-    ].map(function(inner){return '<div class="bd-kpi">'+inner+'</div>';}).join('')+
-  '</div>';
+  // ── Current Project label ─────────────────────
+  var activeCamps=camps.filter(function(c){return (c.status||'ongoing')==='ongoing';});
+  var currentCamp=activeCamps.length?activeCamps[activeCamps.length-1]:null;
+  var pastCamps=camps.filter(function(c){return c.status==='finished';});
+
+  var currentProjBanner='';
+  if(currentCamp){
+    currentProjBanner='<div style="background:'+bColor+'12;border:1.5px solid '+bColor+'30;border-radius:10px;padding:10px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:'+bColor+'"></div>'+
+      '<span style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.08em">Current Project:</span>'+
+      '<span style="font-size:13px;font-weight:700;color:'+bColor+'">'+escHtml(currentCamp.name)+'</span>'+
+      (currentCamp.period?'<span style="font-size:10px;color:var(--text-s);margin-left:4px">'+escHtml(currentCamp.period)+'</span>':'')+
+    '</div>';
+  }
+
+  // ── Campaign Progress (this brand) ───────────
+  var campProgressHtml='<div style="margin-bottom:16px">'+campaignCardHTML(b,0)+'</div>';
 
   // ── Chart card ────────────────────────────────
   var _chartMembers=ST.members.filter(function(m){return m.brands&&m.brands.includes(b.id);});
@@ -4181,108 +4168,199 @@ function renderBrandDetail(brandId){
       '<div style="font-size:12px;font-weight:600;color:var(--text-m)">Team Performance — '+escHtml(b.name)+'</div>'+
       (_chartMembers.length?'':'<span style="font-size:11px;color:var(--text-s)">No members assigned</span>')+
     '</div>'+
-    '<div style="position:relative;height:200px"><canvas id="bd-chart-'+b.id+'"></canvas></div>'+
+    '<div style="position:relative;height:220px"><canvas id="bd-chart-'+b.id+'"></canvas></div>'+
   '</div>';
 
-  // ── Campaign cards ────────────────────────────
-  var campHtml='<div class="bd-camp-grid">';
-  if(!camps.length){
-    campHtml+='<div class="bd-camp-card" style="grid-column:1/-1;text-align:center;color:var(--text-s);padding:40px">No campaigns yet.'+(admin?' Click <strong>+ Campaign</strong> to create one.':'')+'</div>';
-  } else {
-    camps.forEach(function(c){
-      // Per-campaign stats (from logs tagged with this campaignId)
-      var campConfirmed=0,campVids=0;
-      ST.members.forEach(function(m){
-        var mLogs=getLogs(m.id).filter(function(l){return l.brandId===b.id&&l.campaignId===c.id;});
-        campConfirmed+=mLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
-        campVids+=mLogs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
-      });
-      var campSamples=c.samples||0;
-      var pCo=gCo>0?Math.min((totConfirmed/gCo)*100,100):0; // brand-level goal
-      var pV=gV>0?Math.min((totVids/gV)*100,100):0;
+  // ── Active Campaigns ──────────────────────────
+  var activeCampTabId='bd-tab-active-'+b.id;
+  var pastCampTabId='bd-tab-past-'+b.id;
+  var activeCampBodyId='bd-body-active-'+b.id;
+  var pastCampBodyId='bd-body-past-'+b.id;
 
-      // Date range display
-      var dateRange='';
-      if(c.startDate||c.endDate){
-        var fmt=function(d){if(!d)return '?';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);};
-        dateRange='<div class="bd-camp-meta-item">&#128197; '+fmt(c.startDate)+' → '+fmt(c.endDate)+'</div>';
-      }
-      var periodTag=c.period?'<span class="bd-camp-period" style="background:'+bColor+'18;color:'+bColor+'">'+escHtml(c.period)+'</span>':'';
-      var samplesHtml=campSamples?'<div class="bd-camp-meta-item">&#128230; '+campSamples+' samples</div>':'';
-
-      campHtml+='<div class="bd-camp-card">'+
-        '<div class="bd-camp-card-head">'+
-          '<div style="flex:1;min-width:0">'+
-            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'+
-              '<div class="bd-camp-name">'+escHtml(c.name)+'</div>'+
-              periodTag+
-            '</div>'+
-            '<div class="bd-camp-meta">'+dateRange+samplesHtml+'</div>'+
-          '</div>'+
-        '</div>'+
-        '<div class="bd-prog-row">'+
-          '<div class="bd-prog-label"><span>&#129309; Confirmed KOLs</span><span>'+campConfirmed+(gCo?' / '+gCo:'')+'</span></div>'+
-          '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pCo.toFixed(0)+'%;background:'+bColor+'"></div></div>'+
-        '</div>'+
-        '<div class="bd-prog-row">'+
-          '<div class="bd-prog-label"><span>&#127909; Published Videos</span><span>'+campVids+(gV?' / '+gV:'')+'</span></div>'+
-          '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pV.toFixed(0)+'%;background:'+bColor+'88"></div></div>'+
-        '</div>'+
-        // Shipped count
-        (campSamples>0?function(){
-          var shipped=+(c.shipmentStatus)||0;
-          var pct=Math.min(Math.round(shipped/campSamples*100),100);
-          var sc=pct>=100?'#10b981':pct>0?'#3b7ef8':'#9ca3af';
-          return '<div style="padding:8px 0;border-top:1px solid var(--border)">'+
-            '<div class="bd-prog-label" style="margin-bottom:4px"><span style="color:var(--text-m)">&#128666; Shipped</span><span style="font-weight:700;color:'+sc+'">'+shipped+' / '+campSamples+'</span></div>'+
-            '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pct+'%;background:'+sc+'"></div></div>'+
-          '</div>';
-        }():'')+
-        (admin?
-          '<div class="bd-camp-actions">'+
-            '<button onclick="openEditCampaign(\''+c.id+'\',\''+b.id+'\')" style="flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">&#9998; Edit</button>'+
-            (isAdmin()?'<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="padding:6px 10px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" title="Delete">&#128465;</button>':'')+
-          '</div>':'')+
+  function campCardInner(c){
+    var campSamples=c.samples||0;
+    var pCo=gCo>0?Math.min((totConfirmed/gCo)*100,100):0;
+    var pV=gV>0?Math.min((totVids/gV)*100,100):0;
+    var dateRange='';
+    if(c.startDate||c.endDate){
+      var fmtD=function(d){if(!d)return'?';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0].slice(2);};
+      dateRange='<div class="bd-camp-meta-item">&#128197; '+fmtD(c.startDate)+' → '+fmtD(c.endDate)+'</div>';
+    }
+    var periodTag=c.period?'<span class="bd-camp-period" style="background:'+bColor+'18;color:'+bColor+'">'+escHtml(c.period)+'</span>':'';
+    var samplesHtml=campSamples?'<div class="bd-camp-meta-item">&#128230; '+campSamples+' samples</div>':'';
+    var shipped=+(c.shipmentStatus)||0;
+    var shipHtml='';
+    if(campSamples>0){
+      var spct=Math.min(Math.round(shipped/campSamples*100),100);
+      var sc=spct>=100?'#10b981':spct>0?'#3b7ef8':'#9ca3af';
+      shipHtml='<div style="padding:8px 0;border-top:1px solid var(--border)">'+
+        '<div class="bd-prog-label" style="margin-bottom:4px"><span style="color:var(--text-m)">&#128666; Shipped</span><span style="font-weight:700;color:'+sc+'">'+shipped+' / '+campSamples+'</span></div>'+
+        '<div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+spct+'%;background:'+sc+'"></div></div>'+
       '</div>';
-    });
+    }
+    return '<div class="bd-camp-card">'+
+      '<div class="bd-camp-card-head">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'+
+            '<div class="bd-camp-name">'+escHtml(c.name)+'</div>'+periodTag+
+          '</div>'+
+          '<div class="bd-camp-meta">'+dateRange+samplesHtml+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="bd-prog-row"><div class="bd-prog-label"><span>&#129309; Confirmed KOLs</span><span>'+totConfirmed+(gCo?' / '+gCo:'')+'</span></div><div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pCo.toFixed(0)+'%;background:'+bColor+'"></div></div></div>'+
+      '<div class="bd-prog-row"><div class="bd-prog-label"><span>&#127909; Published Videos</span><span>'+totVids+(gV?' / '+gV:'')+'</span></div><div class="bd-prog-bar"><div class="bd-prog-fill" style="width:'+pV.toFixed(0)+'%;background:'+bColor+'88"></div></div></div>'+
+      shipHtml+
+      (admin?'<div class="bd-camp-actions">'+
+        '<button onclick="openEditCampaign(\''+c.id+'\',\''+b.id+'\')" style="flex:1;padding:6px;border-radius:7px;font-size:11px;font-weight:500;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">&#9998; Edit</button>'+
+        (isAdmin()?'<button onclick="deleteCampaign(\''+c.id+'\',\''+b.id+'\')" style="padding:6px 10px;border-radius:7px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer" title="Delete">&#128465;</button>':'')+
+      '</div>':'')+
+    '</div>';
   }
-  campHtml+='</div>';
 
-  el.innerHTML=headerHtml+kpiHtml+membersBlockHtml+chartHtml+campHtml;
+  var activeBodyHtml=activeCamps.length
+    ?'<div class="bd-camp-grid">'+activeCamps.map(campCardInner).join('')+'</div>'
+    :'<div style="padding:30px;text-align:center;color:var(--text-s);font-size:12px">No active campaigns.'+(admin?' Click <strong>+ Campaign</strong> to create one.':'')+'</div>';
 
-  // ── Draw chart ────────────────────────────────
+  var pastBodyHtml=pastCamps.length
+    ?'<div class="bd-camp-grid">'+pastCamps.map(campCardInner).join('')+'</div>'
+    :'<div style="padding:30px;text-align:center;color:var(--text-s);font-size:12px">No past campaigns yet.'+(admin?' Mark a campaign as finished or add past campaign info.':'')+'</div>';
+
+  var campTabsHtml=
+    '<div style="margin-bottom:16px">'+
+      '<div style="display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">'+
+        '<button id="'+activeCampTabId+'" onclick="bdSwitchCampTab(\'active\',\''+b.id+'\')" style="padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;background:'+bColor+';color:#fff;border:none;cursor:pointer">Active Campaigns</button>'+
+        '<button id="'+pastCampTabId+'" onclick="bdSwitchCampTab(\'past\',\''+b.id+'\')" style="padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;background:var(--bg);color:var(--text-m);border:1px solid var(--border);cursor:pointer">Past Campaigns</button>'+
+        (admin?'<button onclick="openAddCampaign(\''+b.id+'\')" style="margin-left:auto;padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Add Campaign</button>':'')+
+      '</div>'+
+      '<div id="'+activeCampBodyId+'">'+activeBodyHtml+'</div>'+
+      '<div id="'+pastCampBodyId+'" style="display:none">'+pastBodyHtml+'</div>'+
+    '</div>';
+
+  // ── Publication Calendar ──────────────────────
+  var calHtml=renderPublicationCalendar(b.id, bColor);
+
+  el.innerHTML=headerHtml+currentProjBanner+campProgressHtml+membersBlockHtml+chartHtml+campTabsHtml+calHtml;
+
+  // ── Draw stacked bar chart per member ─────────
   (function(){
     var ctx=document.getElementById('bd-chart-'+b.id);
     if(!ctx) return;
     if(_bdChartInstance) _bdChartInstance.destroy();
-    if(!_chartMembers.length){return;}
+    if(!_chartMembers.length) return;
     var labels=_chartMembers.map(function(m){return m.name.split(' ')[0];});
+    var contData=_chartMembers.map(function(m){return sumM(m.id,b.id,'kols_contacted');});
     var confData=_chartMembers.map(function(m){return sumM(m.id,b.id,'confirmed');});
     var vidsData=_chartMembers.map(function(m){return sumM(m.id,b.id,'vids_published');});
-    var datasets=[
-      {type:'bar',label:'Confirmed KOLs',data:confData,backgroundColor:bColor+'cc',borderRadius:4,order:2},
-      {type:'bar',label:'Published Videos',data:vidsData,backgroundColor:bColor+'44',borderRadius:4,order:3},
-    ];
-    if(gCo>0){
-      datasets.push({type:'line',label:'Goal (Confirmed)',data:labels.map(function(){return gCo;}),borderColor:bColor,borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false,tension:0,order:1});
-    }
-    if(gV>0){
-      datasets.push({type:'line',label:'Goal (Videos)',data:labels.map(function(){return gV;}),borderColor:bColor+'88',borderWidth:2,borderDash:[3,3],pointRadius:0,fill:false,tension:0,order:1});
-    }
     _bdChartInstance=new Chart(ctx,{
       type:'bar',
-      data:{labels:labels,datasets:datasets},
+      data:{labels:labels,datasets:[
+        {label:'Contacted KOLs',data:contData,backgroundColor:bColor+'55',borderRadius:3,stack:'s'},
+        {label:'Confirmed KOLs',data:confData,backgroundColor:bColor+'99',borderRadius:3,stack:'s'},
+        {label:'Published Videos',data:vidsData,backgroundColor:bColor+'dd',borderRadius:3,stack:'s'},
+      ]},
       options:{
         responsive:true,maintainAspectRatio:false,
         plugins:{legend:{labels:{font:{size:11},boxWidth:12,padding:14}}},
         scales:{
-          x:{grid:{display:false},ticks:{font:{size:11}}},
-          y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},stepSize:1},beginAtZero:true}
+          x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},
+          y:{stacked:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10}},beginAtZero:true}
         }
       }
     });
   })();
+}
 
+function bdSwitchCampTab(tab, brandId){
+  var actBtn=document.getElementById('bd-tab-active-'+brandId);
+  var pastBtn=document.getElementById('bd-tab-past-'+brandId);
+  var actBody=document.getElementById('bd-body-active-'+brandId);
+  var pastBody=document.getElementById('bd-body-past-'+brandId);
+  if(!actBtn||!pastBtn||!actBody||!pastBody) return;
+  var b=getBrand(brandId);
+  var bColor=(b&&b.color)||'var(--primary)';
+  if(tab==='active'){
+    actBtn.style.background=bColor;actBtn.style.color='#fff';actBtn.style.border='none';
+    pastBtn.style.background='var(--bg)';pastBtn.style.color='var(--text-m)';pastBtn.style.border='1px solid var(--border)';
+    actBody.style.display='';pastBody.style.display='none';
+  } else {
+    pastBtn.style.background=bColor;pastBtn.style.color='#fff';pastBtn.style.border='none';
+    actBtn.style.background='var(--bg)';actBtn.style.color='var(--text-m)';actBtn.style.border='1px solid var(--border)';
+    actBody.style.display='none';pastBody.style.display='';
+  }
+}
+
+/* ══════════════════════════════════════════════
+   PUBLICATION CALENDAR (Publishment Schedule)
+══════════════════════════════════════════════ */
+function getPubSched(bid){try{return JSON.parse(localStorage.getItem('dg_pubsched_'+bid)||'{}');}catch(e){return {};}}
+function setPubSched(bid,sched){try{localStorage.setItem('dg_pubsched_'+bid,JSON.stringify(sched));}catch(e){}}
+function addPubKol(bid,date,name){var s=getPubSched(bid);if(!s[date])s[date]=[];if(name&&!s[date].includes(name))s[date].push(name);setPubSched(bid,s);renderPublicationCalendarInPlace(bid);}
+function removePubKol(bid,date,name){var s=getPubSched(bid);if(s[date])s[date]=s[date].filter(function(n){return n!==name;});if(s[date]&&!s[date].length)delete s[date];setPubSched(bid,s);renderPublicationCalendarInPlace(bid);}
+function renderPublicationCalendarInPlace(bid){
+  var b=getBrand(bid);if(!b)return;
+  var el=document.getElementById('pub-cal-'+bid);
+  if(!el)return;
+  el.innerHTML=_pubCalInner(bid,b.color);
+}
+function renderPublicationCalendar(bid, bColor){
+  return '<div id="pub-cal-'+bid+'" class="card mb16">'+_pubCalInner(bid,bColor)+'</div>';
+}
+function _pubCalInner(bid, bColor){
+  var sched=getPubSched(bid);
+  var now=new Date();
+  var calMonthKey='dg_pubcalmonth_'+bid;
+  var stored=localStorage.getItem(calMonthKey);
+  var curYear=now.getFullYear(),curMonth=now.getMonth();
+  if(stored){var p=stored.split('-');curYear=+p[0];curMonth=+p[1]-1;}
+  var firstDay=new Date(curYear,curMonth,1).getDay(); // 0=Sun
+  var daysInMonth=new Date(curYear,curMonth+1,0).getDate();
+  var monthLabel=new Date(curYear,curMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var todayStr2=now.getFullYear()+'-'+(now.getMonth()+1<10?'0'+(now.getMonth()+1):''+(now.getMonth()+1))+'-'+(now.getDate()<10?'0'+now.getDate():''+now.getDate());
+  var prevM='<button onclick="pubCalNav(\''+bid+'\','+curYear+','+curMonth+',-1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m)">‹</button>';
+  var nextM='<button onclick="pubCalNav(\''+bid+'\','+curYear+','+curMonth+',1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m)">›</button>';
+  var dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var headerCells=dayNames.map(function(d){return '<div style="text-align:center;font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;padding:4px 0">'+d+'</div>';}).join('');
+  var cells='';
+  // Leading empty cells
+  for(var ei=0;ei<firstDay;ei++) cells+='<div></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    var mm=(curMonth+1<10?'0'+(curMonth+1):''+(curMonth+1));
+    var dd=(d<10?'0'+d:''+d);
+    var dateStr=curYear+'-'+mm+'-'+dd;
+    var kols=sched[dateStr]||[];
+    var isToday=dateStr===todayStr2;
+    var kolItems=kols.map(function(k){
+      return '<div style="display:flex;align-items:center;gap:3px;background:'+bColor+'22;border-radius:4px;padding:1px 4px;margin-top:2px;font-size:9px;font-weight:600;color:'+bColor+'">'+
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:68px">'+escHtml(k)+'</span>'+
+        '<button onclick="event.stopPropagation();removePubKol(\''+bid+'\',\''+dateStr+'\',\''+k.replace(/'/g,"\\'")+'\')" style="color:'+bColor+';opacity:.6;font-size:10px;padding:0 1px;line-height:1;cursor:pointer;border:none;background:none;flex-shrink:0">×</button>'+
+      '</div>';
+    }).join('');
+    cells+='<div onclick="pubCalAddKol(\''+bid+'\',\''+dateStr+'\')" style="min-height:70px;border:1px solid var(--border);border-radius:7px;padding:5px 6px;cursor:pointer;transition:background .15s;position:relative;background:'+(isToday?bColor+'10':'var(--card)')+';border-color:'+(isToday?bColor:'var(--border)')+';" onmouseover="this.style.background=\''+bColor+'08\'" onmouseout="this.style.background=\''+(isToday?bColor+'10':'var(--card)')+'\'">'+
+      '<div style="font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?bColor:'var(--text-m)')+';margin-bottom:2px">'+d+'</div>'+
+      kolItems+
+      (kols.length===0?'<div style="font-size:8px;color:var(--text-s);opacity:.5;margin-top:4px">+ add</div>':'')+
+    '</div>';
+  }
+  return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text)">&#128197; Publishment Schedule</div>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+prevM+'<span style="font-size:12px;font-weight:600;color:var(--text)">'+monthLabel+'</span>'+nextM+'</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">'+
+      headerCells+cells+
+    '</div>'+
+    '<div style="font-size:10px;color:var(--text-s);margin-top:8px">Click any day to schedule a KOL publication.</div>'+
+  '</div>';
+}
+function pubCalNav(bid,year,month,delta){
+  var d=new Date(year,month+delta,1);
+  var key='dg_pubcalmonth_'+bid;
+  var mm=d.getMonth()+1;
+  localStorage.setItem(key,d.getFullYear()+'-'+(mm<10?'0'+mm:''+mm));
+  renderPublicationCalendarInPlace(bid);
+}
+function pubCalAddKol(bid,date){
+  var name=prompt('KOL name to schedule for '+date+':');
+  if(name&&name.trim()) addPubKol(bid,date,name.trim());
 }
 
 /* ══════════════════════════════════════════════
@@ -4366,7 +4444,7 @@ function renderMemberHome(){
 
 function _renderHomeContent(el){
   var today=todayStr();
-  var h=new Date().getHours();
+  var h=parseInt(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo',hour:'numeric',hour12:false}))||0;
   var greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
   var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
   var uname=userM?userM.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'');
@@ -4394,8 +4472,12 @@ function _renderHomeContent(el){
 
   var brandOptsHTML=myB.map(function(b){return '<option value="'+b.id+'">'+b.name+'</option>';}).join('');
 
-  // Project cards
-  var projHTML=_myAllBrands().map(function(b){
+  // Project cards — owner-role brands first, then support
+  var _allMyBrands=_myAllBrands();
+  var _ownerBrands=_allMyBrands.filter(function(b){return (userM&&userM.roles&&userM.roles[b.id])==='owner';});
+  var _supportBrands=_allMyBrands.filter(function(b){return (userM&&userM.roles&&userM.roles[b.id])!=='owner';});
+  var _sortedMyBrands=_ownerBrands.concat(_supportBrands);
+  var projHTML=_sortedMyBrands.map(function(b){
     var meta=getBrandMeta(b.id);
     var status=meta.status||b.status||'ongoing';
     var badgeColor=status==='ongoing'?'#27ae60':'#888';
@@ -4403,32 +4485,27 @@ function _renderHomeContent(el){
     var roleLabel=myRole==='owner'?'Owner':myRole==='support'?'Support':'Member';
     var roleColor=myRole==='owner'?'var(--primary)':myRole==='support'?'var(--amber)':'var(--text-s)';
     var roleBg=myRole==='owner'?'var(--primary-d)':myRole==='support'?'var(--amber-d)':'var(--bg)';
-    // Support = member with role 'support' for this brand, or fallback to any other member
+    // Support person = another member assigned to this brand
     var supportM=ST.members.find(function(m){return m.id!==(userM&&userM.id)&&(m.brands||[]).includes(b.id)&&(m.roles&&m.roles[b.id]==='support');});
     if(!supportM) supportM=ST.members.find(function(m){return m.id!==(userM&&userM.id)&&(m.brands||[]).includes(b.id);});
     var supportAv='';
     if(supportM){
       var avUrl=avatarUrl(supportM);
       var col=memberColor(supportM);
-      supportAv='<div style="width:22px;height:22px;border-radius:50%;overflow:hidden;background:'+col+';display:inline-flex;align-items:center;justify-content:center;margin-right:5px;flex-shrink:0">'+
-        (avUrl?'<img src="'+avUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">':'<span style="font-size:8px;font-weight:700;color:#fff">'+ini(supportM.name)+'</span>')+
+      supportAv='<div style="width:20px;height:20px;border-radius:50%;overflow:hidden;background:'+col+';display:inline-flex;align-items:center;justify-content:center;margin-right:4px;flex-shrink:0">'+
+        (avUrl?'<img src="'+avUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">':'<span style="font-size:7px;font-weight:700;color:#fff">'+ini(supportM.name)+'</span>')+
       '</div>';
     }
-    return '<div class="card" style="padding:14px;min-width:200px;flex:1;cursor:pointer;border-left:4px solid '+b.color+'" onclick="navTo(\'brand\',null,\''+b.id+'\')">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+    return '<div class="card" style="padding:12px 14px;min-width:180px;flex:1;cursor:pointer;border-left:4px solid '+b.color+'" onclick="navTo(\'brand\',null,\''+b.id+'\')">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'+
         '<div style="font-size:12px;font-weight:700;color:var(--text)">'+b.name+'</div>'+
-        '<button onclick="event.stopPropagation();navTo(\'brand\',null,\''+b.id+'\')" style="font-size:10px;padding:3px 9px;background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text-s)">See details</button>'+
+        '<button onclick="event.stopPropagation();navTo(\'brand\',null,\''+b.id+'\')" style="font-size:10px;padding:2px 8px;background:var(--bg-alt);border:1px solid var(--border);border-radius:5px;cursor:pointer;color:var(--text-s)">Details →</button>'+
       '</div>'+
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">'+
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:8px">'+
         '<div style="display:inline-block;font-size:10px;font-weight:600;color:'+badgeColor+';background:'+badgeColor+'18;padding:2px 8px;border-radius:10px">&#9679; '+(status==='ongoing'?'In Progress':'Finished')+'</div>'+
         (myRole?'<div style="display:inline-block;font-size:9px;font-weight:700;color:'+roleColor+';background:'+roleBg+';padding:2px 7px;border-radius:10px;letter-spacing:.04em">'+roleLabel+'</div>':'')+
       '</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">'+
-        '<div><div style="font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">My role</div><div style="color:var(--text)">'+roleLabel+'</div></div>'+
-        '<div><div style="font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Support</div>'+
-          '<div style="display:flex;align-items:center">'+supportAv+'<span style="color:var(--text)">'+(supportM?supportM.name.split(' ')[0]:'—')+'</span></div>'+
-        '</div>'+
-      '</div>'+
+      (supportM?'<div style="display:flex;align-items:center;font-size:11px;color:var(--text-s)">'+supportAv+'<span>'+(supportM.name.split(' ')[0])+'</span></div>':'')+
     '</div>';
   }).join('');
 
@@ -4445,7 +4522,7 @@ function _renderHomeContent(el){
       // LEFT COLUMN
       '<div>'+
         '<div class="card mb16">'+
-          '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">My daily tasks</div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">My daily tasks</div>'+
           '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-alt);border:1px solid var(--border);border-radius:8px;margin-bottom:10px">'+
             '<div style="display:flex;align-items:center;gap:8px">'+
               '<span style="font-size:11px;font-weight:600;color:var(--text-s)">Brand name</span>'+
@@ -4460,18 +4537,18 @@ function _renderHomeContent(el){
           '</div>'+
         '</div>'+
         '<div class="card">'+
-          '<div class="sec"><div class="sec-t">My projects</div></div>'+
+          '<div class="sec"><div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">My projects</div></div>'+
           '<div style="display:flex;flex-wrap:wrap;gap:12px">'+projHTML+'</div>'+
         '</div>'+
       '</div>'+
       // RIGHT COLUMN
       '<div>'+
         '<div class="card mb16">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">my weekly progress</div>'+
-          '<div style="position:relative;height:80px"><canvas id="chart-home-weekly"></canvas></div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">My weekly progress</div>'+
+          '<div id="home-weekly-summary"></div>'+
         '</div>'+
         '<div class="card mb16">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">daily progress</div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Daily progress</div>'+
           '<div style="display:flex;align-items:center;justify-content:center;padding:8px 0">'+
             '<canvas id="chart-home-donut" width="150" height="150"></canvas>'+
           '</div>'+
@@ -4479,17 +4556,17 @@ function _renderHomeContent(el){
         '</div>'+
         '<div class="card mb16">'+
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-            '<div style="font-size:13px;font-weight:700;color:var(--text)">Check list</div>'+
+            '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Check list</div>'+
             '<button onclick="addHomeCheckItem()" style="font-size:11px;color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600">+ add new check list</button>'+
           '</div>'+
           '<div id="home-checklist"></div>'+
         '</div>'+
         '<div class="card mb16">'+
-          '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Notes</div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Notes</div>'+
           '<textarea id="home-notes" oninput="saveHomeNotes()" placeholder="Write your notes here..." style="width:100%;min-height:80px;background:var(--bg-alt);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:12px;color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit;outline:none"></textarea>'+
         '</div>'+
         '<div class="card">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Working Days</div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Working Days</div>'+
           '<div id="home-working-cal"></div>'+
           '<div id="home-working-stats" style="margin-top:8px;font-size:11px;color:var(--text-s)"></div>'+
         '</div>'+
@@ -4598,26 +4675,53 @@ function renderHomeDonut(pct,done,total){
 
 var _homeWeeklyChart=null;
 function renderHomeWeeklyChart(){
-  var cv=document.getElementById('chart-home-weekly');
-  if(!cv) return;
-  if(_homeWeeklyChart){try{_homeWeeklyChart.destroy();}catch(e){} _homeWeeklyChart=null;}
+  var el=document.getElementById('home-weekly-summary');
+  if(!el) return;
   var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
-  if(!userM) return;
+  if(!userM){el.innerHTML='<div style="font-size:11px;color:var(--text-s)">No data.</div>';return;}
+  // This week Mon–Sun
   var days=[];
-  for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
-  var labels=days.map(function(d){var p=d.split('-');return(+p[1]).toString().padStart(2,'0')+'/'+(+p[2]).toString().padStart(2,'0');});
-  var data=days.map(function(d){
-    return ST.brands.reduce(function(s,b){
-      var e=getLogs(userM.id).find(function(l){return l.date===d&&l.brandId===b.id;});
-      return s+(e?((+e.kols_contacted||0)+(+e.kols_followedup||0)):0);
-    },0);
+  var now=new Date();
+  var dow=now.getDay();
+  var monday=new Date(now);monday.setDate(now.getDate()-((dow+6)%7));
+  for(var i=0;i<7;i++){var d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d.toISOString().split('T')[0]);}
+  var myBrands=ST.brands.filter(function(b){return (userM.brands||[]).includes(b.id);});
+  if(!myBrands.length){el.innerHTML='<div style="font-size:11px;color:var(--text-s)">No brands assigned.</div>';return;}
+  var totalC=0,totalFu=0,totalCo=0,totalV=0;
+  myBrands.forEach(function(b){
+    days.forEach(function(date){
+      var log=getLogs(userM.id).find(function(l){return l.brandId===b.id&&l.date===date;});
+      if(log){totalC+=(+log.kols_contacted||0);totalFu+=(+log.kols_followedup||0);totalCo+=(+log.confirmed||0);totalV+=(+log.vids_published||0);}
+    });
   });
-  _homeWeeklyChart=new Chart(cv,{
-    type:'line',
-    data:{labels:labels,datasets:[{data:data,borderColor:'#3b7ef8',backgroundColor:'rgba(59,126,248,.12)',fill:true,tension:.4,pointRadius:2,borderWidth:2}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888'}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:9},color:'#888',maxTicksLimit:4}}}}
+  var html='<div style="font-size:11px;color:var(--text-s);margin-bottom:8px">'+
+    (function(){
+      var parts=[];
+      if(totalC>0) parts.push('<strong style="color:var(--primary)">'+totalC+'</strong> KOLs contacted');
+      if(totalFu>0) parts.push('<strong style="color:var(--amber)">'+totalFu+'</strong> follow-ups');
+      if(totalCo>0) parts.push('<strong style="color:var(--green)">'+totalCo+'</strong> confirmed');
+      if(totalV>0) parts.push('<strong style="color:var(--purple)">'+totalV+'</strong> videos published');
+      return parts.length?'This week: '+parts.join(', ')+'.':'No activity logged this week.';
+    }())+
+  '</div>';
+  html+='<div style="display:flex;flex-direction:column;gap:5px">';
+  myBrands.forEach(function(b){
+    var bC=0,bFu=0,bCo=0;
+    days.forEach(function(date){
+      var log=getLogs(userM.id).find(function(l){return l.brandId===b.id&&l.date===date;});
+      if(log){bC+=(+log.kols_contacted||0);bFu+=(+log.kols_followedup||0);bCo+=(+log.confirmed||0);}
+    });
+    var total=bC+bFu;
+    var role=(userM.roles&&userM.roles[b.id])||'';
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--bg);border-radius:7px;border:1px solid var(--border)">'+
+      '<div style="width:7px;height:7px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>'+
+      '<span style="font-size:11px;font-weight:600;color:var(--text);flex:1">'+escHtml(b.name)+'</span>'+
+      (role?'<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:'+(role==='owner'?'var(--primary-d)':'var(--amber-d)')+';color:'+(role==='owner'?'var(--primary)':'var(--amber)')+'">'+role+'</span>':'')+
+      '<span style="font-size:11px;color:var(--text-m)">'+total+' acts'+( bCo?' &middot; '+bCo+' conf':'')+' </span>'+
+    '</div>';
   });
+  html+='</div>';
+  el.innerHTML=html;
 }
 
 function _getWdOv(uid,ym){try{return JSON.parse(localStorage.getItem('dg_wd_ov_'+uid+'_'+ym)||'{}');}catch(e){return {};}}
@@ -4752,15 +4856,11 @@ function renderAdminTeam(){
   var el=document.getElementById('admin-team-content');
   if(!el) return;
   var today=todayStr();
-  var h=new Date().getHours();
-  var greet=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
-  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
-  var uname=userM?userM.name.split(' ')[0]:(currentUser?currentUser.email.split('@')[0]:'Admin');
 
   // Only count non-admin members in team status
   var teamMembers=ST.members.filter(function(m){
     var u=_allUsers.find(function(u){return u.member_id===m.id;});
-    return !u||(u.role!=='admin'); // 'member+admin' passes through (counts as team member)
+    return !u||(u.role!=='admin');
   });
 
   var membersStatus=teamMembers.map(function(m){
@@ -4777,49 +4877,132 @@ function renderAdminTeam(){
 
   var activeCount=membersStatus.filter(function(s){return s.hasLogged;}).length;
 
-  var html='<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px">'+
-    '<div>'+
-      '<div style="font-size:22px;font-weight:800;color:var(--text)">'+greet+', '+uname+'!</div>'+
-      '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+fmtDateFull(today)+'</div>'+
-    '</div>'+
-    '<div>'+attendanceWidget()+'</div>'+
-  '</div>';
+  // ── Team Hive: 50 activities = 1 filled hexagon ──
+  var HIVE_COLS=10, HIVE_ROWS=3;
+  var TOTAL_CELLS=HIVE_COLS*HIVE_ROWS;
+  var HEX_R=10;
+  var HW=HEX_R*2, HH=HEX_R*Math.sqrt(3);
+  var COL_W=HW*0.77, ROW_H=HH+2;
+  var SVG_W=Math.ceil(HIVE_COLS*COL_W+HEX_R*2);
+  var SVG_H=Math.ceil(teamMembers.length*(HIVE_ROWS*ROW_H+14)+4);
 
-  // Build SVG hive inline
-  var _hiveDays=[];
-  for(var _hi=_hivePeriodDays-1;_hi>=0;_hi--){var _hd=new Date();_hd.setDate(_hd.getDate()-_hi);_hiveDays.push(_hd.toISOString().split('T')[0]);}
-  var _hR=9,_hW=_hR*2,_hH=_hR*Math.sqrt(3);
-  var _hColW=_hW*0.77,_hRowH=_hH+2;
-  var _nM=teamMembers.length,_nD=_hiveDays.length;
-  var _svgW=Math.ceil(_nD*_hColW+_hR*2);
-  var _svgH=Math.ceil(_nM*_hRowH+_hR);
-  var _hexPath=function(cx,cy){var pts=[];for(var a=0;a<6;a++){var ang=Math.PI/180*(60*a-30);pts.push((cx+_hR*Math.cos(ang)).toFixed(1)+','+(cy+_hR*Math.sin(ang)).toFixed(1));}return pts.join(' ');};
+  function hexPath(cx,cy){
+    var pts=[];
+    for(var a=0;a<6;a++){var ang=Math.PI/180*(60*a-30);pts.push((cx+HEX_R*Math.cos(ang)).toFixed(1)+','+(cy+HEX_R*Math.sin(ang)).toFixed(1));}
+    return pts.join(' ');
+  }
+
   var _svgParts=[];
-  _hiveDays.forEach(function(d,di){
-    teamMembers.forEach(function(m,mi){
-      var act=ST.brands.reduce(function(s,b){var e=getLogs(m.id).find(function(l){return l.date===d&&l.brandId===b.id;});return s+(e?((+e.kols_contacted||0)+(+e.kols_followedup||0)):0);},0);
-      var col=memberColor(m);
-      var alpha=act>0?Math.min(0.18+act/25,1):0.07;
-      var cx=_hR+di*_hColW+(mi%2===1?_hColW/2:0);
-      var cy=_hR+mi*_hRowH;
-      _svgParts.push('<polygon points="'+_hexPath(cx,cy)+'" fill="'+col+'" opacity="'+alpha.toFixed(2)+'"/>');
-    });
-  });
-  var _hiveLegs=teamMembers.map(function(m){return '<div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;border-radius:2px;background:'+memberColor(m)+'"></div><span style="font-size:10px;color:var(--text-s)">'+m.name.split(' ')[0]+'</span></div>';}).join('');
-  var _hiveSvg='<svg width="'+_svgW+'" height="'+_svgH+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+_svgParts.join('')+'</svg>';
-  var _hivePeriodSel='<select onchange="setHivePeriod(this.value)" style="font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--bg-alt);color:var(--text);cursor:pointer">'+
-    '<option value="30"'+(_hivePeriodDays===30?' selected':'')+'>Last 30 days</option>'+
-    '<option value="14"'+(_hivePeriodDays===14?' selected':'')+'>Last 14 days</option>'+
-    '<option value="60"'+(_hivePeriodDays===60?' selected':'')+'>Last 60 days</option>'+
-  '</select>';
+  var _memberOffsetY=0;
+  teamMembers.forEach(function(m,mi){
+    var col=memberColor(m);
+    // Count total contacts + followups across all brands (all time)
+    var totalActs=ST.brands.reduce(function(s,b){
+      return s+sumM(m.id,b.id,'kols_contacted')+sumM(m.id,b.id,'kols_followedup');
+    },0);
+    var filledCells=Math.min(Math.floor(totalActs/50),TOTAL_CELLS);
 
+    // Member label
+    _svgParts.push('<text x="'+HEX_R+'" y="'+(SVG_H>0?_memberOffsetY+10:10)+'" font-size="10" font-family="Inter,sans-serif" fill="'+col+'" font-weight="700">'+escHtml(m.name.split(' ')[0])+'</text>');
+    _memberOffsetY+=14;
+
+    for(var ci=0;ci<TOTAL_CELLS;ci++){
+      var col_i=ci%HIVE_COLS;
+      var row_i=Math.floor(ci/HIVE_COLS);
+      var cx=HEX_R+col_i*COL_W+(row_i%2===1?COL_W/2:0);
+      var cy=_memberOffsetY+HEX_R+row_i*ROW_H;
+      var isFilled=ci<filledCells;
+      _svgParts.push('<polygon points="'+hexPath(cx,cy)+'" fill="'+col+'" opacity="'+(isFilled?'0.85':'0.1')+'"/>');
+    }
+    _memberOffsetY+=HIVE_ROWS*ROW_H+8;
+  });
+
+  var _hiveSvg='<svg width="'+SVG_W+'" height="'+(Math.max(_memberOffsetY+4,40))+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+_svgParts.join('')+'</svg>';
+
+  // ── Member Progress Overview ──
+  var memberOverviewHTML=teamMembers.map(function(m){
+    var assignedBrands=ST.brands.filter(function(b){return (m.brands||[]).includes(b.id);});
+    var ownerBrands=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])==='owner';});
+    var supportBrands=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])!=='owner';});
+    var col=memberColor(m);
+    var avUrl=avatarUrl(m);
+    // This week activity
+    var weekDays=[];
+    var now2=new Date();var dow2=now2.getDay();
+    var mon2=new Date(now2);mon2.setDate(now2.getDate()-((dow2+6)%7));
+    for(var wi=0;wi<7;wi++){var wd=new Date(mon2);wd.setDate(mon2.getDate()+wi);weekDays.push(wd.toISOString().split('T')[0]);}
+    var brandPcts=assignedBrands.map(function(b){
+      var weekAct=weekDays.reduce(function(s,date){
+        var log=getLogs(m.id).find(function(l){return l.brandId===b.id&&l.date===date;});
+        return s+(log?((+log.kols_contacted||0)+(+log.kols_followedup||0)):0);
+      },0);
+      return {b:b,weekAct:weekAct};
+    });
+    var brandPctHTML=brandPcts.map(function(x){
+      return '<div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-m)">'+
+        '<div style="width:6px;height:6px;border-radius:50%;background:'+x.b.color+'"></div>'+
+        '<span style="font-weight:600">'+escHtml(x.b.name)+'</span>'+
+        '<span style="color:var(--text-s)">'+x.weekAct+' activities this week</span>'+
+      '</div>';
+    }).join('');
+
+    return '<div class="card" style="padding:16px;border-top:3px solid '+col+'">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div class="mem-av-img av-md" style="flex-shrink:0;border-color:'+col+'">'+
+          (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:14px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'">':'<span style="font-size:14px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(m.name)+'</div>'+
+          '<div style="font-size:11px;color:var(--text-s);margin-top:1px">Total projects: <strong style="color:var(--text)">'+assignedBrands.length+'</strong></div>'+
+        '</div>'+
+        '<button onclick="openMemberDetail(\''+m.id+'\')" style="font-size:10px;padding:4px 10px;border-radius:6px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer;font-weight:600">View →</button>'+
+      '</div>'+
+      (ownerBrands.length?'<div style="font-size:10px;color:var(--text-s);margin-bottom:3px">&#128081; <strong style="color:var(--text)">Owning:</strong> '+ownerBrands.map(function(b){return escHtml(b.name);}).join(', ')+'</div>':'')+
+      (supportBrands.length?'<div style="font-size:10px;color:var(--text-s);margin-bottom:8px">&#129309; <strong style="color:var(--text)">Support:</strong> '+supportBrands.map(function(b){return escHtml(b.name);}).join(', ')+'</div>':'')+
+      '<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+brandPctHTML+'</div>'+
+    '</div>';
+  }).join('');
+
+  // ── Team Performance This Week ──
+  var perfWeekDays=[];
+  var pnow=new Date();var pdow=pnow.getDay();
+  var pmon=new Date(pnow);pmon.setDate(pnow.getDate()-((pdow+6)%7));
+  for(var pi=0;pi<7;pi++){var pd=new Date(pmon);pd.setDate(pmon.getDate()+pi);perfWeekDays.push(pd.toISOString().split('T')[0]);}
+  var perfRows=teamMembers.map(function(m){
+    var wC=0,wFu=0,wCo=0,wV=0;
+    perfWeekDays.forEach(function(date){
+      ST.brands.forEach(function(b){
+        var log=getLogs(m.id).find(function(l){return l.brandId===b.id&&l.date===date;});
+        if(log){wC+=(+log.kols_contacted||0);wFu+=(+log.kols_followedup||0);wCo+=(+log.confirmed||0);wV+=(+log.vids_published||0);}
+      });
+    });
+    var avUrl=avatarUrl(m);
+    return '<tr>'+
+      '<td><div style="display:flex;align-items:center;gap:6px">'+
+        '<div class="mem-av-img av-sm" style="flex-shrink:0"><img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'"></div>'+
+        '<span style="font-weight:600">'+escHtml(m.name)+'</span>'+
+      '</div></td>'+
+      '<td style="text-align:center;font-weight:600;color:var(--primary)">'+wC+'</td>'+
+      '<td style="text-align:center;font-weight:600;color:var(--amber)">'+wFu+'</td>'+
+      '<td style="text-align:center;font-weight:600;color:var(--green)">'+wCo+'</td>'+
+      '<td style="text-align:center;font-weight:600;color:var(--purple)">'+wV+'</td>'+
+    '</tr>';
+  }).join('');
+
+  var html='';
+
+  // Team Status + Hive
   html+='<div class="card mb16" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">'+
-    // Left: Team Status
     '<div>'+
-      '<div class="sec"><div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
-      (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
-       activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
-       '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+        '<div class="sec-t">Team Status <span class="sec-s">today</span></div>'+
+        (isAdmin()?'<button class="sec-btn" onclick="openAddMember()">+ Add Member</button>':'')+
+        (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
+         activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
+         '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
+      '</div>'+
+      '<div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px">'+
+        '<div>'+attendanceWidget()+'</div>'+
       '</div>'+
       '<div class="team-status-grid">'+
       membersStatus.map(function(s){
@@ -4844,14 +5027,31 @@ function renderAdminTeam(){
       }).join('')+
       '</div>'+
     '</div>'+
-    // Right: Hive
-    '<div style="min-width:220px;max-width:280px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-        '<div style="font-size:11px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.4px">Team Hive</div>'+
-        _hivePeriodSel+
-      '</div>'+
-      '<div style="margin-bottom:6px;display:flex;gap:10px;flex-wrap:wrap">'+_hiveLegs+'</div>'+
+    '<div style="min-width:260px;max-width:320px">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Team Hive</div>'+
+      '<div style="font-size:9px;color:var(--text-s);margin-bottom:8px">Each &#11042; = 50 activities (contacts + follow-ups)</div>'+
       _hiveSvg+
+    '</div>'+
+  '</div>';
+
+  // Member Progress Overview
+  html+='<div class="sec"><div class="sec-t">Member Progress Overview</div></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px">'+memberOverviewHTML+'</div>';
+
+  // Team Performance This Week (all projects)
+  html+='<div class="card mb16">'+
+    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px">Team Performance This Week (all projects)</div>'+
+    '<div style="overflow-x:auto">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr>'+
+          '<th style="text-align:left;padding:7px 10px;border-bottom:2px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-s)">Member</th>'+
+          '<th style="text-align:center;padding:7px 10px;border-bottom:2px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--primary)">Contacted</th>'+
+          '<th style="text-align:center;padding:7px 10px;border-bottom:2px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--amber)">Follow-ups</th>'+
+          '<th style="text-align:center;padding:7px 10px;border-bottom:2px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--green)">Confirmed</th>'+
+          '<th style="text-align:center;padding:7px 10px;border-bottom:2px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--purple)">Videos</th>'+
+        '</tr></thead>'+
+        '<tbody>'+perfRows+'</tbody>'+
+      '</table>'+
     '</div>'+
   '</div>';
 
