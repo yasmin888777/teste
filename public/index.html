@@ -4372,7 +4372,7 @@ function pubCalAddKol(bid,date){
 /* ══════════════════════════════════════════════
    HOME PAGE — DAILY TASKS
 ══════════════════════════════════════════════ */
-var _HOME_TASKS=[
+var _HOME_TASKS_DEFAULT=[
   {section:'1. CH team updates',key:'s1',isSection:true},
   {key:'1.1',label:'Verificar mensagens no Lark',indent:0},
   {key:'1.2',label:'Verificar mensagens nos grupos do WhatsApp',indent:0},
@@ -4401,6 +4401,74 @@ var _HOME_TASKS=[
   {section:'6. Support',key:'s6',isSection:true},
   {key:'s6note',label:'Note: Caso voce tenha finalizado as tasks de todas as suas campanhas que voce e dono, please verifique suas campanhas de suporte e pergunte se o seu colega precisa de ajuda.',isNote:true}
 ];
+var _HOME_TASKS=_HOME_TASKS_DEFAULT;
+function _loadHomeTasks(){try{var s=localStorage.getItem('dg_home_tasks_v1');if(s){_HOME_TASKS=JSON.parse(s);}else{_HOME_TASKS=_HOME_TASKS_DEFAULT.map(function(t){return Object.assign({},t);});}}catch(e){_HOME_TASKS=_HOME_TASKS_DEFAULT.map(function(t){return Object.assign({},t);});}}
+function _saveHomeTasks(){try{localStorage.setItem('dg_home_tasks_v1',JSON.stringify(_HOME_TASKS));}catch(e){}}
+_loadHomeTasks();
+
+function _htNextKey(){
+  var keys=_HOME_TASKS.filter(function(t){return !t.isSection&&!t.isNote;}).map(function(t){return t.key;});
+  var max=0;
+  keys.forEach(function(k){var n=parseFloat(k.replace(/[^0-9.]/g,''));if(!isNaN(n)&&n>max)max=n;});
+  return 'custom_'+(Date.now());
+}
+
+function htRenameSection(key){
+  var t=_HOME_TASKS.find(function(x){return x.key===key;});
+  if(!t) return;
+  var val=prompt('Rename section:',t.section);
+  if(val===null) return;
+  t.section=val.trim()||t.section;
+  _saveHomeTasks();renderHomeTasks();
+}
+function htRenameNote(key){
+  var t=_HOME_TASKS.find(function(x){return x.key===key;});
+  if(!t) return;
+  var val=prompt('Edit note:',t.label);
+  if(val===null) return;
+  t.label=val.trim()||t.label;
+  _saveHomeTasks();renderHomeTasks();
+}
+function htRenameTask(key){
+  var t=_HOME_TASKS.find(function(x){return x.key===key;});
+  if(!t) return;
+  var val=prompt('Rename task:',t.label);
+  if(val===null) return;
+  t.label=val.trim()||t.label;
+  _saveHomeTasks();renderHomeTasks();
+}
+function htDeleteTask(key){
+  if(!confirm('Delete this task?')) return;
+  _HOME_TASKS=_HOME_TASKS.filter(function(x){return x.key!==key;});
+  _saveHomeTasks();renderHomeTasks();
+}
+function htAddTask(afterSectionKey){
+  var val=prompt('New task label:','');
+  if(!val||!val.trim()) return;
+  var idx=_HOME_TASKS.findIndex(function(x){return x.key===afterSectionKey;});
+  // Find the end of this section (next section start)
+  var insertAt=idx+1;
+  while(insertAt<_HOME_TASKS.length&&!_HOME_TASKS[insertAt].isSection) insertAt++;
+  var newTask={key:_htNextKey(),label:val.trim(),indent:0};
+  _HOME_TASKS.splice(insertAt,0,newTask);
+  _saveHomeTasks();renderHomeTasks();
+}
+function htAddNote(afterSectionKey){
+  var val=prompt('Note text:','Note: ');
+  if(!val||!val.trim()) return;
+  var idx=_HOME_TASKS.findIndex(function(x){return x.key===afterSectionKey;});
+  var insertAt=idx+1;
+  // Insert note right after the section header (before any existing notes/tasks)
+  var newNote={key:'note_'+Date.now(),label:val.trim(),isNote:true};
+  _HOME_TASKS.splice(insertAt,0,newNote);
+  _saveHomeTasks();renderHomeTasks();
+}
+function htResetTasks(){
+  if(!confirm('Reset all tasks to default? This will remove all custom edits.')) return;
+  localStorage.removeItem('dg_home_tasks_v1');
+  _HOME_TASKS=_HOME_TASKS_DEFAULT.map(function(t){return Object.assign({},t);});
+  renderHomeTasks();
+}
 var _homeDonutChart=null,_homeWeeklyChart=null;
 
 function _homeUid(){return currentUser?currentUser.email:'guest';}
@@ -4522,7 +4590,10 @@ function _renderHomeContent(el){
       // LEFT COLUMN
       '<div>'+
         '<div class="card mb16">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">My daily tasks</div>'+
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+            '<div style="font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">My daily tasks</div>'+
+            (isDevMode()?'<button onclick="htResetTasks()" style="font-size:10px;padding:3px 9px;border-radius:5px;background:none;color:var(--text-s);border:1px solid var(--border);cursor:pointer">&#8635; Reset to defaults</button>':'')+
+          '</div>'+
           '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-alt);border:1px solid var(--border);border-radius:8px;margin-bottom:10px">'+
             '<div style="display:flex;align-items:center;gap:8px">'+
               '<span style="font-size:11px;font-weight:600;color:var(--text-s)">Brand name</span>'+
@@ -4593,37 +4664,51 @@ function renderHomeTasks(){
   // Group tasks into sections
   var sections=[];var cur=null;
   _HOME_TASKS.forEach(function(t){
-    if(t.isSection){cur={title:t.section,notes:[],items:[]};sections.push(cur);}
-    else if(t.isNote&&cur){cur.notes.push(t.label);}
+    if(t.isSection){cur={title:t.section,key:t.key,notes:[],items:[]};sections.push(cur);}
+    else if(t.isNote&&cur){cur.notes.push(t);}
     else if(cur){cur.items.push(t);}
   });
 
+  var devMode=isDevMode();
   function renderSection(sec){
     var done=sec.items.filter(function(t){return s[t.key]==='green';}).length;
     var total=sec.items.length;
     var allDone=total>0&&done===total;
-    var html='<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden">';
+    var html='<div style="margin-bottom:14px;border:1px solid '+(devMode?'rgba(251,191,36,.35)':'var(--border)')+';border-radius:10px;overflow:hidden">';
     // Section header
     html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-alt);border-bottom:'+(sec.items.length||sec.notes.length?'1px solid var(--border)':'none')+'">'+
-      '<span style="font-size:11px;font-weight:700;color:var(--text)">'+sec.title+'</span>'+
-      (total>0?'<span style="font-size:10px;font-weight:600;color:'+(allDone?'#27ae60':'var(--text-s)')+'">'+done+'/'+total+'</span>':'')+
+      '<span style="font-size:11px;font-weight:700;color:var(--text);'+(devMode?'cursor:pointer;border-bottom:1px dashed var(--amber)':'')+'\" '+(devMode?'onclick="htRenameSection(\''+sec.key+'\')" title="Click to rename section"':'')+'>'+sec.title+'</span>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        (total>0?'<span style="font-size:10px;font-weight:600;color:'+(allDone?'#27ae60':'var(--text-s)')+'">'+done+'/'+total+'</span>':'')+
+        (devMode?'<button onclick="htAddTask(\''+sec.key+'\')" title="Add task" style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.3);cursor:pointer;line-height:1.4">+ task</button>':'')+''+
+        (devMode?'<button onclick="htAddNote(\''+sec.key+'\')" title="Add note" style="font-size:11px;padding:1px 6px;border-radius:4px;background:var(--bg);color:var(--text-s);border:1px solid var(--border);cursor:pointer;line-height:1.4">+ note</button>':'')+
+      '</div>'+
     '</div>';
     // Notes
     sec.notes.forEach(function(n){
-      html+='<div style="padding:6px 12px;font-size:10px;color:var(--text-s);font-style:italic;line-height:1.4;border-bottom:1px solid var(--border)">'+n+'</div>';
+      html+='<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:10px;color:var(--text-s);font-style:italic;line-height:1.4;border-bottom:1px solid var(--border)">'+
+        '<span style="flex:1;'+(devMode?'cursor:pointer;border-bottom:1px dashed var(--text-s)':'')+'\" '+(devMode?'onclick="htRenameNote(\''+n.key+'\')" title="Click to edit note"':'')+'>'+n.label+'</span>'+
+        (devMode?'<button onclick="htDeleteTask(\''+n.key+'\')" title="Delete note" style="font-size:11px;color:#e74c3c;background:none;border:none;cursor:pointer;padding:0 2px;line-height:1">✕</button>':'')+
+      '</div>';
     });
     // Task rows
     sec.items.forEach(function(t,i){
       var isDone=s[t.key]==='green';
       var pad=12+(t.indent||0)*16;
-      var isLast=i===sec.items.length-1;
-      html+='<div onclick="toggleHomeTask(\''+bid+'\',\''+t.key+'\')" style="display:flex;align-items:center;gap:10px;padding:7px 12px;padding-left:'+pad+'px;cursor:pointer;'+(isLast?'':'border-bottom:1px solid var(--border)')+';transition:background .1s" onmouseover="this.style.background=\'var(--bg-alt)\'" onmouseout="this.style.background=\'\'">'+
-        '<div style="width:17px;height:17px;border-radius:50%;border:2px solid '+(isDone?'#27ae60':'var(--border)')+';background:'+(isDone?'#27ae60':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s">'+
+      var isLast=i===sec.items.length-1&&!devMode;
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:7px 12px;padding-left:'+pad+'px;'+(isLast?'':'border-bottom:1px solid var(--border)')+';transition:background .1s" onmouseover="this.style.background=\'var(--bg-alt)\'" onmouseout="this.style.background=\'\'">'+
+        '<div onclick="toggleHomeTask(\''+bid+'\',\''+t.key+'\')" style="width:17px;height:17px;border-radius:50%;border:2px solid '+(isDone?'#27ae60':'var(--border)')+';background:'+(isDone?'#27ae60':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;cursor:pointer">'+
           (isDone?'<svg width="8" height="6" viewBox="0 0 8 6"><polyline points="1,3 3,5 7,1" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':'')+
         '</div>'+
-        '<span style="font-size:11.5px;line-height:1.4;color:'+(isDone?'var(--text-s)':'var(--text)')+';'+(isDone?'text-decoration:line-through;opacity:.6;':'')+'flex:1">'+t.label+'</span>'+
+        '<span onclick="'+(devMode?'htRenameTask(\''+t.key+'\')':'toggleHomeTask(\''+bid+'\',\''+t.key+'\')')+'" style="font-size:11.5px;line-height:1.4;color:'+(isDone?'var(--text-s)':'var(--text)')+';'+(isDone?'text-decoration:line-through;opacity:.6;':'')+';flex:1;'+(devMode?'cursor:pointer;':'cursor:pointer')+'" '+(devMode?'title="Click to rename"':'')+'>'+t.label+'</span>'+
+        (devMode?'<button onclick="htDeleteTask(\''+t.key+'\')" title="Delete task" style="font-size:11px;color:var(--red,#e74c3c);background:none;border:none;cursor:pointer;padding:0 4px;opacity:.5;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5">✕</button>':'')+
       '</div>';
     });
+    if(devMode){
+      html+='<div style="padding:5px 12px;border-top:1px dashed var(--border);background:var(--bg-alt);opacity:.7">'+
+        '<button onclick="htAddTask(\''+sec.key+'\')" style="font-size:10px;color:var(--primary);background:none;border:none;cursor:pointer;padding:2px 0">+ Add task</button>'+
+      '</div>';
+    }
     html+='</div>';
     return html;
   }
