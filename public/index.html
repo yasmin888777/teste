@@ -4877,46 +4877,6 @@ function renderAdminTeam(){
 
   var activeCount=membersStatus.filter(function(s){return s.hasLogged;}).length;
 
-  // ── Team Hive: 50 activities = 1 filled hexagon ──
-  var HIVE_COLS=10, HIVE_ROWS=3;
-  var TOTAL_CELLS=HIVE_COLS*HIVE_ROWS;
-  var HEX_R=10;
-  var HW=HEX_R*2, HH=HEX_R*Math.sqrt(3);
-  var COL_W=HW*0.77, ROW_H=HH+2;
-  var SVG_W=Math.ceil(HIVE_COLS*COL_W+HEX_R*2);
-  var SVG_H=Math.ceil(teamMembers.length*(HIVE_ROWS*ROW_H+14)+4);
-
-  function hexPath(cx,cy){
-    var pts=[];
-    for(var a=0;a<6;a++){var ang=Math.PI/180*(60*a-30);pts.push((cx+HEX_R*Math.cos(ang)).toFixed(1)+','+(cy+HEX_R*Math.sin(ang)).toFixed(1));}
-    return pts.join(' ');
-  }
-
-  var _svgParts=[];
-  var _memberOffsetY=0;
-  teamMembers.forEach(function(m,mi){
-    var col=memberColor(m);
-    // Count total contacts + followups across all brands (all time)
-    var totalActs=ST.brands.reduce(function(s,b){
-      return s+sumM(m.id,b.id,'kols_contacted')+sumM(m.id,b.id,'kols_followedup');
-    },0);
-    var filledCells=Math.min(Math.floor(totalActs/50),TOTAL_CELLS);
-
-    // (no member label)
-
-    for(var ci=0;ci<TOTAL_CELLS;ci++){
-      var col_i=ci%HIVE_COLS;
-      var row_i=Math.floor(ci/HIVE_COLS);
-      var cx=HEX_R+col_i*COL_W+(row_i%2===1?COL_W/2:0);
-      var cy=_memberOffsetY+HEX_R+row_i*ROW_H;
-      var isFilled=ci<filledCells;
-      _svgParts.push('<polygon points="'+hexPath(cx,cy)+'" fill="'+col+'" opacity="'+(isFilled?'0.85':'0.1')+'"/>');
-    }
-    _memberOffsetY+=HIVE_ROWS*ROW_H+8;
-  });
-
-  var _hiveSvg='<svg width="'+SVG_W+'" height="'+(Math.max(_memberOffsetY+4,40))+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">'+_svgParts.join('')+'</svg>';
-
   // ── Member Progress Overview ──
   var memberOverviewHTML=teamMembers.map(function(m){
     var assignedBrands=ST.brands.filter(function(b){return (m.brands||[]).includes(b.id);});
@@ -4944,21 +4904,23 @@ function renderAdminTeam(){
       '</div>';
     }).join('');
 
-    return '<div class="card" style="padding:16px;border-top:3px solid '+col+'">'+
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+    var totalWeekAct=brandPcts.reduce(function(s,x){return s+x.weekAct;},0);
+    return '<div class="card" style="padding:16px;border-left:3px solid '+col+';display:flex;flex-direction:column;gap:10px">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
         '<div class="mem-av-img av-md" style="flex-shrink:0;border-color:'+col+'">'+
-          (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:14px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'">':'<span style="font-size:14px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
+          (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:14px;font-weight:700;color:'+col+'>'+ini(m.name)+'</span>\'">':'<span style="font-size:14px;font-weight:700;color:'+col+'">'+ini(m.name)+'</span>')+
         '</div>'+
         '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(m.name)+'</div>'+
-          '<div style="font-size:11px;color:var(--text-s);margin-top:1px">Total projects: <strong style="color:var(--text)">'+assignedBrands.length+'</strong></div>'+
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">'+escHtml(m.name)+'</div>'+
+          '<div style="font-size:11px;color:var(--text-s);margin-top:2px">'+assignedBrands.length+' project'+(assignedBrands.length!==1?'s':'')+' &nbsp;·&nbsp; <strong style="color:var(--text)">'+totalWeekAct+'</strong> acts this week</div>'+
         '</div>'+
-        '<button onclick="openMemberDetail(\''+m.id+'\')" style="font-size:10px;padding:4px 10px;border-radius:6px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer;font-weight:600">View →</button>'+
+        '<button onclick="openMemberDetail(\''+m.id+'\')" style="font-size:10px;padding:4px 10px;border-radius:6px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer;font-weight:600;white-space:nowrap">View →</button>'+
       '</div>'+
-      (ownerBrands.length?'<div style="font-size:10px;color:var(--text-s);margin-bottom:3px">&#128081; <strong style="color:var(--text)">Owning:</strong> '+ownerBrands.map(function(b){return escHtml(b.name);}).join(', ')+'</div>':'')+
-      (supportBrands.length?'<div style="font-size:10px;color:var(--text-s);margin-bottom:8px">&#129309; <strong style="color:var(--text)">Support:</strong> '+supportBrands.map(function(b){return escHtml(b.name);}).join(', ')+'</div>':'')+
-      '<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">'+brandPctHTML+'</div>'+
-    '</div>';
+      (ownerBrands.length||supportBrands.length?
+        '<div style="display:flex;flex-direction:column;gap:3px;padding:8px 10px;background:var(--bg);border-radius:8px">'+
+          (ownerBrands.length?'<div style="font-size:10px;color:var(--text-s)"><span style="color:var(--text);font-weight:600">Owner:</span> '+ownerBrands.map(function(b){return '<span style="color:'+b.color+';font-weight:500">'+escHtml(b.name)+'</span>';}).join(' &nbsp;')+'</div>':'')+
+          (supportBrands.length?'<div style="font-size:10px;color:var(--text-s)"><span style="color:var(--text);font-weight:600">Support:</span> '+supportBrands.map(function(b){return '<span style="color:'+b.color+';font-weight:500">'+escHtml(b.name)+'</span>';}).join(' &nbsp;')+'</div>':'')+
+        '</div>':'')+'</div>';
   }).join('');
 
   // ── Team Performance This Week ──
@@ -4989,50 +4951,44 @@ function renderAdminTeam(){
 
   var html='';
 
-  // Team Status + Hive
-  html+='<div class="card mb16" style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start">'+
-    '<div>'+
-      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'+
-        '<div class="sec-t" style="margin:0">Team Status <span class="sec-s">today</span></div>'+
-        (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
-         activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
-         '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
-        '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'+
-          attendanceWidget()+
-          (isAdmin()?'<button class="sec-btn" onclick="openAddMember()">+ Add Member</button>':'')+
-        '</div>'+
-      '</div>'+
-      '<div class="team-status-grid">'+
-      membersStatus.map(function(s){
-        var m=s.m;
-        var avUrl=avatarUrl(m);
-        var avHtml='<div class="mem-av-img av-sm" style="flex-shrink:0">'+
-          (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
-        '</div>';
-        var streak=calcStreak(m.id);
-        return '<div class="team-status-card '+(s.hasLogged?'ts-active':'ts-idle')+'" onclick="openMemberDetail(\''+m.id+'\')" title="View '+m.name+'\'s page">'+
-          avHtml+
-          '<div style="flex:1;min-width:0">'+
-            '<div style="font-size:12px;font-weight:600;color:var(--text)">'+m.name+'</div>'+
-            (s.hasLogged?
-              '<div style="font-size:10px;color:var(--green);font-weight:500">&#10003; Logged today</div>'+
-              '<div style="font-size:10px;color:var(--text-s)">'+s.tots.sourced+' sourced &middot; '+s.tots.confirmed+' conf</div>':
-              '<div style="font-size:10px;color:var(--text-s)">No activity yet</div>'+
-              (streak?'<div style="font-size:10px;color:var(--amber)">&#128293; '+streak+'d streak</div>':''))+
-          '</div>'+
-          '<div class="ts-dot '+(s.hasLogged?'active':'idle')+'"></div>'+
-        '</div>';
-      }).join('')+
+  // Team Status
+  html+='<div class="card mb16">'+
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+
+      '<div class="sec-t" style="margin:0">Team Status <span class="sec-s">today</span></div>'+
+      (activeCount===0?'<span style="font-size:11px;color:var(--amber)">&#9888; No one has logged yet</span>':
+       activeCount===teamMembers.length?'<span style="font-size:11px;color:var(--green)">&#10003; All members active</span>':
+       '<span style="font-size:11px;color:var(--text-s)">'+activeCount+' of '+teamMembers.length+' active</span>')+
+      '<div style="margin-left:auto;display:flex;align-items:center;gap:10px">'+
+        attendanceWidget()+
+        (isAdmin()?'<button class="sec-btn" onclick="openAddMember()">+ Add Member</button>':'')+
       '</div>'+
     '</div>'+
-    '<div style="min-width:240px;max-width:300px;display:flex;align-items:center">'+
-      _hiveSvg+
+    '<div class="team-status-grid">'+
+    membersStatus.map(function(s){
+      var m=s.m;
+      var avUrl=avatarUrl(m);
+      var avHtml='<div class="mem-av-img av-sm" style="flex-shrink:0">'+
+        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\'<span style=font-size:9px;font-weight:700>'+ini(m.name)+'</span>\'">':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
+      '</div>';
+      var streak=calcStreak(m.id);
+      return '<div class="team-status-card '+(s.hasLogged?'ts-active':'ts-idle')+'" onclick="openMemberDetail(\''+m.id+'\')" title="View '+m.name+'\'s page">'+
+        avHtml+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:600;color:var(--text)">'+m.name+'</div>'+
+          (s.hasLogged?
+            '<div style="font-size:10px;color:var(--green);font-weight:500">&#10003; Logged today</div>'+
+            '<div style="font-size:10px;color:var(--text-s)">'+s.tots.sourced+' sourced &middot; '+s.tots.confirmed+' conf</div>':
+            '<div style="font-size:10px;color:var(--text-s)">No activity yet</div>'+
+            (streak?'<div style="font-size:10px;color:var(--amber)">&#128293; '+streak+'d streak</div>':''))+
+        '</div>'+
+        '<div class="ts-dot '+(s.hasLogged?'active':'idle')+'"></div>'+
+      '</div>';
+    }).join('')+
     '</div>'+
   '</div>';
 
   // Member Progress Overview
-  html+='<div class="sec"><div class="sec-t">Member Progress Overview</div></div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px">'+memberOverviewHTML+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:20px">'+memberOverviewHTML+'</div>';
 
   // Team Performance This Week (all projects)
   html+='<div class="card mb16">'+
