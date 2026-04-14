@@ -1413,6 +1413,63 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 </div>
 
 <!-- ══════════════════ MODAL: CHANGELOG ══════════════════ -->
+<!-- ── Add KOL Modal ── -->
+<div class="overlay" id="ov-pub-kol" onclick="ovBg('ov-pub-kol',event)">
+  <div class="modal goals-modal" style="max-width:460px">
+    <div class="modal-hd">
+      <div><div class="modal-title">👤 KOL Registration</div><div class="modal-sub">Add or edit a KOL for this brand</div></div>
+      <button class="modal-x" onclick="closeOv('ov-pub-kol')">&#10005;</button>
+    </div>
+    <input type="hidden" id="pub-kol-id">
+    <div class="ff"><label class="ff-lbl">Name *</label><input class="ff-inp" id="pub-kol-name" placeholder="KOL full name"></div>
+    <div class="ff"><label class="ff-lbl">Instagram</label><input class="ff-inp" id="pub-kol-instagram" placeholder="@username or link"></div>
+    <div class="ff"><label class="ff-lbl">TikTok</label><input class="ff-inp" id="pub-kol-tiktok" placeholder="@username or link"></div>
+    <div class="ff"><label class="ff-lbl">YouTube</label><input class="ff-inp" id="pub-kol-youtube" placeholder="Channel name or link"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ff">
+        <label class="ff-lbl">Platform to publish</label>
+        <select class="ff-inp" id="pub-kol-platform">
+          <option value="instagram">📸 Instagram</option>
+          <option value="tiktok">🎵 TikTok</option>
+          <option value="youtube">▶️ YouTube</option>
+          <option value="multi">🌐 Multi-platform</option>
+        </select>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Deliverable</label>
+        <select class="ff-inp" id="pub-kol-deliverable">
+          <option value="short_video">📱 Short Video</option>
+          <option value="long_video">🎬 Long Video</option>
+          <option value="stories">💬 Stories</option>
+          <option value="reel">🎞️ Reel</option>
+          <option value="post">🖼️ Post</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-primary" style="flex:1" onclick="saveKolModal()">Save KOL</button>
+      <button class="btn-sec" onclick="closeOv('ov-pub-kol')">Cancel</button>
+    </div>
+  </div>
+</div>
+<!-- ── Schedule KOL Slot Modal ── -->
+<div class="overlay" id="ov-pub-sched" onclick="ovBg('ov-pub-sched',event)">
+  <div class="modal goals-modal" style="max-width:380px">
+    <div class="modal-hd">
+      <div><div class="modal-title">📅 Schedule Publication</div><div class="modal-sub" id="pub-sched-date-label"></div></div>
+      <button class="modal-x" onclick="closeOv('ov-pub-sched')">&#10005;</button>
+    </div>
+    <div class="ff"><label class="ff-lbl">Select KOL</label><select class="ff-inp" id="pub-sched-kol-sel"></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="ff"><label class="ff-lbl">Date</label><input class="ff-inp" type="date" id="pub-sched-date-inp"></div>
+      <div class="ff"><label class="ff-lbl">Time</label><input class="ff-inp" type="time" id="pub-sched-time-inp" value="10:00"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-primary" style="flex:1" onclick="savePubSchedModal()">Schedule</button>
+      <button class="btn-sec" onclick="closeOv('ov-pub-sched')">Cancel</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="ov-changelog" onclick="ovBg('ov-changelog',event)">
   <div class="modal goals-modal" style="max-height:80vh;display:flex;flex-direction:column">
     <div class="modal-hd" style="flex-shrink:0">
@@ -4282,75 +4339,236 @@ function bdSwitchCampTab(tab, brandId){
 /* ══════════════════════════════════════════════
    PUBLICATION CALENDAR (Publishment Schedule)
 ══════════════════════════════════════════════ */
-function getPubSched(bid){try{return JSON.parse(localStorage.getItem('dg_pubsched_'+bid)||'{}');}catch(e){return {};}}
-function setPubSched(bid,sched){try{localStorage.setItem('dg_pubsched_'+bid,JSON.stringify(sched));}catch(e){}}
-function addPubKol(bid,date,name){var s=getPubSched(bid);if(!s[date])s[date]=[];if(name&&!s[date].includes(name))s[date].push(name);setPubSched(bid,s);renderPublicationCalendarInPlace(bid);}
-function removePubKol(bid,date,name){var s=getPubSched(bid);if(s[date])s[date]=s[date].filter(function(n){return n!==name;});if(s[date]&&!s[date].length)delete s[date];setPubSched(bid,s);renderPublicationCalendarInPlace(bid);}
-function renderPublicationCalendarInPlace(bid){
-  var b=getBrand(bid);if(!b)return;
-  var el=document.getElementById('pub-cal-'+bid);
-  if(!el)return;
-  el.innerHTML=_pubCalInner(bid,b.color);
+// ── KOL Registry ─────────────────────────────────────────────────────────
+var _pubCurrentBid=null;
+function getKolRegistry(bid){try{return JSON.parse(localStorage.getItem('dg_kolreg_'+bid)||'[]');}catch(e){return [];}}
+function setKolRegistry(bid,kols){try{localStorage.setItem('dg_kolreg_'+bid,JSON.stringify(kols));}catch(e){}}
+function getPubScheduleV2(bid){try{return JSON.parse(localStorage.getItem('dg_pubsched2_'+bid)||'[]');}catch(e){return [];}}
+function setPubScheduleV2(bid,entries){try{localStorage.setItem('dg_pubsched2_'+bid,JSON.stringify(entries));}catch(e){}}
+
+var _PLATFORM_ICON={instagram:'📸',tiktok:'🎵',youtube:'▶️',multi:'🌐'};
+var _PLATFORM_LABEL={instagram:'Instagram',tiktok:'TikTok',youtube:'YouTube',multi:'Multi'};
+var _DELIV_LABEL={short_video:'Short Video',long_video:'Long Video',stories:'Stories',reel:'Reel',post:'Post'};
+var _CARD_COLORS=['#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ef4444','#14b8a6'];
+
+function kolColor(kol,idx){return _CARD_COLORS[idx%_CARD_COLORS.length];}
+
+function openAddKolModal(bid,editId){
+  _pubCurrentBid=bid;
+  var kols=getKolRegistry(bid);
+  var k=editId?kols.find(function(x){return x.id===editId;}):null;
+  document.getElementById('pub-kol-id').value=k?k.id:'';
+  document.getElementById('pub-kol-name').value=k?k.name:'';
+  document.getElementById('pub-kol-instagram').value=k?k.instagram:'';
+  document.getElementById('pub-kol-tiktok').value=k?k.tiktok:'';
+  document.getElementById('pub-kol-youtube').value=k?k.youtube:'';
+  document.getElementById('pub-kol-platform').value=k?k.platform:'instagram';
+  document.getElementById('pub-kol-deliverable').value=k?k.deliverable:'short_video';
+  openOv('ov-pub-kol');
 }
-function renderPublicationCalendar(bid, bColor){
-  return '<div id="pub-cal-'+bid+'" class="card mb16">'+_pubCalInner(bid,bColor)+'</div>';
-}
-function _pubCalInner(bid, bColor){
-  var sched=getPubSched(bid);
-  var now=new Date();
-  var calMonthKey='dg_pubcalmonth_'+bid;
-  var stored=localStorage.getItem(calMonthKey);
-  var curYear=now.getFullYear(),curMonth=now.getMonth();
-  if(stored){var p=stored.split('-');curYear=+p[0];curMonth=+p[1]-1;}
-  var firstDay=new Date(curYear,curMonth,1).getDay(); // 0=Sun
-  var daysInMonth=new Date(curYear,curMonth+1,0).getDate();
-  var monthLabel=new Date(curYear,curMonth,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  var todayStr2=now.getFullYear()+'-'+(now.getMonth()+1<10?'0'+(now.getMonth()+1):''+(now.getMonth()+1))+'-'+(now.getDate()<10?'0'+now.getDate():''+now.getDate());
-  var prevM='<button onclick="pubCalNav(\''+bid+'\','+curYear+','+curMonth+',-1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m)">‹</button>';
-  var nextM='<button onclick="pubCalNav(\''+bid+'\','+curYear+','+curMonth+',1)" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m)">›</button>';
-  var dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var headerCells=dayNames.map(function(d){return '<div style="text-align:center;font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;padding:4px 0">'+d+'</div>';}).join('');
-  var cells='';
-  // Leading empty cells
-  for(var ei=0;ei<firstDay;ei++) cells+='<div></div>';
-  for(var d=1;d<=daysInMonth;d++){
-    var mm=(curMonth+1<10?'0'+(curMonth+1):''+(curMonth+1));
-    var dd=(d<10?'0'+d:''+d);
-    var dateStr=curYear+'-'+mm+'-'+dd;
-    var kols=sched[dateStr]||[];
-    var isToday=dateStr===todayStr2;
-    var kolItems=kols.map(function(k){
-      return '<div style="display:flex;align-items:center;gap:3px;background:'+bColor+'22;border-radius:4px;padding:1px 4px;margin-top:2px;font-size:9px;font-weight:600;color:'+bColor+'">'+
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:68px">'+escHtml(k)+'</span>'+
-        '<button onclick="event.stopPropagation();removePubKol(\''+bid+'\',\''+dateStr+'\',\''+k.replace(/'/g,"\\'")+'\')" style="color:'+bColor+';opacity:.6;font-size:10px;padding:0 1px;line-height:1;cursor:pointer;border:none;background:none;flex-shrink:0">×</button>'+
-      '</div>';
-    }).join('');
-    cells+='<div onclick="pubCalAddKol(\''+bid+'\',\''+dateStr+'\')" style="min-height:70px;border:1px solid var(--border);border-radius:7px;padding:5px 6px;cursor:pointer;transition:background .15s;position:relative;background:'+(isToday?bColor+'10':'var(--card)')+';border-color:'+(isToday?bColor:'var(--border)')+';" onmouseover="this.style.background=\''+bColor+'08\'" onmouseout="this.style.background=\''+(isToday?bColor+'10':'var(--card)')+'\'">'+
-      '<div style="font-size:11px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?bColor:'var(--text-m)')+';margin-bottom:2px">'+d+'</div>'+
-      kolItems+
-      (kols.length===0?'<div style="font-size:8px;color:var(--text-s);opacity:.5;margin-top:4px">+ add</div>':'')+
-    '</div>';
-  }
-  return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-      '<div style="font-size:13px;font-weight:700;color:var(--text)">&#128197; Publishment Schedule</div>'+
-      '<div style="display:flex;align-items:center;gap:8px">'+prevM+'<span style="font-size:12px;font-weight:600;color:var(--text)">'+monthLabel+'</span>'+nextM+'</div>'+
-    '</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">'+
-      headerCells+cells+
-    '</div>'+
-    '<div style="font-size:10px;color:var(--text-s);margin-top:8px">Click any day to schedule a KOL publication.</div>'+
-  '</div>';
-}
-function pubCalNav(bid,year,month,delta){
-  var d=new Date(year,month+delta,1);
-  var key='dg_pubcalmonth_'+bid;
-  var mm=d.getMonth()+1;
-  localStorage.setItem(key,d.getFullYear()+'-'+(mm<10?'0'+mm:''+mm));
+function saveKolModal(){
+  var bid=_pubCurrentBid;
+  var eid=document.getElementById('pub-kol-id').value;
+  var id=eid||('kol_'+Date.now());
+  var name=document.getElementById('pub-kol-name').value.trim();
+  if(!name){alert('Name is required');return;}
+  var kol={id:id,name:name,
+    instagram:document.getElementById('pub-kol-instagram').value.trim(),
+    tiktok:document.getElementById('pub-kol-tiktok').value.trim(),
+    youtube:document.getElementById('pub-kol-youtube').value.trim(),
+    platform:document.getElementById('pub-kol-platform').value,
+    deliverable:document.getElementById('pub-kol-deliverable').value};
+  var kols=getKolRegistry(bid);
+  var idx=kols.findIndex(function(k){return k.id===id;});
+  if(idx>=0)kols[idx]=kol;else kols.push(kol);
+  setKolRegistry(bid,kols);
+  closeOv('ov-pub-kol');
   renderPublicationCalendarInPlace(bid);
 }
-function pubCalAddKol(bid,date){
-  var name=prompt('KOL name to schedule for '+date+':');
-  if(name&&name.trim()) addPubKol(bid,date,name.trim());
+function deleteKolFromRegistry(bid,kolId){
+  if(!confirm('Remove this KOL?')) return;
+  var kols=getKolRegistry(bid).filter(function(k){return k.id!==kolId;});
+  setKolRegistry(bid,kols);
+  // also remove from schedule
+  var entries=getPubScheduleV2(bid).filter(function(e){return e.kolId!==kolId;});
+  setPubScheduleV2(bid,entries);
+  renderPublicationCalendarInPlace(bid);
+}
+
+function openSchedSlot(bid,date,time){
+  _pubCurrentBid=bid;
+  var kols=getKolRegistry(bid);
+  var sel=document.getElementById('pub-sched-kol-sel');
+  sel.innerHTML=kols.length
+    ?kols.map(function(k,i){return '<option value="'+k.id+'">'+(_PLATFORM_ICON[k.platform]||'')+'  '+escHtml(k.name)+' — '+(_DELIV_LABEL[k.deliverable]||k.deliverable)+'</option>';}).join('')
+    :'<option value="">No KOLs — add one first</option>';
+  document.getElementById('pub-sched-date-label').textContent=(date||'')+' '+(time?'at '+time:'');
+  document.getElementById('pub-sched-date-inp').value=date||'';
+  document.getElementById('pub-sched-time-inp').value=time||'10:00';
+  openOv('ov-pub-sched');
+}
+function savePubSchedModal(){
+  var bid=_pubCurrentBid;
+  var kolId=document.getElementById('pub-sched-kol-sel').value;
+  if(!kolId){alert('Select a KOL');return;}
+  var date=document.getElementById('pub-sched-date-inp').value;
+  var time=document.getElementById('pub-sched-time-inp').value;
+  if(!date){alert('Select a date');return;}
+  var kols=getKolRegistry(bid);
+  var kol=kols.find(function(k){return k.id===kolId;});
+  if(!kol)return;
+  var entries=getPubScheduleV2(bid);
+  entries.push({id:'sc_'+Date.now(),kolId:kol.id,kolName:kol.name,platform:kol.platform,deliverable:kol.deliverable,date:date,time:time,status:'scheduled'});
+  setPubScheduleV2(bid,entries);
+  closeOv('ov-pub-sched');
+  renderPublicationCalendarInPlace(bid);
+}
+function removePubSchedEntry(bid,entryId){
+  var entries=getPubScheduleV2(bid).filter(function(e){return e.id!==entryId;});
+  setPubScheduleV2(bid,entries);
+  renderPublicationCalendarInPlace(bid);
+}
+function pubWeekNav(bid,delta){
+  var key='dg_pubweek_'+bid;
+  var stored=localStorage.getItem(key);
+  var base=stored?new Date(stored):new Date();
+  base.setDate(base.getDate()+delta*7);
+  localStorage.setItem(key,base.toISOString().split('T')[0]);
+  renderPublicationCalendarInPlace(bid);
+}
+
+function renderPublicationCalendarInPlace(bid){
+  var b=getBrand(bid);if(!b)return;
+  var el=document.getElementById('pub-cal-'+bid);if(!el)return;
+  el.innerHTML=_pubCalInner(bid,b.color);
+}
+function renderPublicationCalendar(bid,bColor){
+  return '<div id="pub-cal-'+bid+'" class="card mb16" style="padding:0;overflow:hidden">'+_pubCalInner(bid,bColor)+'</div>';
+}
+function _pubCalInner(bid,bColor){
+  var kols=getKolRegistry(bid);
+  var entries=getPubScheduleV2(bid);
+  var now=new Date();
+  var todayISO=now.toISOString().split('T')[0];
+
+  // Week start (Sunday)
+  var weekKey='dg_pubweek_'+bid;
+  var stored=localStorage.getItem(weekKey);
+  var baseDate=stored?new Date(stored):new Date();
+  var dow=baseDate.getDay();
+  var weekStart=new Date(baseDate);
+  weekStart.setDate(baseDate.getDate()-dow);
+  var weekDays=[];
+  for(var wi=0;wi<7;wi++){var wd=new Date(weekStart);wd.setDate(weekStart.getDate()+wi);weekDays.push(wd);}
+  var monthLabel=weekStart.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  var TIMES=['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+  var TIME_LABELS=['9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM'];
+  var DAY_SHORT=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+  // ── Calendar grid ────────────────────────────────────────────────────────
+  // Day header row
+  var dayHeaders='<div style="width:52px;flex-shrink:0;font-size:9px;color:var(--text-s);padding-top:6px;text-align:right;padding-right:8px">GMT</div>';
+  weekDays.forEach(function(wd){
+    var iso=wd.toISOString().split('T')[0];
+    var isToday=iso===todayISO;
+    dayHeaders+='<div style="flex:1;text-align:center;padding:8px 4px 6px">'+
+      '<div style="font-size:9px;font-weight:700;color:var(--text-s);text-transform:uppercase;letter-spacing:.05em">'+DAY_SHORT[wd.getDay()]+'</div>'+
+      '<div style="width:28px;height:28px;border-radius:50%;margin:4px auto 0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;'+(isToday?'background:'+bColor+';color:#fff':'color:var(--text)')+'">'+wd.getDate()+'</div>'+
+    '</div>';
+  });
+
+  // Time rows
+  var timeRows='';
+  TIMES.forEach(function(t,ti){
+    var rowCells='<div style="width:52px;flex-shrink:0;font-size:9px;color:var(--text-s);text-align:right;padding-right:8px;padding-top:4px;white-space:nowrap">'+TIME_LABELS[ti]+'</div>';
+    weekDays.forEach(function(wd){
+      var iso=wd.toISOString().split('T')[0];
+      var isToday=iso===todayISO;
+      var slotEntries=entries.filter(function(e){return e.date===iso&&(e.time||'').slice(0,5)===t;});
+      var cards=slotEntries.map(function(e){
+        var ki=kols.findIndex(function(k){return k.id===e.kolId;});
+        var col=ki>=0?kolColor(kols[ki],ki):bColor;
+        var bg=col+'18';
+        return '<div style="background:'+bg+';border-left:3px solid '+col+';border-radius:5px;padding:4px 6px;margin-bottom:3px;position:relative;cursor:default" title="'+escHtml(e.kolName)+'">'+
+          '<div style="font-size:10px;font-weight:700;color:'+col+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(e.kolName)+'</div>'+
+          '<div style="font-size:9px;color:var(--text-s)">'+(_PLATFORM_ICON[e.platform]||'')+'  '+(_DELIV_LABEL[e.deliverable]||e.deliverable)+'</div>'+
+          '<button onclick="removePubSchedEntry(\''+bid+'\',\''+e.id+'\')" style="position:absolute;top:2px;right:3px;font-size:9px;color:var(--text-s);background:none;border:none;cursor:pointer;padding:0;line-height:1;opacity:.5" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5">✕</button>'+
+        '</div>';
+      }).join('');
+      rowCells+='<div onclick="openSchedSlot(\''+bid+'\',\''+iso+'\',\''+t+'\')" style="flex:1;min-height:60px;border-left:1px solid var(--border);border-top:1px solid var(--border);padding:4px 5px;cursor:pointer;transition:background .1s;background:'+(isToday?bColor+'05':'')+';" onmouseover="this.style.background=\''+bColor+'0a\'" onmouseout="this.style.background=\''+(isToday?bColor+'05':'')+'\'">'+cards+'</div>';
+    });
+    timeRows+='<div style="display:flex">'+rowCells+'</div>';
+  });
+
+  var calHtml='<div style="flex:1;min-width:0;border-right:1px solid var(--border);overflow:auto">'+
+    '<div style="display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--border)">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px">📅 <span>'+monthLabel+'</span></div>'+
+      '<button onclick="pubWeekNav(\''+bid+'\',-1)" style="padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m);font-size:12px">‹</button>'+
+      '<button onclick="pubWeekNav(\''+bid+'\',1)" style="padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m);font-size:12px">›</button>'+
+      '<button onclick="pubWeekNav(\''+bid+'\',0);localStorage.removeItem(\'dg_pubweek_'+bid+'\');renderPublicationCalendarInPlace(\''+bid+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text-m);font-size:11px">Today</button>'+
+      '<button onclick="openSchedSlot(\''+bid+'\',\''+todayISO+'\',\'10:00\')" style="margin-left:auto;padding:5px 14px;border-radius:7px;background:'+bColor+';color:#fff;border:none;cursor:pointer;font-size:11px;font-weight:600">+ Schedule KOL</button>'+
+    '</div>'+
+    '<div style="display:flex;border-bottom:1px solid var(--border)">'+dayHeaders+'</div>'+
+    '<div style="overflow-y:auto;max-height:480px">'+timeRows+'</div>'+
+  '</div>';
+
+  // ── Right Panel ───────────────────────────────────────────────────────────
+  // Next Videos queue (upcoming sorted by date+time)
+  var upcoming=entries.filter(function(e){return e.date>=todayISO;}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1;}).slice(0,8);
+  var nextVideosHTML=upcoming.length?upcoming.map(function(e,i){
+    var ki=kols.findIndex(function(k){return k.id===e.kolId;});
+    var col=ki>=0?kolColor(kols[ki],ki):bColor;
+    var d=new Date(e.date+'T12:00:00');
+    var dLabel=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    var ini=(e.kolName||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;'+(i>0?'border-top:1px solid var(--border)':'')+'">'+
+      '<div style="width:34px;height:34px;border-radius:50%;background:'+col+'22;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+col+';flex-shrink:0">'+ini+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(e.kolName)+'</div>'+
+        '<div style="font-size:10px;color:var(--text-s)">'+dLabel+' · '+e.time+'  '+(_PLATFORM_ICON[e.platform]||'')+'</div>'+
+      '</div>'+
+      '<button onclick="removePubSchedEntry(\''+bid+'\',\''+e.id+'\')" style="font-size:11px;color:var(--text-s);background:none;border:none;cursor:pointer;padding:2px 4px;opacity:.5" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5">✕</button>'+
+    '</div>';
+  }).join(''):'<div style="font-size:11px;color:var(--text-s);padding:12px 0">No upcoming videos scheduled.</div>';
+
+  // KOL registry list
+  var kolListHTML=kols.length?kols.map(function(k,i){
+    var col=kolColor(k,i);
+    var ini=(k.name||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var socials=[k.instagram?'📸':'',k.tiktok?'🎵':'',k.youtube?'▶️':''].filter(Boolean).join(' ');
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;'+(i>0?'border-top:1px solid var(--border)':'')+'">'+
+      '<div style="width:32px;height:32px;border-radius:50%;background:'+col+'22;border:2px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:'+col+';flex-shrink:0">'+ini+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:11px;font-weight:600;color:var(--text)">'+escHtml(k.name)+'</div>'+
+        '<div style="font-size:10px;color:var(--text-s)">'+(_PLATFORM_ICON[k.platform]||'')+' '+(_DELIV_LABEL[k.deliverable]||k.deliverable)+(socials?' · '+socials:'')+'</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:4px">'+
+        '<button onclick="openAddKolModal(\''+bid+'\',\''+k.id+'\')" style="font-size:10px;padding:2px 7px;border-radius:5px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">Edit</button>'+
+        '<button onclick="deleteKolFromRegistry(\''+bid+'\',\''+k.id+'\')" style="font-size:10px;padding:2px 6px;border-radius:5px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">✕</button>'+
+      '</div>'+
+    '</div>';
+  }).join(''):'<div style="font-size:11px;color:var(--text-s);padding:12px 0">No KOLs registered yet.</div>';
+
+  var rightPanel='<div style="width:280px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden">'+
+    // Next Videos
+    '<div style="padding:14px 16px;border-bottom:1px solid var(--border)">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--text)">Next Videos</div>'+
+        '<span style="font-size:10px;font-weight:700;background:'+bColor+';color:#fff;border-radius:10px;padding:1px 7px">'+upcoming.length+'</span>'+
+      '</div>'+
+      nextVideosHTML+
+    '</div>'+
+    // KOL List
+    '<div style="padding:14px 16px;flex:1;overflow-y:auto">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--text)">KOL List</div>'+
+        '<button onclick="openAddKolModal(\''+bid+'\')" style="font-size:10px;padding:3px 10px;border-radius:6px;background:'+bColor+';color:#fff;border:none;cursor:pointer;font-weight:600">+ Add KOL</button>'+
+      '</div>'+
+      kolListHTML+
+    '</div>'+
+  '</div>';
+
+  return '<div style="display:flex;min-height:520px">'+calHtml+rightPanel+'</div>';
 }
 
 /* ══════════════════════════════════════════════
