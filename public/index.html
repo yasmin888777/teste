@@ -742,6 +742,9 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <div class="sb-sep" id="sb-brands-sep">Brands</div>
   <div class="sb-list" id="sb-brands-list"></div>
 
+  <div class="sb-sep" id="sb-kols-sep">KOLs</div>
+  <div class="sb-list" id="sb-kols-list"></div>
+
   <div class="sb-sep" id="sb-team-sep">Team</div>
   <div class="sb-list" id="sb-team-list"></div>
 
@@ -882,6 +885,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <!-- ── WEEKLY DIGEST ── -->
     <div class="page" id="page-all-brands">
       <div id="all-brands-content"></div>
+    </div>
+
+    <div class="page" id="page-kols-registry">
+      <div id="kols-registry-content"></div>
     </div>
 
     <div class="page" id="page-digest">
@@ -1773,6 +1780,7 @@ function navTo(page,el,brandId){
   if(page==='report') renderWeeklyReport();
   if(page==='settings') renderSettings();
   if(page==='all-brands') renderAllBrands();
+  if(page==='kols-registry') renderKolsRegistry();
   saveNavState();
 }
 function openBrandDetail(brandId){
@@ -1869,6 +1877,15 @@ function renderSidebar(){
         '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
         '<span>'+b.name+'</span>'+
       '</div>').join('');
+
+  // KOLs section — count across all brands
+  var _allKolsCount=ST.brands.reduce(function(s,b){return s+getKolRegistry(b.id).length;},0);
+  var _kolsActive=currentPage==='kols-registry';
+  document.getElementById('sb-kols-list').innerHTML=
+    '<div class="sb-pill'+(_kolsActive?' sb-pill-active':'')+'" onclick="navTo(\'kols-registry\',null)" style="font-weight:600;justify-content:space-between">'+
+      '<div style="display:flex;align-items:center;gap:8px"><div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div><span>All KOLs</span></div>'+
+      (_allKolsCount?'<span style="font-size:9px;font-weight:700;background:rgba(255,255,255,.15);border-radius:10px;padding:1px 6px">'+_allKolsCount+'</span>':'')+
+    '</div>';
 
   var pureMember=currentUser&&currentUser.role==='member';
   var membersToShow=pureMember
@@ -4030,6 +4047,109 @@ function deleteCampaign(campId,brandId){
 function getBrandNote(bid){try{return JSON.parse(localStorage.getItem('dg_brand_notes')||'{}')[bid]||'';}catch(e){return '';}}
 function setBrandNote(bid,txt){try{var o=JSON.parse(localStorage.getItem('dg_brand_notes')||'{}');o[bid]=txt;localStorage.setItem('dg_brand_notes',JSON.stringify(o));}catch(e){}}
 
+function renderKolsRegistry(){
+  var el=document.getElementById('kols-registry-content');
+  if(!el) return;
+
+  // Collect all KOLs across all brands
+  var allKols=[];
+  ST.brands.forEach(function(b){
+    getKolRegistry(b.id).forEach(function(k,i){
+      allKols.push(Object.assign({},k,{brandId:b.id,brandName:b.name,brandColor:b.color||'var(--primary)',_idx:i}));
+    });
+  });
+
+  // Filter state
+  var filterKey='dg_kolreg_filter';
+  var filterBid=localStorage.getItem(filterKey)||'';
+  var filterPlat=localStorage.getItem(filterKey+'_plat')||'';
+  var filterDeliv=localStorage.getItem(filterKey+'_deliv')||'';
+
+  var filtered=allKols.filter(function(k){
+    if(filterBid&&k.brandId!==filterBid) return false;
+    if(filterPlat&&k.platform!==filterPlat) return false;
+    if(filterDeliv&&k.deliverable!==filterDeliv) return false;
+    return true;
+  });
+
+  // Brand options for filter
+  var brandOpts='<option value="">All Brands</option>'+ST.brands.map(function(b){
+    return '<option value="'+b.id+'"'+(filterBid===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';
+  }).join('');
+  var platOpts='<option value="">All Platforms</option>'+Object.keys(_PLATFORM_LABEL).map(function(p){
+    return '<option value="'+p+'"'+(filterPlat===p?' selected':'')+'>'+(_PLATFORM_ICON[p]||'')+' '+_PLATFORM_LABEL[p]+'</option>';
+  }).join('');
+  var delivOpts='<option value="">All Deliverables</option>'+Object.keys(_DELIV_LABEL).map(function(d){
+    return '<option value="'+d+'"'+(filterDeliv===d?' selected':'')+'>'+_DELIV_LABEL[d]+'</option>';
+  }).join('');
+
+  // KOL cards grid
+  var cardsHTML=filtered.length?filtered.map(function(k){
+    var col=kolColor(k,k._idx);
+    var ini=(k.name||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var socials=[];
+    if(k.instagram) socials.push('<a href="'+(k.instagram.startsWith('http')?k.instagram:'https://instagram.com/'+k.instagram.replace('@',''))+'" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#e1306c;text-decoration:none;background:rgba(225,48,108,.08);padding:3px 8px;border-radius:6px">📸 Instagram</a>');
+    if(k.tiktok) socials.push('<a href="'+(k.tiktok.startsWith('http')?k.tiktok:'https://tiktok.com/@'+k.tiktok.replace('@',''))+'" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#000;text-decoration:none;background:rgba(0,0,0,.06);padding:3px 8px;border-radius:6px">🎵 TikTok</a>');
+    if(k.youtube) socials.push('<a href="'+(k.youtube.startsWith('http')?k.youtube:'https://youtube.com/'+k.youtube)+'" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#ff0000;text-decoration:none;background:rgba(255,0,0,.06);padding:3px 8px;border-radius:6px">▶️ YouTube</a>');
+    // Upcoming schedules for this KOL
+    var schedEntries=getPubScheduleV2(k.brandId).filter(function(e){return e.kolId===k.id;});
+    var upcoming=schedEntries.filter(function(e){return e.date>=new Date().toISOString().split('T')[0];}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1;});
+    var nextEntry=upcoming[0];
+    return '<div class="card" style="padding:0;overflow:hidden;border-top:3px solid '+col+'">'+
+      // Header
+      '<div style="padding:14px 16px 10px;display:flex;align-items:center;gap:12px">'+
+        '<div style="width:44px;height:44px;border-radius:50%;background:'+col+'20;border:2.5px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:'+col+';flex-shrink:0">'+ini+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(k.name)+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'+
+            '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+col+'15;color:'+col+';font-weight:600">'+(_PLATFORM_ICON[k.platform]||'')+' '+(_PLATFORM_LABEL[k.platform]||k.platform)+'</span>'+
+            '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg);color:var(--text-s);font-weight:500">'+(_DELIV_LABEL[k.deliverable]||k.deliverable)+'</span>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
+          '<button onclick="openAddKolModal(\''+k.brandId+'\',\''+k.id+'\')" style="font-size:10px;padding:3px 10px;border-radius:6px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer;font-weight:600">✏️ Edit</button>'+
+          '<button onclick="deleteKolFromRegistry(\''+k.brandId+'\',\''+k.id+'\');renderKolsRegistry();" style="font-size:10px;padding:3px 10px;border-radius:6px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">✕ Remove</button>'+
+        '</div>'+
+      '</div>'+
+      // Brand tag
+      '<div style="padding:0 16px 10px;display:flex;align-items:center;gap:6px">'+
+        '<div style="width:8px;height:8px;border-radius:50%;background:'+k.brandColor+'"></div>'+
+        '<span style="font-size:10px;color:var(--text-s)">Brand: <strong style="color:var(--text)">'+escHtml(k.brandName)+'</strong></span>'+
+      '</div>'+
+      // Social links
+      (socials.length?'<div style="padding:0 16px 10px;display:flex;flex-wrap:wrap;gap:6px">'+socials.join('')+'</div>':'')+
+      // Next publication
+      '<div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg-alt);display:flex;align-items:center;justify-content:space-between">'+
+        '<div style="font-size:10px;color:var(--text-s)">'+
+          (nextEntry
+            ?'📅 Next: <strong style="color:var(--text)">'+new Date(nextEntry.date+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+nextEntry.time+'</strong>'
+            :'No upcoming schedule')+
+        '</div>'+
+        '<button onclick="openSchedSlot(\''+k.brandId+'\',\''+new Date().toISOString().split('T')[0]+'\',\'10:00\');document.getElementById(\'pub-sched-kol-sel\').value=\''+k.id+'\'" style="font-size:10px;padding:3px 10px;border-radius:6px;background:'+col+';color:#fff;border:none;cursor:pointer;font-weight:600">+ Schedule</button>'+
+      '</div>'+
+    '</div>';
+  }).join(''):'<div style="padding:40px;text-align:center;color:var(--text-s);grid-column:1/-1"><div style="font-size:32px;margin-bottom:12px">👤</div><div style="font-size:13px;font-weight:600">No KOLs found</div><div style="font-size:11px;margin-top:4px">Try adjusting filters or add a new KOL from a brand page</div></div>';
+
+  el.innerHTML=
+    '<div style="margin-bottom:20px">'+
+      '<div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">KOL Registry</div>'+
+      '<div style="font-size:12px;color:var(--text-s)">All KOLs registered across brands · '+allKols.length+' total</div>'+
+    '</div>'+
+    // Filter bar
+    '<div class="card mb16" style="padding:12px 16px">'+
+      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+        '<span style="font-size:11px;font-weight:600;color:var(--text-s)">Filter:</span>'+
+        '<select onchange="localStorage.setItem(\'dg_kolreg_filter\',this.value);renderKolsRegistry()" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer">'+brandOpts+'</select>'+
+        '<select onchange="localStorage.setItem(\'dg_kolreg_filter_plat\',this.value);renderKolsRegistry()" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer">'+platOpts+'</select>'+
+        '<select onchange="localStorage.setItem(\'dg_kolreg_filter_deliv\',this.value);renderKolsRegistry()" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer">'+delivOpts+'</select>'+
+        (filterBid||filterPlat||filterDeliv?'<button onclick="localStorage.removeItem(\'dg_kolreg_filter\');localStorage.removeItem(\'dg_kolreg_filter_plat\');localStorage.removeItem(\'dg_kolreg_filter_deliv\');renderKolsRegistry()" style="font-size:11px;padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text-s);cursor:pointer">✕ Clear filters</button>':'')+
+        '<span style="margin-left:auto;font-size:11px;color:var(--text-s)">'+filtered.length+' KOL'+(filtered.length!==1?'s':'')+' shown</span>'+
+      '</div>'+
+    '</div>'+
+    // Grid
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">'+cardsHTML+'</div>';
+}
+
 function renderAllBrands(){
   var el=document.getElementById('all-brands-content');if(!el)return;
   var BRAND_BLUE='#3b7ef8';
@@ -4384,15 +4504,18 @@ function saveKolModal(){
   setKolRegistry(bid,kols);
   closeOv('ov-pub-kol');
   renderPublicationCalendarInPlace(bid);
+  if(currentPage==='kols-registry') renderKolsRegistry();
+  renderSidebar();
 }
 function deleteKolFromRegistry(bid,kolId){
   if(!confirm('Remove this KOL?')) return;
   var kols=getKolRegistry(bid).filter(function(k){return k.id!==kolId;});
   setKolRegistry(bid,kols);
-  // also remove from schedule
   var entries=getPubScheduleV2(bid).filter(function(e){return e.kolId!==kolId;});
   setPubScheduleV2(bid,entries);
   renderPublicationCalendarInPlace(bid);
+  if(currentPage==='kols-registry') renderKolsRegistry();
+  renderSidebar();
 }
 
 function openSchedSlot(bid,date,time){
