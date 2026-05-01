@@ -750,14 +750,6 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div style="flex:1"></div>
   <div style="padding:4px 8px 0">
-  <!-- Language Switcher -->
-  <div style="margin-bottom:4px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
-    <div style="font-size:10px;color:rgba(255,255,255,.3);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🌐 Language</div>
-    <div style="display:flex;gap:4px">
-      <button id="lang-btn-pt" onclick="setLang('pt')" style="flex:1;padding:5px 0;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.12);color:#fff;transition:all .15s">🇧🇷 PT</button>
-      <button id="lang-btn-en" onclick="setLang('en')" style="flex:1;padding:5px 0;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:transparent;color:rgba(255,255,255,.45);transition:all .15s">🇺🇸 EN</button>
-    </div>
-  </div>
   <button id="dark-toggle" onclick="toggleDark()" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:11px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
     <span id="dark-icon">🌙</span><span id="dark-lbl">Dark Mode</span>
   </button>
@@ -792,6 +784,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <button class="sec-btn" onclick="openAddMember()" style="padding:5px 12px;font-size:11px">+ Add Member</button>
         <button id="tb-remove-btn" style="padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">&#128465; Remove</button>
       </div>
+      <div style="display:flex;gap:2px;align-items:center;margin-right:4px">
+  <button id="lang-btn-pt" onclick="setLang('pt')" title="Português" style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;font-size:17px;cursor:pointer;opacity:1;transition:opacity .15s;line-height:1" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='transparent'">🇧🇷</button>
+  <button id="lang-btn-en" onclick="setLang('en')" title="English" style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;font-size:17px;cursor:pointer;opacity:.35;transition:opacity .15s;line-height:1" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='transparent'">🇺🇸</button>
+</div>
       <div class="tb-time" id="tb-time"></div>
       <button class="tb-btn refresh" onclick="renderAll()">&#8635; Refresh</button>
       <button class="tb-btn export" onclick="exportDashboard()">&#11015; Export</button>
@@ -1735,7 +1731,7 @@ function navTo(page,el,brandId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','admin-team':'Team Activity','member-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail',report:'Weekly Report','all-brands':'All Brands','settings':'Settings','kols-registry':'Meus Influenciadores','kol-form':'KOL'};
+  const T2=_i18n[_lang];const T={overview:T2.overview,members:T2.members,campaigns:T2.campaigns,digest:T2.weeklyDigest,'admin-home':T2.home,'admin-team':T2.teamActivity,'member-home':T2.home,'links':T2.documents,brand:T2.brandDetail,report:T2.weeklyReport,'all-brands':T2.allBrands,settings:T2.settings,'kols-registry':T2.myInfluencers,'kol-form':T2.addKol};
   if(page==='brand'&&_activeBrandId){const b=getBrand(_activeBrandId);document.getElementById('tb-title').textContent=b?b.name:'Brand Detail';}
   else document.getElementById('tb-title').textContent=T[page]||page;
   // Hide period selector on pages that don't need it
@@ -4482,13 +4478,27 @@ var _i18n={
   pt:{
     // Sidebar
     navigation:'Navegação',brands:'Marcas',kols:'KOLs',team:'Time',
-    darkMode:'Modo escuro',systemUpdates:'Atualizações do sistema',
-    // Topbar / pages
+    darkMode:'Modo escuro',lightMode:'Modo claro',systemUpdates:'Atualizações do sistema',
+    // Topbar
+    refresh:'Atualizar',export:'Exportar',addMember:'+ Adicionar membro',remove:'🗑️ Remover',
+    daily:'Diário',weekly:'Semanal',monthly:'Mensal',
+    // Pages / nav
     overview:'Visão geral',campaigns:'Campanhas',members:'Atividade do time',
-    documents:'Documentos',home:'Home',settings:'Configurações',
+    documents:'Documentos e Planilhas',home:'Home',settings:'Configurações',
     allBrands:'Todas as marcas',brandDetail:'Detalhe da marca',
     weeklyReport:'Relatório semanal',weeklyDigest:'Digest semanal',
-    myInfluencers:'Meus Influenciadores',
+    myInfluencers:'Meus Influenciadores',teamActivity:'Atividade do time',
+    // Campaign page
+    campaignProgress:'Progresso das campanhas',campaignGoals:'metas e KPIs por marca',
+    ongoing:'Em andamento',finished:'Finalizada',newCampaign:'+ Nova campanha',
+    // Documents page
+    documentsTitle:'Documentos e Planilhas',documentsSubtitle:'notas e links — apenas admin',
+    allYears:'Todos os anos',addNote:'+ Adicionar nota',
+    // Team Activity
+    teamActivityTitle:'Atividade do time',teamActivitySub:'log e acompanhamento por membro e marca',
+    // Trend chart
+    activityTrend:'Tendência de atividade',last14:'últimos 14 dias',last30:'últimos 30 dias',last60:'últimos 60 dias',
+    last14opt:'Últimos 14 dias',last30opt:'Últimos 30 dias',last60opt:'Últimos 60 dias',
     // KOL form
     back:'Voltar',cancel:'Cancelar',
     addKol:'Cadastrar KOL',editKol:'Editar KOL',registerKol:'Cadastrar KOL',saveChanges:'Salvar alterações',
@@ -4514,19 +4524,59 @@ var _i18n={
     results:'resultado',results_plural:'resultados',noCreators:'Nenhum creator cadastrado',
     noCreatorsSub:'Cadastre seus primeiros influenciadores para começar a indicá-los para campanhas.',
     addFirstCreator:'+ Cadastrar creator',editProfile:'✏️ Editar perfil',schedule:'+ Agendar',
+    // Brand detail
+    currentProject:'Projeto atual',confirmedKols:'KOLs confirmados',publishedVideos:'Vídeos publicados',
+    shipped:'Enviado',samples:'amostras',teamPerformance:'Desempenho do time',
+    noMembers:'Nenhum membro atribuído',noCampaigns:'Nenhuma campanha ainda.',
+    clickAddCampaign:'Clique em <strong>+ Add Campaign</strong> para criar uma.',
+    editBtn:'✏️ Editar',deleteBtn:'🗑️',
+    // Settings
+    settingsTitle:'Configurações',
+    // Misc
+    loading:'Carregando...',noData:'Sem dados',refresh2:'↻ Atualizar',
+    schedulePublication:'📅 Agendar publicação',selectKol:'Selecionar KOL',
+    date:'Data',time:'Hora',save:'Salvar',
+    noKolsAddFirst:'Nenhum KOL — adicione um primeiro',
+    confirmRemove:'Remover este KOL?',
+    // Weekly report
+    weeklyReportTitle:'Relatório Semanal',selectWeek:'Selecionar semana',
+    // All brands
+    allBrandsTitle:'Todas as marcas',
+    // Admin home KPIs
+    totalContacted:'Total contatado',totalConfirmed:'Total confirmado',totalVideos:'Vídeos publicados',activeBrands:'Marcas ativas',
+    // Member cards
+    contacted:'Contatados',confirmed:'Confirmados',videos:'Vídeos',
+    // Changelog
+    systemUpdatesTitle:'Atualizações do sistema',
+    // Account
+    accountSettings:'Configurações da conta',
     // Dark mode
     darkModeLabel:'Modo escuro',lightModeLabel:'Modo claro',
   },
   en:{
     // Sidebar
     navigation:'Navigation',brands:'Brands',kols:'KOLs',team:'Team',
-    darkMode:'Dark mode',systemUpdates:'System updates',
-    // Topbar / pages
+    darkMode:'Dark mode',lightMode:'Light mode',systemUpdates:'System updates',
+    // Topbar
+    refresh:'Refresh',export:'Export',addMember:'+ Add Member',remove:'🗑️ Remove',
+    daily:'Daily',weekly:'Weekly',monthly:'Monthly',
+    // Pages / nav
     overview:'Overview',campaigns:'Campaigns',members:'Team Activity',
-    documents:'Documents',home:'Home',settings:'Settings',
+    documents:'Documents & Spreadsheets',home:'Home',settings:'Settings',
     allBrands:'All Brands',brandDetail:'Brand Detail',
     weeklyReport:'Weekly Report',weeklyDigest:'Weekly Digest',
-    myInfluencers:'My Influencers',
+    myInfluencers:'My Influencers',teamActivity:'Team Activity',
+    // Campaign page
+    campaignProgress:'Campaign Progress',campaignGoals:'goals & KPIs per brand',
+    ongoing:'Ongoing',finished:'Finished',newCampaign:'+ New Campaign',
+    // Documents page
+    documentsTitle:'Documents & Spreadsheets',documentsSubtitle:'admin-only notes & links',
+    allYears:'All years',addNote:'+ Add Note',
+    // Team Activity
+    teamActivityTitle:'Team Activity',teamActivitySub:'log & track by member + brand',
+    // Trend chart
+    activityTrend:'Activity Trend',last14:'last 14 days',last30:'last 30 days',last60:'last 60 days',
+    last14opt:'Last 14 days',last30opt:'Last 30 days',last60opt:'Last 60 days',
     // KOL form
     back:'Back',cancel:'Cancel',
     addKol:'Add KOL',editKol:'Edit KOL',registerKol:'Register KOL',saveChanges:'Save changes',
@@ -4538,7 +4588,7 @@ var _i18n={
     available:'Available',inCampaign:'In campaign',inCuration:'In curation',
     bio:'Influencer bio',
     bioPlaceholder:'Describe as much as possible about the influencer: lifestyle, hobbies, interests...',
-    bioTip:'The more complete the bio, the easier it is to find the ideal influencer for each campaign.',
+    bioTip:'The more complete the bio, the easier it is to find the ideal influencer.',
     igFollowers:'Instagram followers',tkFollowers:'TikTok followers',ytFollowers:'YouTube followers',
     gender:'Predominant gender',female:'Female',male:'Male',mixed:'Mixed',
     ageRange:'Age range',audLocation:'Audience location',
@@ -4552,6 +4602,32 @@ var _i18n={
     results:'result',results_plural:'results',noCreators:'No creators registered',
     noCreatorsSub:'Register your first influencers to start matching them to campaigns.',
     addFirstCreator:'+ Add creator',editProfile:'✏️ Edit profile',schedule:'+ Schedule',
+    // Brand detail
+    currentProject:'Current project',confirmedKols:'Confirmed KOLs',publishedVideos:'Published videos',
+    shipped:'Shipped',samples:'samples',teamPerformance:'Team performance',
+    noMembers:'No members assigned',noCampaigns:'No campaigns yet.',
+    clickAddCampaign:'Click <strong>+ Add Campaign</strong> to create one.',
+    editBtn:'✏️ Edit',deleteBtn:'🗑️',
+    // Settings
+    settingsTitle:'Settings',
+    // Misc
+    loading:'Loading...',noData:'No data',refresh2:'↻ Refresh',
+    schedulePublication:'📅 Schedule Publication',selectKol:'Select KOL',
+    date:'Date',time:'Time',save:'Save',
+    noKolsAddFirst:'No KOLs — add one first',
+    confirmRemove:'Remove this KOL?',
+    // Weekly report
+    weeklyReportTitle:'Weekly Report',selectWeek:'Select week',
+    // All brands
+    allBrandsTitle:'All Brands',
+    // Admin home KPIs
+    totalContacted:'Total contacted',totalConfirmed:'Total confirmed',totalVideos:'Published videos',activeBrands:'Active brands',
+    // Member cards
+    contacted:'Contacted',confirmed:'Confirmed',videos:'Videos',
+    // Changelog
+    systemUpdatesTitle:'System Updates',
+    // Account
+    accountSettings:'Account settings',
     // Dark mode
     darkModeLabel:'Dark mode',lightModeLabel:'Light mode',
   }
@@ -4563,13 +4639,8 @@ function setLang(lang){
   var ptBtn=document.getElementById('lang-btn-pt');
   var enBtn=document.getElementById('lang-btn-en');
   if(ptBtn&&enBtn){
-    if(lang==='pt'){
-      ptBtn.style.background='rgba(255,255,255,.18)';ptBtn.style.color='#fff';ptBtn.style.borderColor='rgba(255,255,255,.3)';
-      enBtn.style.background='transparent';enBtn.style.color='rgba(255,255,255,.45)';enBtn.style.borderColor='rgba(255,255,255,.08)';
-    } else {
-      enBtn.style.background='rgba(255,255,255,.18)';enBtn.style.color='#fff';enBtn.style.borderColor='rgba(255,255,255,.3)';
-      ptBtn.style.background='transparent';ptBtn.style.color='rgba(255,255,255,.45)';ptBtn.style.borderColor='rgba(255,255,255,.08)';
-    }
+    if(lang==='pt'){ptBtn.style.opacity='1';enBtn.style.opacity='.35';}
+    else{enBtn.style.opacity='1';ptBtn.style.opacity='.35';}
   }
   // Update sidebar static labels
   var T=_i18n[lang];
@@ -4589,10 +4660,71 @@ function setLang(lang){
     var el=document.getElementById(id);
     if(el){var dot=el.querySelector('.sb-dot');el.innerHTML='';if(dot)el.appendChild(dot);el.appendChild(document.createTextNode(' '+navLabels[id]));}
   });
-  // Re-render current page with new language
+  // Update topbar buttons
+  var tbRefresh=document.querySelector('.tb-btn.refresh');
+  if(tbRefresh) tbRefresh.innerHTML='&#8635; '+T.refresh;
+  var tbExport=document.querySelector('.tb-btn.export');
+  if(tbExport) tbExport.innerHTML='&#11015; '+T.export;
+  // tb-view buttons
+  var vbtns=document.querySelectorAll('.tb-vbtn');
+  var viewLabels=[T.daily,T.weekly,T.monthly];
+  vbtns.forEach(function(b,i){if(viewLabels[i])b.textContent=viewLabels[i];});
+  // tb-member-actions
+  var addMbrBtn=document.querySelector('#tb-member-actions .sec-btn');
+  if(addMbrBtn) addMbrBtn.textContent=T.addMember;
+  var rmBtn=document.getElementById('tb-remove-btn');
+  if(rmBtn) rmBtn.innerHTML=T.remove;
+  // campaigns page static HTML
+  var campSec=document.querySelector('#page-campaigns .sec-t');
+  if(campSec) campSec.textContent=T.campaignProgress;
+  var campSub=document.querySelector('#page-campaigns .sec-s');
+  if(campSub) campSub.textContent=T.campaignGoals;
+  var campFilter=document.getElementById('camp-status-filter');
+  if(campFilter){campFilter.options[0].text=T.ongoing;campFilter.options[1].text=T.finished;}
+  var newCampBtn=document.getElementById('btn-new-campaign');
+  if(newCampBtn) newCampBtn.textContent=T.newCampaign;
+  // team activity static
+  var taSec=document.querySelector('#page-members .sec-t');
+  if(taSec) taSec.textContent=T.teamActivityTitle;
+  var taSub=document.querySelector('#page-members .sec-s');
+  if(taSub) taSub.textContent=T.teamActivitySub;
+  var addMbrTA=document.getElementById('btn-add-member-ta');
+  if(addMbrTA) addMbrTA.textContent=T.addMember;
+  // documents page static
+  var linksSec=document.querySelector('#page-links .sec-t');
+  if(linksSec) linksSec.textContent=T.documentsTitle;
+  var linksSub=document.querySelector('#page-links .sec-s');
+  if(linksSub) linksSub.textContent=T.documentsSubtitle;
+  var linksYear=document.getElementById('links-year-filter');
+  if(linksYear&&linksYear.options[0]) linksYear.options[0].text=T.allYears;
+  var addNoteBtn=document.querySelector('#page-links .sec-btn');
+  if(addNoteBtn) addNoteBtn.textContent=T.addNote;
+  // trend chart labels
+  var trendSec=document.querySelector('#admin-overview-section .sec-t');
+  if(trendSec) trendSec.childNodes[0].textContent=T.activityTrend+' ';
+  var trendSel=document.getElementById('trend-period-sel');
+  if(trendSel){trendSel.options[0].text=T.last14opt;trendSel.options[1].text=T.last30opt;trendSel.options[2].text=T.last60opt;}
+  // schedule modal
+  var schedTitle=document.querySelector('#ov-pub-sched .modal-title');
+  if(schedTitle) schedTitle.textContent=T.schedulePublication;
+  var schedKolLbl=document.querySelector('#ov-pub-sched .ff-lbl');
+  if(schedKolLbl) schedKolLbl.textContent=T.selectKol;
+  // Re-render dynamic pages
   if(currentPage==='kols-registry') renderKolsRegistry();
   if(currentPage==='kol-form') _renderKolFormPage(_pubCurrentBid,_kolFormEditId);
   if(currentPage==='settings') renderSettings();
+  if(currentPage==='admin-home') renderAdminHome();
+  if(currentPage==='admin-team') renderAdminTeam();
+  if(currentPage==='all-brands') renderAllBrands();
+  if(currentPage==='campaigns') renderCampaigns();
+  if(currentPage==='members') renderMembers();
+  if(currentPage==='links') renderLinks();
+  if(currentPage==='brand') renderBrandDetail(_activeBrandId);
+  if(currentPage==='report') renderWeeklyReport();
+  // Update topbar title
+  var pageNameMap={'overview':T.overview,'campaigns':T.campaigns,'members':T.members,'admin-home':T.home,'admin-team':T.teamActivity,'member-home':T.home,'links':T.documents,'brand':T.brandDetail,'report':T.weeklyReport,'all-brands':T.allBrands,'settings':T.settings,'kols-registry':T.myInfluencers,'kol-form':T.addKol,'digest':T.weeklyDigest};
+  var tbTitle=document.getElementById('tb-title');
+  if(tbTitle&&pageNameMap[currentPage]) tbTitle.textContent=pageNameMap[currentPage];
 }
 function _initLang(){
   _lang=localStorage.getItem('dg_lang')||'pt';
