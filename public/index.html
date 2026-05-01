@@ -1420,42 +1420,145 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 </div>
 
 <!-- ══════════════════ MODAL: CHANGELOG ══════════════════ -->
-<!-- ── Add KOL Modal ── -->
-<div class="overlay" id="ov-pub-kol" onclick="ovBg('ov-pub-kol',event)">
-  <div class="modal goals-modal" style="max-width:460px">
-    <div class="modal-hd">
-      <div><div class="modal-title">👤 KOL Registration</div><div class="modal-sub">Add or edit a KOL for this brand</div></div>
-      <button class="modal-x" onclick="closeOv('ov-pub-kol')">&#10005;</button>
+<!-- ── KOL Full Registration Overlay ── -->
+<div id="ov-pub-kol" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:1000;overflow-y:auto">
+  <div style="max-width:860px;margin:0 auto;padding:32px 24px 60px">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
+      <button onclick="closeOv('ov-pub-kol')" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-m);background:none;border:none;cursor:pointer;padding:0">← Voltar</button>
+      <div>
+        <div style="font-size:20px;font-weight:800;color:var(--text)" id="kol-form-title">Cadastrar KOL</div>
+        <div style="font-size:12px;color:var(--text-s)">Preencha o perfil do influenciador</div>
+      </div>
     </div>
     <input type="hidden" id="pub-kol-id">
-    <div class="ff"><label class="ff-lbl">Name *</label><input class="ff-inp" id="pub-kol-name" placeholder="KOL full name"></div>
-    <div class="ff"><label class="ff-lbl">Instagram</label><input class="ff-inp" id="pub-kol-instagram" placeholder="@username or link"></div>
-    <div class="ff"><label class="ff-lbl">TikTok</label><input class="ff-inp" id="pub-kol-tiktok" placeholder="@username or link"></div>
-    <div class="ff"><label class="ff-lbl">YouTube</label><input class="ff-inp" id="pub-kol-youtube" placeholder="Channel name or link"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="ff">
-        <label class="ff-lbl">Platform to publish</label>
-        <select class="ff-inp" id="pub-kol-platform">
-          <option value="instagram">📸 Instagram</option>
-          <option value="tiktok">🎵 TikTok</option>
-          <option value="youtube">▶️ YouTube</option>
-          <option value="multi">🌐 Multi-platform</option>
-        </select>
-      </div>
-      <div class="ff">
-        <label class="ff-lbl">Deliverable</label>
-        <select class="ff-inp" id="pub-kol-deliverable">
-          <option value="short_video">📱 Short Video</option>
-          <option value="long_video">🎬 Long Video</option>
-          <option value="stories">💬 Stories</option>
-          <option value="reel">🎞️ Reel</option>
-          <option value="post">🖼️ Post</option>
-        </select>
+    <input type="hidden" id="pub-kol-brand-id">
+
+    <!-- Dados Básicos -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Dados Básicos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="ff"><label class="ff-lbl">Nome do influenciador *</label><input class="ff-inp" id="pub-kol-name" placeholder="Nome completo"></div>
+        <div class="ff"><label class="ff-lbl">Instagram *</label>
+          <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+            <span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>
+            <input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-instagram" placeholder="ex: joaosilva">
+          </div>
+        </div>
+        <div class="ff"><label class="ff-lbl">URL do perfil Instagram</label><input class="ff-inp" id="pub-kol-ig-url" placeholder="https://instagram.com/seuusuario"></div>
+        <div class="ff"><label class="ff-lbl">TikTok</label>
+          <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+            <span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>
+            <input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-tiktok" placeholder="ex: joaosilva">
+          </div>
+        </div>
+        <div class="ff"><label class="ff-lbl">YouTube (opcional)</label>
+          <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
+            <span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>
+            <input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-youtube" placeholder="ex: joaosilva">
+          </div>
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn-primary" style="flex:1" onclick="saveKolModal()">Save KOL</button>
-      <button class="btn-sec" onclick="closeOv('ov-pub-kol')">Cancel</button>
+
+    <!-- Informações do Perfil -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Informações do Perfil</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="ff"><label class="ff-lbl">Nicho Principal *</label>
+          <select class="ff-inp" id="pub-kol-niche" onchange="kolUpdateSub1()">
+            <option value="">Selecione o nicho</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Subnicho *</label>
+          <select class="ff-inp" id="pub-kol-sub1" onchange="kolUpdateSub2()">
+            <option value="">Selecione o nicho primeiro</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Subnicho 2 (opcional)</label>
+          <select class="ff-inp" id="pub-kol-sub2">
+            <option value="">Selecione o subnicho primeiro</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Idioma principal</label>
+          <select class="ff-inp" id="pub-kol-lang">
+            <option value="pt">Português</option><option value="es">Español</option><option value="en">English</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Localização (cidade/país)</label><input class="ff-inp" id="pub-kol-location" placeholder="Ex: São Paulo, Brasil"></div>
+        <div class="ff"><label class="ff-lbl">Status</label>
+          <select class="ff-inp" id="pub-kol-status">
+            <option value="available">✅ Disponível</option>
+            <option value="in_campaign">🎯 Em campanha</option>
+            <option value="curadoria">🔍 Em curadoria</option>
+          </select>
+        </div>
+      </div>
+      <div class="ff" style="margin-top:4px"><label class="ff-lbl">✨ Biografia do influenciador</label>
+        <textarea class="ff-inp" id="pub-kol-bio" rows="4" placeholder="Descreva o máximo possível sobre o influenciador: estilo de vida, hobbies, se tem filhos, estado civil, onde mora, se está em algum momento especial da vida (noivado, gravidez, mudança de cidade), interesses pessoais, valores, causas que apoia..." style="resize:vertical;font-family:inherit"></textarea>
+        <div style="font-size:10px;color:var(--amber);margin-top:4px">💡 Quanto mais completa a bio, mais fácil será encontrar o influenciador ideal para cada campanha.</div>
+      </div>
+    </div>
+
+    <!-- Dados de Audiência -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Dados de Audiência</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+        <div class="ff"><label class="ff-lbl">Seguidores Instagram *</label><input class="ff-inp" type="number" id="pub-kol-ig-followers" placeholder="Ex: 50000"></div>
+        <div class="ff"><label class="ff-lbl">Seguidores TikTok</label><input class="ff-inp" type="number" id="pub-kol-tk-followers" placeholder="Ex: 30000"></div>
+        <div class="ff"><label class="ff-lbl">Seguidores YouTube</label><input class="ff-inp" type="number" id="pub-kol-yt-followers" placeholder="Ex: 10000"></div>
+        <div class="ff"><label class="ff-lbl">Gênero predominante</label>
+          <select class="ff-inp" id="pub-kol-gender">
+            <option value="">Selecione</option><option value="feminino">Feminino</option><option value="masculino">Masculino</option><option value="misto">Misto</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Faixa etária</label>
+          <select class="ff-inp" id="pub-kol-age">
+            <option value="">Selecione</option><option value="13-17">13–17</option><option value="18-24">18–24</option><option value="25-34">25–34</option><option value="35-44">35–44</option><option value="45+">45+</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Localização da audiência</label><input class="ff-inp" id="pub-kol-aud-location" placeholder="Ex: São Paulo, Brasil"></div>
+      </div>
+    </div>
+
+    <!-- Informações Comerciais -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:28px">
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Informações Comerciais</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:10px">Formatos de conteúdo</div>
+      <div id="pub-kol-formats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="ff"><label class="ff-lbl">Faixa de preço</label>
+          <select class="ff-inp" id="pub-kol-price">
+            <option value="">Selecione</option>
+            <option value="permuta">Permuta / Gifting</option>
+            <option value="ate500">Até R$ 500</option>
+            <option value="500-2k">R$ 500 – R$ 2.000</option>
+            <option value="2k-5k">R$ 2.000 – R$ 5.000</option>
+            <option value="5k+">Acima de R$ 5.000</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Disponível para campanhas?</label>
+          <select class="ff-inp" id="pub-kol-available">
+            <option value="sim">Sim</option><option value="nao">Não</option><option value="avaliar">A avaliar</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Plataforma principal de publicação</label>
+          <select class="ff-inp" id="pub-kol-platform">
+            <option value="instagram">📸 Instagram</option><option value="tiktok">🎵 TikTok</option><option value="youtube">▶️ YouTube</option><option value="multi">🌐 Multi-platform</option>
+          </select>
+        </div>
+        <div class="ff"><label class="ff-lbl">Deliverable padrão</label>
+          <select class="ff-inp" id="pub-kol-deliverable">
+            <option value="reel">Reel</option><option value="stories">Stories</option><option value="short_video">Short Video</option><option value="long_video">Long Video</option><option value="post">Post</option><option value="tiktok">TikTok</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save button -->
+    <div style="display:flex;justify-content:flex-end;gap:12px">
+      <button onclick="closeOv('ov-pub-kol')" style="padding:12px 28px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text-m);font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+      <button onclick="saveKolModal()" style="padding:12px 32px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">👤 Cadastrar KOL</button>
     </div>
   </div>
 </div>
@@ -4051,7 +4154,6 @@ function renderKolsRegistry(){
   var el=document.getElementById('kols-registry-content');
   if(!el) return;
 
-  // Collect all KOLs across all brands
   var allKols=[];
   ST.brands.forEach(function(b){
     getKolRegistry(b.id).forEach(function(k,i){
@@ -4059,95 +4161,130 @@ function renderKolsRegistry(){
     });
   });
 
-  // Filter state
-  var filterKey='dg_kolreg_filter';
-  var filterBid=localStorage.getItem(filterKey)||'';
-  var filterPlat=localStorage.getItem(filterKey+'_plat')||'';
-  var filterDeliv=localStorage.getItem(filterKey+'_deliv')||'';
+  var filterSearch=(localStorage.getItem('dg_kolreg_search')||'').toLowerCase();
+  var filterStatus=localStorage.getItem('dg_kolreg_status')||'';
+  var filterNiche=localStorage.getItem('dg_kolreg_niche')||'';
+  var filterBid=localStorage.getItem('dg_kolreg_filter')||'';
 
   var filtered=allKols.filter(function(k){
+    if(filterSearch&&!(k.name||'').toLowerCase().includes(filterSearch)&&!(k.instagram||'').toLowerCase().includes(filterSearch)&&!(k.location||'').toLowerCase().includes(filterSearch)) return false;
+    if(filterStatus&&k.status!==filterStatus) return false;
+    if(filterNiche&&k.niche!==filterNiche) return false;
     if(filterBid&&k.brandId!==filterBid) return false;
-    if(filterPlat&&k.platform!==filterPlat) return false;
-    if(filterDeliv&&k.deliverable!==filterDeliv) return false;
     return true;
   });
 
-  // Brand options for filter
-  var brandOpts='<option value="">All Brands</option>'+ST.brands.map(function(b){
-    return '<option value="'+b.id+'"'+(filterBid===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';
-  }).join('');
-  var platOpts='<option value="">All Platforms</option>'+Object.keys(_PLATFORM_LABEL).map(function(p){
-    return '<option value="'+p+'"'+(filterPlat===p?' selected':'')+'>'+(_PLATFORM_ICON[p]||'')+' '+_PLATFORM_LABEL[p]+'</option>';
-  }).join('');
-  var delivOpts='<option value="">All Deliverables</option>'+Object.keys(_DELIV_LABEL).map(function(d){
-    return '<option value="'+d+'"'+(filterDeliv===d?' selected':'')+'>'+_DELIV_LABEL[d]+'</option>';
-  }).join('');
+  var totAvail=allKols.filter(function(k){return k.status==='available'||!k.status;}).length;
+  var totCamp=allKols.filter(function(k){return k.status==='in_campaign';}).length;
+  var totCur=allKols.filter(function(k){return k.status==='curadoria';}).length;
+  var todayISO=new Date().toISOString().split('T')[0];
 
-  // KOL cards grid
+  // KPI cards
+  var kpis='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'+
+    [['👥','Total no roster',allKols.length,'var(--primary)'],
+     ['✅','Disponíveis',totAvail,'#10b981'],
+     ['🎯','Em campanha',totCamp,'#3b7ef8'],
+     ['🔍','Em curadoria',totCur,'#f59e0b']].map(function(item){
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:12px">'+
+        '<div style="width:36px;height:36px;border-radius:10px;background:'+item[3]+'15;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+item[0]+'</div>'+
+        '<div><div style="font-size:22px;font-weight:800;color:var(--text)">'+item[2]+'</div><div style="font-size:11px;color:var(--text-s);margin-top:1px">'+item[1]+'</div></div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+
+  // Toolbar
+  var nicheOpts='<option value="">Todos os nichos</option>'+_KOL_NICHES.map(function(n){return '<option value="'+n.k+'"'+(filterNiche===n.k?' selected':'')+'>'+n.l+'</option>';}).join('');
+  var statusOpts='<option value="">Status: Todos</option><option value="available"'+(filterStatus==='available'?' selected':'')+'>✅ Disponíveis</option><option value="in_campaign"'+(filterStatus==='in_campaign'?' selected':'')+'>🎯 Em campanha</option><option value="curadoria"'+(filterStatus==='curadoria'?' selected':'')+'>🔍 Em curadoria</option>';
+  var brandOpts='<option value="">Todas as brands</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'"'+(filterBid===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
+
+  var toolbar='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+
+    '<div style="flex:1;min-width:220px;position:relative">'+
+      '<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-s);font-size:14px">🔍</span>'+
+      '<input id="kol-search-inp" value="'+escHtml(filterSearch)+'" oninput="localStorage.setItem(\'dg_kolreg_search\',this.value);renderKolsRegistry()" placeholder="Buscar por nome, @, nicho ou cidade..." style="width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);outline:none;box-sizing:border-box">'+
+    '</div>'+
+    '<select onchange="localStorage.setItem(\'dg_kolreg_status\',this.value);renderKolsRegistry()" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);cursor:pointer">'+statusOpts+'</select>'+
+    '<select onchange="localStorage.setItem(\'dg_kolreg_niche\',this.value);renderKolsRegistry()" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);cursor:pointer;max-width:180px">'+nicheOpts+'</select>'+
+    '<select onchange="localStorage.setItem(\'dg_kolreg_filter\',this.value);renderKolsRegistry()" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);cursor:pointer">'+brandOpts+'</select>'+
+    (filterSearch||filterStatus||filterNiche||filterBid?'<button onclick="[\'dg_kolreg_search\',\'dg_kolreg_status\',\'dg_kolreg_niche\',\'dg_kolreg_filter\'].forEach(function(k){localStorage.removeItem(k)});renderKolsRegistry()" style="padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--text-s);font-size:12px;cursor:pointer">✕ Limpar</button>':'')+
+    '<span style="font-size:11px;color:var(--text-s);margin-left:auto">'+filtered.length+' influenciador'+(filtered.length!==1?'es':'')+' encontrado'+(filtered.length!==1?'s':'')+'</span>'+
+  '</div>';
+
+  // KOL cards
   var cardsHTML=filtered.length?filtered.map(function(k){
     var col=kolColor(k,k._idx);
     var ini=(k.name||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
-    var socials=[];
-    if(k.instagram) socials.push('<a href="'+(k.instagram.startsWith('http')?k.instagram:'https://instagram.com/'+k.instagram.replace('@',''))+'" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#e1306c;text-decoration:none;background:rgba(225,48,108,.08);padding:3px 8px;border-radius:6px">📸 Instagram</a>');
-    if(k.tiktok) socials.push('<a href="'+(k.tiktok.startsWith('http')?k.tiktok:'https://tiktok.com/@'+k.tiktok.replace('@',''))+'" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#000;text-decoration:none;background:rgba(0,0,0,.06);padding:3px 8px;border-radius:6px">🎵 TikTok</a>');
-    if(k.youtube) socials.push('<a href="'+(k.youtube.startsWith('http')?k.youtube:'https://youtube.com/'+k.youtube)+'" target="_blank" style="display:flex;align-items:center;gap:4px;font-size:10px;color:#ff0000;text-decoration:none;background:rgba(255,0,0,.06);padding:3px 8px;border-radius:6px">▶️ YouTube</a>');
-    // Upcoming schedules for this KOL
-    var schedEntries=getPubScheduleV2(k.brandId).filter(function(e){return e.kolId===k.id;});
-    var upcoming=schedEntries.filter(function(e){return e.date>=new Date().toISOString().split('T')[0];}).sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1;});
-    var nextEntry=upcoming[0];
-    return '<div class="card" style="padding:0;overflow:hidden;border-top:3px solid '+col+'">'+
-      // Header
-      '<div style="padding:14px 16px 10px;display:flex;align-items:center;gap:12px">'+
-        '<div style="width:44px;height:44px;border-radius:50%;background:'+col+'20;border:2.5px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:'+col+';flex-shrink:0">'+ini+'</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(k.name)+'</div>'+
-          '<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'+
-            '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+col+'15;color:'+col+';font-weight:600">'+(_PLATFORM_ICON[k.platform]||'')+' '+(_PLATFORM_LABEL[k.platform]||k.platform)+'</span>'+
-            '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg);color:var(--text-s);font-weight:500">'+(_DELIV_LABEL[k.deliverable]||k.deliverable)+'</span>'+
+    var statusCol=_KOL_STATUS_COLOR[k.status]||'#10b981';
+    var statusLbl=_KOL_STATUS_LABEL[k.status]||'Disponível';
+    var niche=k.niche?_KOL_NICHES.find(function(n){return n.k===k.niche;}):null;
+    var sub1=niche&&k.sub1?niche.s.find(function(s){return s.k===k.sub1;}):null;
+    var nicheLabel=niche?niche.l+(sub1?' › '+sub1.l+(k.sub2?' › '+k.sub2:''):''):'';
+    var followers=[];
+    if(k.igFollowers) followers.push('📸 '+kolFmtFollowers(k.igFollowers));
+    if(k.tkFollowers) followers.push('🎵 '+kolFmtFollowers(k.tkFollowers));
+    if(k.ytFollowers) followers.push('▶️ '+kolFmtFollowers(k.ytFollowers));
+    var igLink=k.igUrl||(k.instagram?'https://instagram.com/'+k.instagram.replace('@',''):'');
+    var tkLink=k.tiktok?'https://tiktok.com/@'+k.tiktok.replace('@',''):'';
+    var ytLink=k.youtube?(k.youtube.startsWith('http')?k.youtube:'https://youtube.com/@'+k.youtube.replace('@','')):'';
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s" onmouseover="this.style.boxShadow=\'0 4px 20px rgba(0,0,0,.08)\'" onmouseout="this.style.boxShadow=\'\'">'+
+      // Top color strip
+      '<div style="height:4px;background:'+col+'"></div>'+
+      // Card body
+      '<div style="padding:18px 18px 14px">'+
+        // Avatar + name + status
+        '<div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">'+
+          '<div style="width:52px;height:52px;border-radius:50%;background:'+col+'20;border:2.5px solid '+col+';display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:'+col+';flex-shrink:0">'+ini+'</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">'+escHtml(k.name)+'</div>'+
+            (k.instagram?'<div style="font-size:11px;color:var(--text-s)">@'+escHtml(k.instagram)+'</div>':'')+
+            (nicheLabel?'<div style="font-size:10px;color:var(--primary);margin-top:3px;font-weight:500">'+nicheLabel+'</div>':'')+
           '</div>'+
+          '<span style="font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;background:'+statusCol+'18;color:'+statusCol+';white-space:nowrap;flex-shrink:0">'+statusLbl+'</span>'+
         '</div>'+
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+
-          '<button onclick="openAddKolModal(\''+k.brandId+'\',\''+k.id+'\')" style="font-size:10px;padding:3px 10px;border-radius:6px;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer;font-weight:600">✏️ Edit</button>'+
-          '<button onclick="deleteKolFromRegistry(\''+k.brandId+'\',\''+k.id+'\');renderKolsRegistry();" style="font-size:10px;padding:3px 10px;border-radius:6px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">✕ Remove</button>'+
+        // Followers
+        (followers.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">'+followers.map(function(f){return '<span style="font-size:11px;font-weight:600;color:var(--text-m);background:var(--bg);border:1px solid var(--border);padding:3px 9px;border-radius:7px">'+f+'</span>';}).join('')+'</div>':'')+
+        // Brand tag
+        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:12px">'+
+          '<div style="width:6px;height:6px;border-radius:50%;background:'+k.brandColor+'"></div>'+
+          '<span style="font-size:10px;color:var(--text-s)">'+escHtml(k.brandName)+'</span>'+
+          (k.location?'<span style="font-size:10px;color:var(--text-s);margin-left:8px">📍 '+escHtml(k.location)+'</span>':'')+
         '</div>'+
+        // Social links
+        (igLink||tkLink||ytLink?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+
+          (igLink?'<a href="'+igLink+'" target="_blank" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:7px;background:#fce4ec;color:#c2185b;text-decoration:none;border:1px solid #f8bbd0">📸 Instagram</a>':'')+
+          (tkLink?'<a href="'+tkLink+'" target="_blank" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:7px;background:#f3f4f6;color:#111;text-decoration:none;border:1px solid #e5e7eb">🎵 TikTok</a>':'')+
+          (ytLink?'<a href="'+ytLink+'" target="_blank" style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:7px;background:#fce8e6;color:#c62828;text-decoration:none;border:1px solid #ffcdd2">▶️ YouTube</a>':'')+
+        '</div>':'')+
+        // Formats preview
+        (k.formats&&k.formats.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">'+k.formats.slice(0,3).map(function(f){return '<span style="font-size:9px;padding:2px 7px;border-radius:5px;background:var(--bg);color:var(--text-s);border:1px solid var(--border)">'+f+'</span>';}).join('')+(k.formats.length>3?'<span style="font-size:9px;padding:2px 7px;border-radius:5px;background:var(--bg);color:var(--text-s)">+'+( k.formats.length-3)+'</span>':'')+'</div>':'')+
       '</div>'+
-      // Brand tag
-      '<div style="padding:0 16px 10px;display:flex;align-items:center;gap:6px">'+
-        '<div style="width:8px;height:8px;border-radius:50%;background:'+k.brandColor+'"></div>'+
-        '<span style="font-size:10px;color:var(--text-s)">Brand: <strong style="color:var(--text)">'+escHtml(k.brandName)+'</strong></span>'+
-      '</div>'+
-      // Social links
-      (socials.length?'<div style="padding:0 16px 10px;display:flex;flex-wrap:wrap;gap:6px">'+socials.join('')+'</div>':'')+
-      // Next publication
-      '<div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg-alt);display:flex;align-items:center;justify-content:space-between">'+
-        '<div style="font-size:10px;color:var(--text-s)">'+
-          (nextEntry
-            ?'📅 Next: <strong style="color:var(--text)">'+new Date(nextEntry.date+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})+' at '+nextEntry.time+'</strong>'
-            :'No upcoming schedule')+
-        '</div>'+
-        '<button onclick="openSchedSlot(\''+k.brandId+'\',\''+new Date().toISOString().split('T')[0]+'\',\'10:00\');document.getElementById(\'pub-sched-kol-sel\').value=\''+k.id+'\'" style="font-size:10px;padding:3px 10px;border-radius:6px;background:'+col+';color:#fff;border:none;cursor:pointer;font-weight:600">+ Schedule</button>'+
+      // Footer actions
+      '<div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--bg-alt)">'+
+        '<button onclick="openAddKolModal(\''+k.brandId+'\',\''+k.id+'\')" style="flex:1;padding:7px 0;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">✏️ Editar perfil</button>'+
+        '<button onclick="openSchedSlot(\''+k.brandId+'\',\''+todayISO+'\',\'10:00\')" style="padding:7px 12px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Agendar</button>'+
+        '<button onclick="deleteKolFromRegistry(\''+k.brandId+'\',\''+k.id+'\')" style="padding:7px 10px;border-radius:8px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">🗑️</button>'+
       '</div>'+
     '</div>';
-  }).join(''):'<div style="padding:40px;text-align:center;color:var(--text-s);grid-column:1/-1"><div style="font-size:32px;margin-bottom:12px">👤</div><div style="font-size:13px;font-weight:600">No KOLs found</div><div style="font-size:11px;margin-top:4px">Try adjusting filters or add a new KOL from a brand page</div></div>';
+  }).join(''):
+  '<div style="grid-column:1/-1;padding:60px;text-align:center">'+
+    '<div style="font-size:48px;margin-bottom:16px">👤</div>'+
+    '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Nenhum creator cadastrado</div>'+
+    '<div style="font-size:12px;color:var(--text-s);margin-bottom:20px">Cadastre seus primeiros influenciadores para começar a indicá-los para campanhas.</div>'+
+    '<button onclick="openAddKolModal(ST.brands[0]?ST.brands[0].id:\'\')" style="padding:10px 24px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">+ Cadastrar creator</button>'+
+  '</div>';
 
   el.innerHTML=
-    '<div style="margin-bottom:20px">'+
-      '<div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">KOL Registry</div>'+
-      '<div style="font-size:12px;color:var(--text-s)">All KOLs registered across brands · '+allKols.length+' total</div>'+
-    '</div>'+
-    // Filter bar
-    '<div class="card mb16" style="padding:12px 16px">'+
-      '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
-        '<span style="font-size:11px;font-weight:600;color:var(--text-s)">Filter:</span>'+
-        '<select onchange="localStorage.setItem(\'dg_kolreg_filter\',this.value);renderKolsRegistry()" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer">'+brandOpts+'</select>'+
-        '<select onchange="localStorage.setItem(\'dg_kolreg_filter_plat\',this.value);renderKolsRegistry()" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer">'+platOpts+'</select>'+
-        '<select onchange="localStorage.setItem(\'dg_kolreg_filter_deliv\',this.value);renderKolsRegistry()" style="font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer">'+delivOpts+'</select>'+
-        (filterBid||filterPlat||filterDeliv?'<button onclick="localStorage.removeItem(\'dg_kolreg_filter\');localStorage.removeItem(\'dg_kolreg_filter_plat\');localStorage.removeItem(\'dg_kolreg_filter_deliv\');renderKolsRegistry()" style="font-size:11px;padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text-s);cursor:pointer">✕ Clear filters</button>':'')+
-        '<span style="margin-left:auto;font-size:11px;color:var(--text-s)">'+filtered.length+' KOL'+(filtered.length!==1?'s':'')+' shown</span>'+
+    // Page header
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'+
+      '<div>'+
+        '<div style="font-size:22px;font-weight:800;color:var(--text)">Meus Influenciadores</div>'+
+        '<div style="font-size:12px;color:var(--text-s);margin-top:2px">Gerencie seu roster de creators. '+allKols.length+' perfil'+(allKols.length!==1?'s':'')+' cadastrado'+(allKols.length!==1?'s':'')+'.</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:10px">'+
+        (ST.brands.length?'<button onclick="openAddKolModal(ST.brands[0].id)" style="display:flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">+ Adicionar Creator</button>':'')+
       '</div>'+
     '</div>'+
-    // Grid
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">'+cardsHTML+'</div>';
+    kpis+toolbar+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">'+cardsHTML+'</div>';
 }
 
 function renderAllBrands(){
@@ -4463,6 +4600,86 @@ function bdSwitchCampTab(tab, brandId){
 var _pubCurrentBid=null;
 function getKolRegistry(bid){try{return JSON.parse(localStorage.getItem('dg_kolreg_'+bid)||'[]');}catch(e){return [];}}
 function setKolRegistry(bid,kols){try{localStorage.setItem('dg_kolreg_'+bid,JSON.stringify(kols));}catch(e){}}
+
+// ── Niche taxonomy ────────────────────────────────────────────────────────
+var _KOL_NICHES=[
+  {k:'beleza',l:'Beleza',s:[{k:'skincare',l:'Skincare',s2:['Acne','Rotina diária']},{k:'maquiagem',l:'Maquiagem',s2:['Básica','Profissional']}]},
+  {k:'moda',l:'Moda',s:[{k:'moda_fem',l:'Moda feminina',s2:['Casual','Trend']},{k:'moda_masc',l:'Moda masculina',s2:['Casual','Streetwear']}]},
+  {k:'lifestyle',l:'Lifestyle',s:[{k:'rotina',l:'Rotina',s2:['Dia a dia','Produtividade']},{k:'inspiracao',l:'Inspiração',s2:['Motivacional','Luxo']}]},
+  {k:'humor',l:'Humor e Entretenimento',s:[{k:'humor_s',l:'Humor',s2:['Sketch','Relatable']},{k:'trends',l:'Trends',s2:['TikTok','Memes']}]},
+  {k:'fitness',l:'Fitness e Saúde',s:[{k:'treino',l:'Treino',s2:['Academia','Funcional']},{k:'saude',l:'Saúde',s2:['Nutrição','Bem-estar']}]},
+  {k:'gastronomia',l:'Alimentação e Gastronomia',s:[{k:'receitas',l:'Receitas',s2:['Saudável','Rápida']},{k:'reviews_food',l:'Reviews',s2:['Restaurantes','Produtos']}]},
+  {k:'compras',l:'Compras e Reviews',s:[{k:'achadinhos',l:'Achadinhos',s2:['Ofertas','Produtos baratos']},{k:'reviews_prod',l:'Reviews',s2:['Testes de produtos','Unboxing']}]},
+  {k:'viagens',l:'Viagens',s:[{k:'destinos',l:'Destinos',s2:['Nacional','Internacional']},{k:'experiencias',l:'Experiências',s2:['Hotéis','Passeios']}]},
+  {k:'familia',l:'Família e Maternidade',s:[{k:'maternidade',l:'Maternidade',s2:['Bebês','Rotina']},{k:'familia_s',l:'Família',s2:['Casal','Filhos']}]},
+  {k:'educacao',l:'Educação e Carreira',s:[{k:'estudos',l:'Estudos',s2:['Idiomas','Vestibular']},{k:'profissional',l:'Profissional',s2:['Marketing','Negócios']}]},
+  {k:'tecnologia',l:'Tecnologia e Games',s:[{k:'tech',l:'Tecnologia',s2:['Apps','Gadgets']},{k:'games',l:'Games',s2:['Mobile','Console']}]},
+  {k:'casa',l:'Casa e Decoração',s:[{k:'decoracao',l:'Decoração',s2:['Interiores','Organização']},{k:'casa_s',l:'Casa',s2:['DIY','Limpeza']}]},
+  {k:'pet',l:'Pet',s:[{k:'pets',l:'Pets',s2:['Gato','Cachorro']},{k:'cuidados_pet',l:'Cuidados',s2:['Saúde','Alimentação']}]},
+  {k:'financas',l:'Finanças & Negócios',s:[{k:'financas_s',l:'Finanças',s2:['Investimentos','Organização financeira']},{k:'negocios',l:'Negócios',s2:['Empreendedorismo','Marketing digital']}]},
+  {k:'cultura',l:'Cultura & Comunidades',s:[{k:'cultura_s',l:'Cultura',s2:['Música','Cinema']},{k:'comunidades',l:'Comunidades',s2:['Geek','K-pop']}]},
+  {k:'body',l:'Body Positivity & Autoestima',s:[{k:'body_pos',l:'Body positivity',s2:['Corpo real','Aceitação corporal']},{k:'autoestima',l:'Autoestima',s2:['Amor próprio','Confiança']}]},
+  {k:'lgbtq',l:'LGBTQIA+',s:[{k:'lgbtq_com',l:'Comunidade',s2:['Representatividade','Vivências']},{k:'lgbtq_con',l:'Conteúdo',s2:['Educação','Lifestyle LGBTQIA+']}]},
+  {k:'espiritualidade',l:'Espiritualidade & Desenvolvimento Pessoal',s:[{k:'espirit',l:'Espiritualidade',s2:['Religião','Energia / espiritual']},{k:'desenv_pessoal',l:'Desenvolvimento pessoal',s2:['Mindset','Autoconhecimento']}]},
+  {k:'luxo',l:'Luxo & Lifestyle Premium',s:[{k:'luxo_s',l:'Luxo',s2:['Marcas premium','Experiências']},{k:'alta_renda',l:'Alta renda',s2:['Viagens premium','Consumo premium']}]},
+  {k:'esportes',l:'Esportes',s:[{k:'esportes_s',l:'Esportes',s2:['Futebol','Corrida','Basquete','Skateboard']}]},
+  {k:'acessibilidade',l:'Acessibilidade & Inclusão',s:[{k:'acessib',l:'Acessibilidade',s2:['PCD','Mobilidade reduzida']},{k:'inclusao',l:'Inclusão',s2:['Rotina adaptada','Educação inclusiva']}]},
+  {k:'sustentabilidade',l:'Sustentabilidade & Consumo Consciente',s:[{k:'sustent',l:'Sustentabilidade',s2:['Meio ambiente','Vida sustentável']},{k:'consumo',l:'Consumo consciente',s2:['Minimalismo','Reutilização']}]},
+  {k:'relacionamentos',l:'Relacionamentos & Sexualidade',s:[{k:'relac',l:'Relacionamentos',s2:['Casal','Dating']},{k:'sexualidade',l:'Sexualidade',s2:['Educação sexual','Bem-estar íntimo']}]},
+  {k:'neuro',l:'Neurodiversidade & Saúde Mental',s:[{k:'saude_mental',l:'Saúde mental',s2:['Ansiedade','Depressão']},{k:'neuro_s',l:'Neurodiversidade',s2:['TDAH','Autismo']}]},
+  {k:'cultura_regional',l:'Cultura Regional & Local',s:[{k:'cult_reg',l:'Cultura Regional',s2:['Nordeste','Interior']},{k:'lifestyle_local',l:'Lifestyle local',s2:['Rotina local','Tradições']}]},
+  {k:'fe',l:'Fé & Religiosidade',s:[{k:'cristandade',l:'Cristianismo',s2:['Evangélico','Católico']},{k:'outras_rel',l:'Outras religiões',s2:['Religiões afro','Espiritualidade alternativa']}]},
+  {k:'estudantes',l:'Estudantes & Universitários',s:[{k:'universitarios',l:'Universitários',s2:['Rotina acadêmica','Vida universitária']},{k:'jovens',l:'Jovens',s2:['ENEM','Primeiro emprego']}]},
+  {k:'profissoes',l:'Profissões & Carreiras Específicas',s:[{k:'prof_s',l:'Profissões',s2:['Médicos','Advogados']}]}
+];
+var _KOL_FORMATS=['Reels','Stories','Feed Foto','Feed Carrossel','IGTV / Vídeos longos','Lives','TikTok','YouTube Shorts','YouTube Vídeos Longos','Conteúdo de review','Conteúdo de lifestyle','Conteúdo de humor','Conteúdo educativo'];
+var _KOL_STATUS_LABEL={available:'Disponível',in_campaign:'Em campanha',curadoria:'Em curadoria'};
+var _KOL_STATUS_COLOR={available:'#10b981',in_campaign:'#3b7ef8',curadoria:'#f59e0b'};
+var _KOL_PRICE_LABEL={permuta:'Permuta/Gifting','ate500':'Até R$500','500-2k':'R$500–2k','2k-5k':'R$2k–5k','5k+':'R$5k+'};
+
+function kolFmtFollowers(n){if(!n)return '–';n=+n;if(n>=1000000)return (n/1000000).toFixed(1)+'M';if(n>=1000)return (n/1000).toFixed(1)+'k';return n;}
+
+function kolUpdateSub1(){
+  var nicheKey=document.getElementById('pub-kol-niche').value;
+  var niche=_KOL_NICHES.find(function(n){return n.k===nicheKey;});
+  var sub1=document.getElementById('pub-kol-sub1');
+  var sub2=document.getElementById('pub-kol-sub2');
+  sub1.innerHTML='<option value="">Selecione o subnicho</option>'+(niche?niche.s.map(function(s){return '<option value="'+s.k+'">'+s.l+'</option>';}).join(''):'');
+  sub2.innerHTML='<option value="">Selecione o subnicho primeiro</option>';
+}
+function kolUpdateSub2(){
+  var nicheKey=document.getElementById('pub-kol-niche').value;
+  var sub1Key=document.getElementById('pub-kol-sub1').value;
+  var niche=_KOL_NICHES.find(function(n){return n.k===nicheKey;});
+  var sub=niche?niche.s.find(function(s){return s.k===sub1Key;}):null;
+  var sub2=document.getElementById('pub-kol-sub2');
+  sub2.innerHTML='<option value="">Nenhum</option>'+(sub&&sub.s2?sub.s2.map(function(s){return '<option value="'+s+'">'+s+'</option>';}).join(''):'');
+}
+function _buildNicheDropdown(){
+  var el=document.getElementById('pub-kol-niche');
+  if(!el)return;
+  el.innerHTML='<option value="">Selecione o nicho</option>'+_KOL_NICHES.map(function(n){return '<option value="'+n.k+'">'+n.l+'</option>';}).join('');
+}
+function _buildFormatsGrid(selectedFormats){
+  var el=document.getElementById('pub-kol-formats-grid');
+  if(!el)return;
+  el.innerHTML=_KOL_FORMATS.map(function(f){
+    var checked=(selectedFormats||[]).indexOf(f)>=0;
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid '+(checked?'var(--primary)':'var(--border)')+';border-radius:8px;cursor:pointer;background:'+(checked?'var(--primary-d)':'var(--card)')+';transition:all .15s">'+
+      '<input type="checkbox" value="'+f+'" '+(checked?'checked':'')+' onchange="_updateFormatBorder(this)" style="accent-color:var(--primary);width:14px;height:14px;cursor:pointer">'+
+      '<span style="font-size:11px;font-weight:500;color:var(--text)">'+f+'</span>'+
+    '</label>';
+  }).join('');
+}
+function _updateFormatBorder(cb){
+  var label=cb.closest('label');
+  if(cb.checked){label.style.border='1px solid var(--primary)';label.style.background='var(--primary-d)';}
+  else{label.style.border='1px solid var(--border)';label.style.background='var(--card)';}
+}
+function _getSelectedFormats(){
+  var checked=document.querySelectorAll('#pub-kol-formats-grid input[type=checkbox]:checked');
+  return Array.from(checked).map(function(c){return c.value;});
+}
 function getPubScheduleV2(bid){try{return JSON.parse(localStorage.getItem('dg_pubsched2_'+bid)||'[]');}catch(e){return [];}}
 function setPubScheduleV2(bid,entries){try{localStorage.setItem('dg_pubsched2_'+bid,JSON.stringify(entries));}catch(e){}}
 
@@ -4475,27 +4692,69 @@ function kolColor(kol,idx){return _CARD_COLORS[idx%_CARD_COLORS.length];}
 
 function openAddKolModal(bid,editId){
   _pubCurrentBid=bid;
+  document.getElementById('pub-kol-brand-id').value=bid||'';
   var kols=getKolRegistry(bid);
   var k=editId?kols.find(function(x){return x.id===editId;}):null;
+  document.getElementById('kol-form-title').textContent=k?'Editar KOL':'Cadastrar KOL';
   document.getElementById('pub-kol-id').value=k?k.id:'';
   document.getElementById('pub-kol-name').value=k?k.name:'';
-  document.getElementById('pub-kol-instagram').value=k?k.instagram:'';
-  document.getElementById('pub-kol-tiktok').value=k?k.tiktok:'';
-  document.getElementById('pub-kol-youtube').value=k?k.youtube:'';
-  document.getElementById('pub-kol-platform').value=k?k.platform:'instagram';
-  document.getElementById('pub-kol-deliverable').value=k?k.deliverable:'short_video';
-  openOv('ov-pub-kol');
+  document.getElementById('pub-kol-instagram').value=k?(k.instagram||''):'';
+  document.getElementById('pub-kol-ig-url').value=k?(k.igUrl||''):'';
+  document.getElementById('pub-kol-tiktok').value=k?(k.tiktok||''):'';
+  document.getElementById('pub-kol-youtube').value=k?(k.youtube||''):'';
+  document.getElementById('pub-kol-lang').value=k?(k.lang||'pt'):'pt';
+  document.getElementById('pub-kol-location').value=k?(k.location||''):'';
+  document.getElementById('pub-kol-status').value=k?(k.status||'available'):'available';
+  document.getElementById('pub-kol-bio').value=k?(k.bio||''):'';
+  document.getElementById('pub-kol-ig-followers').value=k?(k.igFollowers||''):'';
+  document.getElementById('pub-kol-tk-followers').value=k?(k.tkFollowers||''):'';
+  document.getElementById('pub-kol-yt-followers').value=k?(k.ytFollowers||''):'';
+  document.getElementById('pub-kol-gender').value=k?(k.gender||''):'';
+  document.getElementById('pub-kol-age').value=k?(k.age||''):'';
+  document.getElementById('pub-kol-aud-location').value=k?(k.audLocation||''):'';
+  document.getElementById('pub-kol-price').value=k?(k.price||''):'';
+  document.getElementById('pub-kol-available').value=k?(k.available||'sim'):'sim';
+  document.getElementById('pub-kol-platform').value=k?(k.platform||'instagram'):'instagram';
+  document.getElementById('pub-kol-deliverable').value=k?(k.deliverable||'reel'):'reel';
+  _buildNicheDropdown();
+  if(k&&k.niche){
+    document.getElementById('pub-kol-niche').value=k.niche;
+    kolUpdateSub1();
+    if(k.sub1){document.getElementById('pub-kol-sub1').value=k.sub1;kolUpdateSub2();}
+    if(k.sub2) document.getElementById('pub-kol-sub2').value=k.sub2;
+  } else {kolUpdateSub1();kolUpdateSub2();}
+  _buildFormatsGrid(k?k.formats:[]);
+  var ov=document.getElementById('ov-pub-kol');
+  ov.style.display='block';
+  ov.scrollTop=0;
 }
 function saveKolModal(){
-  var bid=_pubCurrentBid;
+  var bid=document.getElementById('pub-kol-brand-id').value||_pubCurrentBid;
   var eid=document.getElementById('pub-kol-id').value;
   var id=eid||('kol_'+Date.now());
   var name=document.getElementById('pub-kol-name').value.trim();
-  if(!name){alert('Name is required');return;}
+  if(!name){alert('Nome é obrigatório');return;}
   var kol={id:id,name:name,
     instagram:document.getElementById('pub-kol-instagram').value.trim(),
+    igUrl:document.getElementById('pub-kol-ig-url').value.trim(),
     tiktok:document.getElementById('pub-kol-tiktok').value.trim(),
     youtube:document.getElementById('pub-kol-youtube').value.trim(),
+    niche:document.getElementById('pub-kol-niche').value,
+    sub1:document.getElementById('pub-kol-sub1').value,
+    sub2:document.getElementById('pub-kol-sub2').value,
+    lang:document.getElementById('pub-kol-lang').value,
+    location:document.getElementById('pub-kol-location').value.trim(),
+    status:document.getElementById('pub-kol-status').value,
+    bio:document.getElementById('pub-kol-bio').value.trim(),
+    igFollowers:+document.getElementById('pub-kol-ig-followers').value||0,
+    tkFollowers:+document.getElementById('pub-kol-tk-followers').value||0,
+    ytFollowers:+document.getElementById('pub-kol-yt-followers').value||0,
+    gender:document.getElementById('pub-kol-gender').value,
+    age:document.getElementById('pub-kol-age').value,
+    audLocation:document.getElementById('pub-kol-aud-location').value.trim(),
+    formats:_getSelectedFormats(),
+    price:document.getElementById('pub-kol-price').value,
+    available:document.getElementById('pub-kol-available').value,
     platform:document.getElementById('pub-kol-platform').value,
     deliverable:document.getElementById('pub-kol-deliverable').value};
   var kols=getKolRegistry(bid);
