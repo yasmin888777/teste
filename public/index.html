@@ -750,6 +750,14 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div style="flex:1"></div>
   <div style="padding:4px 8px 0">
+  <!-- Language Switcher -->
+  <div style="margin-bottom:4px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)">
+    <div style="font-size:10px;color:rgba(255,255,255,.3);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🌐 Language</div>
+    <div style="display:flex;gap:4px">
+      <button id="lang-btn-pt" onclick="setLang('pt')" style="flex:1;padding:5px 0;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.12);color:#fff;transition:all .15s">🇧🇷 PT</button>
+      <button id="lang-btn-en" onclick="setLang('en')" style="flex:1;padding:5px 0;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.08);background:transparent;color:rgba(255,255,255,.45);transition:all .15s">🇺🇸 EN</button>
+    </div>
+  </div>
   <button id="dark-toggle" onclick="toggleDark()" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:11px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
     <span id="dark-icon">🌙</span><span id="dark-lbl">Dark Mode</span>
   </button>
@@ -889,6 +897,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
     <div class="page" id="page-kols-registry">
       <div id="kols-registry-content"></div>
+    </div>
+
+    <div class="page" id="page-kol-form">
+      <div id="kol-form-content" style="max-width:860px;margin:0 auto;padding:8px 0 60px"></div>
     </div>
 
     <div class="page" id="page-digest">
@@ -1421,147 +1433,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 <!-- ══════════════════ MODAL: CHANGELOG ══════════════════ -->
 <!-- ── KOL Full Registration Overlay ── -->
-<div id="ov-pub-kol" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:1000;overflow-y:auto">
-  <div style="max-width:860px;margin:0 auto;padding:32px 24px 60px">
-    <!-- Header -->
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
-      <button onclick="closeOv('ov-pub-kol')" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-m);background:none;border:none;cursor:pointer;padding:0">← Voltar</button>
-      <div>
-        <div style="font-size:20px;font-weight:800;color:var(--text)" id="kol-form-title">Cadastrar KOL</div>
-        <div style="font-size:12px;color:var(--text-s)">Preencha o perfil do influenciador</div>
-      </div>
-    </div>
-    <input type="hidden" id="pub-kol-id">
-    <input type="hidden" id="pub-kol-brand-id">
-
-    <!-- Dados Básicos -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Dados Básicos</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="ff"><label class="ff-lbl">Nome do influenciador *</label><input class="ff-inp" id="pub-kol-name" placeholder="Nome completo"></div>
-        <div class="ff"><label class="ff-lbl">Instagram *</label>
-          <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
-            <span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>
-            <input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-instagram" placeholder="ex: joaosilva">
-          </div>
-        </div>
-        <div class="ff"><label class="ff-lbl">URL do perfil Instagram</label><input class="ff-inp" id="pub-kol-ig-url" placeholder="https://instagram.com/seuusuario"></div>
-        <div class="ff"><label class="ff-lbl">TikTok</label>
-          <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
-            <span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>
-            <input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-tiktok" placeholder="ex: joaosilva">
-          </div>
-        </div>
-        <div class="ff"><label class="ff-lbl">YouTube (opcional)</label>
-          <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">
-            <span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>
-            <input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-youtube" placeholder="ex: joaosilva">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Informações do Perfil -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Informações do Perfil</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="ff"><label class="ff-lbl">Nicho Principal *</label>
-          <select class="ff-inp" id="pub-kol-niche" onchange="kolUpdateSub1()">
-            <option value="">Selecione o nicho</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Subnicho *</label>
-          <select class="ff-inp" id="pub-kol-sub1" onchange="kolUpdateSub2()">
-            <option value="">Selecione o nicho primeiro</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Subnicho 2 (opcional)</label>
-          <select class="ff-inp" id="pub-kol-sub2">
-            <option value="">Selecione o subnicho primeiro</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Idioma principal</label>
-          <select class="ff-inp" id="pub-kol-lang">
-            <option value="pt">Português</option><option value="es">Español</option><option value="en">English</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Localização (cidade/país)</label><input class="ff-inp" id="pub-kol-location" placeholder="Ex: São Paulo, Brasil"></div>
-        <div class="ff"><label class="ff-lbl">Status</label>
-          <select class="ff-inp" id="pub-kol-status">
-            <option value="available">✅ Disponível</option>
-            <option value="in_campaign">🎯 Em campanha</option>
-            <option value="curadoria">🔍 Em curadoria</option>
-          </select>
-        </div>
-      </div>
-      <div class="ff" style="margin-top:4px"><label class="ff-lbl">✨ Biografia do influenciador</label>
-        <textarea class="ff-inp" id="pub-kol-bio" rows="4" placeholder="Descreva o máximo possível sobre o influenciador: estilo de vida, hobbies, se tem filhos, estado civil, onde mora, se está em algum momento especial da vida (noivado, gravidez, mudança de cidade), interesses pessoais, valores, causas que apoia..." style="resize:vertical;font-family:inherit"></textarea>
-        <div style="font-size:10px;color:var(--amber);margin-top:4px">💡 Quanto mais completa a bio, mais fácil será encontrar o influenciador ideal para cada campanha.</div>
-      </div>
-    </div>
-
-    <!-- Dados de Audiência -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Dados de Audiência</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-        <div class="ff"><label class="ff-lbl">Seguidores Instagram *</label><input class="ff-inp" type="number" id="pub-kol-ig-followers" placeholder="Ex: 50000"></div>
-        <div class="ff"><label class="ff-lbl">Seguidores TikTok</label><input class="ff-inp" type="number" id="pub-kol-tk-followers" placeholder="Ex: 30000"></div>
-        <div class="ff"><label class="ff-lbl">Seguidores YouTube</label><input class="ff-inp" type="number" id="pub-kol-yt-followers" placeholder="Ex: 10000"></div>
-        <div class="ff"><label class="ff-lbl">Gênero predominante</label>
-          <select class="ff-inp" id="pub-kol-gender">
-            <option value="">Selecione</option><option value="feminino">Feminino</option><option value="masculino">Masculino</option><option value="misto">Misto</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Faixa etária</label>
-          <select class="ff-inp" id="pub-kol-age">
-            <option value="">Selecione</option><option value="13-17">13–17</option><option value="18-24">18–24</option><option value="25-34">25–34</option><option value="35-44">35–44</option><option value="45+">45+</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Localização da audiência</label><input class="ff-inp" id="pub-kol-aud-location" placeholder="Ex: São Paulo, Brasil"></div>
-      </div>
-    </div>
-
-    <!-- Informações Comerciais -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:28px">
-      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">Informações Comerciais</div>
-      <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:10px">Formatos de conteúdo</div>
-      <div id="pub-kol-formats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="ff"><label class="ff-lbl">Faixa de preço</label>
-          <select class="ff-inp" id="pub-kol-price">
-            <option value="">Selecione</option>
-            <option value="permuta">Permuta / Gifting</option>
-            <option value="ate500">Até R$ 500</option>
-            <option value="500-2k">R$ 500 – R$ 2.000</option>
-            <option value="2k-5k">R$ 2.000 – R$ 5.000</option>
-            <option value="5k+">Acima de R$ 5.000</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Disponível para campanhas?</label>
-          <select class="ff-inp" id="pub-kol-available">
-            <option value="sim">Sim</option><option value="nao">Não</option><option value="avaliar">A avaliar</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Plataforma principal de publicação</label>
-          <select class="ff-inp" id="pub-kol-platform">
-            <option value="instagram">📸 Instagram</option><option value="tiktok">🎵 TikTok</option><option value="youtube">▶️ YouTube</option><option value="multi">🌐 Multi-platform</option>
-          </select>
-        </div>
-        <div class="ff"><label class="ff-lbl">Deliverable padrão</label>
-          <select class="ff-inp" id="pub-kol-deliverable">
-            <option value="reel">Reel</option><option value="stories">Stories</option><option value="short_video">Short Video</option><option value="long_video">Long Video</option><option value="post">Post</option><option value="tiktok">TikTok</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Save button -->
-    <div style="display:flex;justify-content:flex-end;gap:12px">
-      <button onclick="closeOv('ov-pub-kol')" style="padding:12px 28px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text-m);font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
-      <button onclick="saveKolModal()" style="padding:12px 32px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">👤 Cadastrar KOL</button>
-    </div>
-  </div>
-</div>
+<!-- KOL form rendered dynamically via renderKolForm() into #page-kol-form -->
 <!-- ── Schedule KOL Slot Modal ── -->
 <div class="overlay" id="ov-pub-sched" onclick="ovBg('ov-pub-sched',event)">
   <div class="modal goals-modal" style="max-width:380px">
@@ -1804,7 +1676,8 @@ function toggleDark(){
   var on=document.documentElement.classList.toggle('dark');
   localStorage.setItem('dg_dark_mode', on?'1':'0');
   document.getElementById('dark-icon').textContent=on?'☀️':'🌙';
-  document.getElementById('dark-lbl').textContent=on?'Light Mode':'Dark Mode';
+  var T=_i18n[_lang];
+  document.getElementById('dark-lbl').textContent=on?(T.lightModeLabel||'Light Mode'):(T.darkModeLabel||'Dark Mode');
   if(trendChart){trendChart.destroy();trendChart=null;drawTrend();}
   if(memberChart){memberChart.destroy();memberChart=null;if(currentMemberId)drawMemberChart(currentMemberId);}
 }
@@ -1862,11 +1735,11 @@ function navTo(page,el,brandId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
-  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','admin-team':'Team Activity','member-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail',report:'Weekly Report','all-brands':'All Brands','settings':'Settings'};
+  const T={overview:'Overview',members:'Team Activity',campaigns:'Campaign Progress',digest:'Weekly Digest','admin-home':'Home','admin-team':'Team Activity','member-home':'Home','links':'Documents & Spreadsheets',brand:'Brand Detail',report:'Weekly Report','all-brands':'All Brands','settings':'Settings','kols-registry':'Meus Influenciadores','kol-form':'KOL'};
   if(page==='brand'&&_activeBrandId){const b=getBrand(_activeBrandId);document.getElementById('tb-title').textContent=b?b.name:'Brand Detail';}
   else document.getElementById('tb-title').textContent=T[page]||page;
   // Hide period selector on pages that don't need it
-  var _noperiod=['campaigns','links','report','all-brands','admin-home','admin-team','member-home','brand','settings'];
+  var _noperiod=['campaigns','links','report','all-brands','admin-home','admin-team','member-home','brand','settings','kols-registry','kol-form'];
   var _tbView=document.querySelector('.tb-view');
   if(_tbView) _tbView.style.display=_noperiod.includes(page)?'none':'';
   var _tbExport=document.querySelector('.tb-btn.export');
@@ -1912,6 +1785,7 @@ function setTimeView(v,el){
    RENDER ALL
 ══════════════════════════════════════════════ */
 function renderAll(){
+  _initLang();
   renderSidebar();
   renderKPIs();
   renderConvTable();
@@ -4179,12 +4053,13 @@ function renderKolsRegistry(){
   var totCur=allKols.filter(function(k){return k.status==='curadoria';}).length;
   var todayISO=new Date().toISOString().split('T')[0];
 
+  var T=_i18n[_lang];
   // KPI cards
   var kpis='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'+
-    [['👥','Total no roster',allKols.length,'var(--primary)'],
-     ['✅','Disponíveis',totAvail,'#10b981'],
-     ['🎯','Em campanha',totCamp,'#3b7ef8'],
-     ['🔍','Em curadoria',totCur,'#f59e0b']].map(function(item){
+    [['👥',T.totalRoster,allKols.length,'var(--primary)'],
+     ['✅',T.availableKols,totAvail,'#10b981'],
+     ['🎯',T.inCampaignKols,totCamp,'#3b7ef8'],
+     ['🔍',T.inCurationKols,totCur,'#f59e0b']].map(function(item){
       return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:12px">'+
         '<div style="width:36px;height:36px;border-radius:10px;background:'+item[3]+'15;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+item[0]+'</div>'+
         '<div><div style="font-size:22px;font-weight:800;color:var(--text)">'+item[2]+'</div><div style="font-size:11px;color:var(--text-s);margin-top:1px">'+item[1]+'</div></div>'+
@@ -4193,20 +4068,20 @@ function renderKolsRegistry(){
   '</div>';
 
   // Toolbar
-  var nicheOpts='<option value="">Todos os nichos</option>'+_KOL_NICHES.map(function(n){return '<option value="'+n.k+'"'+(filterNiche===n.k?' selected':'')+'>'+n.l+'</option>';}).join('');
-  var statusOpts='<option value="">Status: Todos</option><option value="available"'+(filterStatus==='available'?' selected':'')+'>✅ Disponíveis</option><option value="in_campaign"'+(filterStatus==='in_campaign'?' selected':'')+'>🎯 Em campanha</option><option value="curadoria"'+(filterStatus==='curadoria'?' selected':'')+'>🔍 Em curadoria</option>';
-  var brandOpts='<option value="">Todas as brands</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'"'+(filterBid===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
+  var nicheOpts='<option value="">'+T.allNiches+'</option>'+_KOL_NICHES.map(function(n){return '<option value="'+n.k+'"'+(filterNiche===n.k?' selected':'')+'>'+n.l+'</option>';}).join('');
+  var statusOpts='<option value="">'+T.allStatuses+'</option><option value="available"'+(filterStatus==='available'?' selected':'')+'>✅ '+T.available+'</option><option value="in_campaign"'+(filterStatus==='in_campaign'?' selected':'')+'>🎯 '+T.inCampaign+'</option><option value="curadoria"'+(filterStatus==='curadoria'?' selected':'')+'>🔍 '+T.inCuration+'</option>';
+  var brandOpts='<option value="">'+T.allBrandsFilter+'</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'"'+(filterBid===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
 
   var toolbar='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'+
     '<div style="flex:1;min-width:220px;position:relative">'+
       '<span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-s);font-size:14px">🔍</span>'+
-      '<input id="kol-search-inp" value="'+escHtml(filterSearch)+'" oninput="localStorage.setItem(\'dg_kolreg_search\',this.value);renderKolsRegistry()" placeholder="Buscar por nome, @, nicho ou cidade..." style="width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);outline:none;box-sizing:border-box">'+
+      '<input id="kol-search-inp" value="'+escHtml(filterSearch)+'" oninput="localStorage.setItem(\'dg_kolreg_search\',this.value);renderKolsRegistry()" placeholder="'+T.searchPlaceholder+'" style="width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);outline:none;box-sizing:border-box">'+
     '</div>'+
     '<select onchange="localStorage.setItem(\'dg_kolreg_status\',this.value);renderKolsRegistry()" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);cursor:pointer">'+statusOpts+'</select>'+
     '<select onchange="localStorage.setItem(\'dg_kolreg_niche\',this.value);renderKolsRegistry()" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);cursor:pointer;max-width:180px">'+nicheOpts+'</select>'+
     '<select onchange="localStorage.setItem(\'dg_kolreg_filter\',this.value);renderKolsRegistry()" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:12px;background:var(--card);color:var(--text);cursor:pointer">'+brandOpts+'</select>'+
-    (filterSearch||filterStatus||filterNiche||filterBid?'<button onclick="[\'dg_kolreg_search\',\'dg_kolreg_status\',\'dg_kolreg_niche\',\'dg_kolreg_filter\'].forEach(function(k){localStorage.removeItem(k)});renderKolsRegistry()" style="padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--text-s);font-size:12px;cursor:pointer">✕ Limpar</button>':'')+
-    '<span style="font-size:11px;color:var(--text-s);margin-left:auto">'+filtered.length+' influenciador'+(filtered.length!==1?'es':'')+' encontrado'+(filtered.length!==1?'s':'')+'</span>'+
+    (filterSearch||filterStatus||filterNiche||filterBid?'<button onclick="[\'dg_kolreg_search\',\'dg_kolreg_status\',\'dg_kolreg_niche\',\'dg_kolreg_filter\'].forEach(function(k){localStorage.removeItem(k)});renderKolsRegistry()" style="padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg);color:var(--text-s);font-size:12px;cursor:pointer">✕ '+T.clearFilters+'</button>':'')+
+    '<span style="font-size:11px;color:var(--text-s);margin-left:auto">'+filtered.length+' '+(filtered.length!==1?T.results_plural:T.results)+'</span>'+
   '</div>';
 
   // KOL cards
@@ -4259,28 +4134,28 @@ function renderKolsRegistry(){
       '</div>'+
       // Footer actions
       '<div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--bg-alt)">'+
-        '<button onclick="openAddKolModal(\''+k.brandId+'\',\''+k.id+'\')" style="flex:1;padding:7px 0;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">✏️ Editar perfil</button>'+
-        '<button onclick="openSchedSlot(\''+k.brandId+'\',\''+todayISO+'\',\'10:00\')" style="padding:7px 12px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">+ Agendar</button>'+
+        '<button onclick="openAddKolModal(\''+k.brandId+'\',\''+k.id+'\')" style="flex:1;padding:7px 0;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary-d);color:var(--primary);border:1px solid rgba(59,126,248,.2);cursor:pointer">'+T.editProfile+'</button>'+
+        '<button onclick="openSchedSlot(\''+k.brandId+'\',\''+todayISO+'\',\'10:00\')" style="padding:7px 12px;border-radius:8px;font-size:11px;font-weight:600;background:var(--primary);color:#fff;border:none;cursor:pointer">'+T.schedule+'</button>'+
         '<button onclick="deleteKolFromRegistry(\''+k.brandId+'\',\''+k.id+'\')" style="padding:7px 10px;border-radius:8px;font-size:11px;background:rgba(248,113,113,.08);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">🗑️</button>'+
       '</div>'+
     '</div>';
   }).join(''):
   '<div style="grid-column:1/-1;padding:60px;text-align:center">'+
     '<div style="font-size:48px;margin-bottom:16px">👤</div>'+
-    '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">Nenhum creator cadastrado</div>'+
-    '<div style="font-size:12px;color:var(--text-s);margin-bottom:20px">Cadastre seus primeiros influenciadores para começar a indicá-los para campanhas.</div>'+
-    '<button onclick="openAddKolModal(ST.brands[0]?ST.brands[0].id:\'\')" style="padding:10px 24px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">+ Cadastrar creator</button>'+
+    '<div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px">'+T.noCreators+'</div>'+
+    '<div style="font-size:12px;color:var(--text-s);margin-bottom:20px">'+T.noCreatorsSub+'</div>'+
+    '<button onclick="openAddKolModal(ST.brands[0]?ST.brands[0].id:\'\')" style="padding:10px 24px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">'+T.addFirstCreator+'</button>'+
   '</div>';
 
   el.innerHTML=
     // Page header
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'+
       '<div>'+
-        '<div style="font-size:22px;font-weight:800;color:var(--text)">Meus Influenciadores</div>'+
-        '<div style="font-size:12px;color:var(--text-s);margin-top:2px">Gerencie seu roster de creators. '+allKols.length+' perfil'+(allKols.length!==1?'s':'')+' cadastrado'+(allKols.length!==1?'s':'')+'.</div>'+
+        '<div style="font-size:22px;font-weight:800;color:var(--text)">'+T.myInfluencers+'</div>'+
+        '<div style="font-size:12px;color:var(--text-s);margin-top:2px">'+allKols.length+' '+(allKols.length!==1?T.results_plural:T.results)+'</div>'+
       '</div>'+
       '<div style="display:flex;gap:10px">'+
-        (ST.brands.length?'<button onclick="openAddKolModal(ST.brands[0].id)" style="display:flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">+ Adicionar Creator</button>':'')+
+        (ST.brands.length?'<button onclick="openAddKolModal(ST.brands[0].id)" style="display:flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">'+T.addCreator+'</button>':'')+
       '</div>'+
     '</div>'+
     kpis+toolbar+
@@ -4601,6 +4476,129 @@ var _pubCurrentBid=null;
 function getKolRegistry(bid){try{return JSON.parse(localStorage.getItem('dg_kolreg_'+bid)||'[]');}catch(e){return [];}}
 function setKolRegistry(bid,kols){try{localStorage.setItem('dg_kolreg_'+bid,JSON.stringify(kols));}catch(e){}}
 
+// ── i18n ─────────────────────────────────────────────────────────────────
+var _lang=localStorage.getItem('dg_lang')||'pt';
+var _i18n={
+  pt:{
+    // Sidebar
+    navigation:'Navegação',brands:'Marcas',kols:'KOLs',team:'Time',
+    darkMode:'Modo escuro',systemUpdates:'Atualizações do sistema',
+    // Topbar / pages
+    overview:'Visão geral',campaigns:'Campanhas',members:'Atividade do time',
+    documents:'Documentos',home:'Home',settings:'Configurações',
+    allBrands:'Todas as marcas',brandDetail:'Detalhe da marca',
+    weeklyReport:'Relatório semanal',weeklyDigest:'Digest semanal',
+    myInfluencers:'Meus Influenciadores',
+    // KOL form
+    back:'Voltar',cancel:'Cancelar',
+    addKol:'Cadastrar KOL',editKol:'Editar KOL',registerKol:'Cadastrar KOL',saveChanges:'Salvar alterações',
+    kolFormSub:'Preencha o perfil do influenciador',
+    basicData:'Dados Básicos',profileInfo:'Informações do Perfil',audienceData:'Dados de Audiência',commercialInfo:'Informações Comerciais',
+    kolName:'Nome do influenciador',igUrl:'URL do perfil Instagram',optional:'opcional',
+    mainNiche:'Nicho Principal',subNiche:'Subnicho',subNiche2:'Subnicho 2',
+    mainLang:'Idioma principal',location:'Localização (cidade/país)',
+    available:'Disponível',inCampaign:'Em campanha',inCuration:'Em curadoria',
+    bio:'Biografia do influenciador',
+    bioPlaceholder:'Descreva o máximo possível sobre o influenciador: estilo de vida, hobbies, interesses...',
+    bioTip:'Quanto mais completa a bio, mais fácil será encontrar o influenciador ideal.',
+    igFollowers:'Seguidores Instagram',tkFollowers:'Seguidores TikTok',ytFollowers:'Seguidores YouTube',
+    gender:'Gênero predominante',female:'Feminino',male:'Masculino',mixed:'Misto',
+    ageRange:'Faixa etária',audLocation:'Localização da audiência',
+    contentFormats:'Formatos de conteúdo',priceRange:'Faixa de preço',
+    availableForCampaigns:'Disponível para campanhas?',yes:'Sim',no:'Não',toEvaluate:'A avaliar',
+    mainPlatform:'Plataforma principal de publicação',defaultDeliverable:'Deliverable padrão',
+    // Registry
+    addCreator:'+ Adicionar Creator',totalRoster:'Total no roster',availableKols:'Disponíveis',
+    inCampaignKols:'Em campanha',inCurationKols:'Em curadoria',
+    searchPlaceholder:'Buscar por nome ou @handle...',allStatuses:'Todos os status',allNiches:'Todos os nichos',allBrandsFilter:'Todas as marcas',clearFilters:'Limpar',
+    results:'resultado',results_plural:'resultados',noCreators:'Nenhum creator cadastrado',
+    noCreatorsSub:'Cadastre seus primeiros influenciadores para começar a indicá-los para campanhas.',
+    addFirstCreator:'+ Cadastrar creator',editProfile:'✏️ Editar perfil',schedule:'+ Agendar',
+    // Dark mode
+    darkModeLabel:'Modo escuro',lightModeLabel:'Modo claro',
+  },
+  en:{
+    // Sidebar
+    navigation:'Navigation',brands:'Brands',kols:'KOLs',team:'Team',
+    darkMode:'Dark mode',systemUpdates:'System updates',
+    // Topbar / pages
+    overview:'Overview',campaigns:'Campaigns',members:'Team Activity',
+    documents:'Documents',home:'Home',settings:'Settings',
+    allBrands:'All Brands',brandDetail:'Brand Detail',
+    weeklyReport:'Weekly Report',weeklyDigest:'Weekly Digest',
+    myInfluencers:'My Influencers',
+    // KOL form
+    back:'Back',cancel:'Cancel',
+    addKol:'Add KOL',editKol:'Edit KOL',registerKol:'Register KOL',saveChanges:'Save changes',
+    kolFormSub:'Fill in the influencer profile',
+    basicData:'Basic Data',profileInfo:'Profile Information',audienceData:'Audience Data',commercialInfo:'Commercial Info',
+    kolName:'Influencer name',igUrl:'Instagram profile URL',optional:'optional',
+    mainNiche:'Main Niche',subNiche:'Sub-niche',subNiche2:'Sub-niche 2',
+    mainLang:'Main language',location:'Location (city/country)',
+    available:'Available',inCampaign:'In campaign',inCuration:'In curation',
+    bio:'Influencer bio',
+    bioPlaceholder:'Describe as much as possible about the influencer: lifestyle, hobbies, interests...',
+    bioTip:'The more complete the bio, the easier it is to find the ideal influencer for each campaign.',
+    igFollowers:'Instagram followers',tkFollowers:'TikTok followers',ytFollowers:'YouTube followers',
+    gender:'Predominant gender',female:'Female',male:'Male',mixed:'Mixed',
+    ageRange:'Age range',audLocation:'Audience location',
+    contentFormats:'Content formats',priceRange:'Price range',
+    availableForCampaigns:'Available for campaigns?',yes:'Yes',no:'No',toEvaluate:'To evaluate',
+    mainPlatform:'Main publishing platform',defaultDeliverable:'Default deliverable',
+    // Registry
+    addCreator:'+ Add Creator',totalRoster:'Total in roster',availableKols:'Available',
+    inCampaignKols:'In campaign',inCurationKols:'In curation',
+    searchPlaceholder:'Search by name or @handle...',allStatuses:'All statuses',allNiches:'All niches',allBrandsFilter:'All brands',clearFilters:'Clear',
+    results:'result',results_plural:'results',noCreators:'No creators registered',
+    noCreatorsSub:'Register your first influencers to start matching them to campaigns.',
+    addFirstCreator:'+ Add creator',editProfile:'✏️ Edit profile',schedule:'+ Schedule',
+    // Dark mode
+    darkModeLabel:'Dark mode',lightModeLabel:'Light mode',
+  }
+};
+function setLang(lang){
+  _lang=lang;
+  try{localStorage.setItem('dg_lang',lang);}catch(e){}
+  // Update button styles
+  var ptBtn=document.getElementById('lang-btn-pt');
+  var enBtn=document.getElementById('lang-btn-en');
+  if(ptBtn&&enBtn){
+    if(lang==='pt'){
+      ptBtn.style.background='rgba(255,255,255,.18)';ptBtn.style.color='#fff';ptBtn.style.borderColor='rgba(255,255,255,.3)';
+      enBtn.style.background='transparent';enBtn.style.color='rgba(255,255,255,.45)';enBtn.style.borderColor='rgba(255,255,255,.08)';
+    } else {
+      enBtn.style.background='rgba(255,255,255,.18)';enBtn.style.color='#fff';enBtn.style.borderColor='rgba(255,255,255,.3)';
+      ptBtn.style.background='transparent';ptBtn.style.color='rgba(255,255,255,.45)';ptBtn.style.borderColor='rgba(255,255,255,.08)';
+    }
+  }
+  // Update sidebar static labels
+  var T=_i18n[lang];
+  var seps={
+    'sb-nav-sep':T.navigation,'sb-brands-sep':T.brands,
+    'sb-kols-sep':T.kols,'sb-team-sep':T.team
+  };
+  Object.keys(seps).forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=seps[id];});
+  var darkLbl=document.getElementById('dark-lbl');
+  if(darkLbl) darkLbl.textContent=document.documentElement.classList.contains('dark')?T.lightModeLabel:T.darkModeLabel;
+  // Sidebar items
+  var navLabels={
+    'sbi-campaigns':T.campaigns,'sbi-admin-home':T.home,'sbi-admin-team':T.members,
+    'sbi-links':T.documents,'sbi-member-home':T.home
+  };
+  Object.keys(navLabels).forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){var dot=el.querySelector('.sb-dot');el.innerHTML='';if(dot)el.appendChild(dot);el.appendChild(document.createTextNode(' '+navLabels[id]));}
+  });
+  // Re-render current page with new language
+  if(currentPage==='kols-registry') renderKolsRegistry();
+  if(currentPage==='kol-form') _renderKolFormPage(_pubCurrentBid,_kolFormEditId);
+  if(currentPage==='settings') renderSettings();
+}
+function _initLang(){
+  _lang=localStorage.getItem('dg_lang')||'pt';
+  setLang(_lang);
+}
+
 // ── Niche taxonomy ────────────────────────────────────────────────────────
 var _KOL_NICHES=[
   {k:'beleza',l:'Beleza',s:[{k:'skincare',l:'Skincare',s2:['Acne','Rotina diária']},{k:'maquiagem',l:'Maquiagem',s2:['Básica','Profissional']}]},
@@ -4707,41 +4705,177 @@ function kolColor(kol,idx){return _CARD_COLORS[idx%_CARD_COLORS.length];}
 
 function openAddKolModal(bid,editId){
   _pubCurrentBid=bid;
-  document.getElementById('pub-kol-brand-id').value=bid||'';
+  _kolFormEditId=editId||null;
+  // Render the form into the page and navigate to it
+  _renderKolFormPage(bid,editId);
+  navTo('kol-form',null);
+}
+var _kolFormEditId=null;
+function _renderKolFormPage(bid,editId){
   var kols=getKolRegistry(bid);
   var k=editId?kols.find(function(x){return x.id===editId;}):null;
-  document.getElementById('kol-form-title').textContent=k?'Editar KOL':'Cadastrar KOL';
-  document.getElementById('pub-kol-id').value=k?k.id:'';
-  document.getElementById('pub-kol-name').value=k?k.name:'';
-  document.getElementById('pub-kol-instagram').value=k?(k.instagram||''):'';
-  document.getElementById('pub-kol-ig-url').value=k?(k.igUrl||''):'';
-  document.getElementById('pub-kol-tiktok').value=k?(k.tiktok||''):'';
-  document.getElementById('pub-kol-youtube').value=k?(k.youtube||''):'';
-  document.getElementById('pub-kol-lang').value=k?(k.lang||'pt'):'pt';
-  document.getElementById('pub-kol-location').value=k?(k.location||''):'';
-  document.getElementById('pub-kol-status').value=k?(k.status||'available'):'available';
-  document.getElementById('pub-kol-bio').value=k?(k.bio||''):'';
-  document.getElementById('pub-kol-ig-followers').value=k?(k.igFollowers||''):'';
-  document.getElementById('pub-kol-tk-followers').value=k?(k.tkFollowers||''):'';
-  document.getElementById('pub-kol-yt-followers').value=k?(k.ytFollowers||''):'';
-  document.getElementById('pub-kol-gender').value=k?(k.gender||''):'';
-  document.getElementById('pub-kol-age').value=k?(k.age||''):'';
-  document.getElementById('pub-kol-aud-location').value=k?(k.audLocation||''):'';
-  document.getElementById('pub-kol-price').value=k?(k.price||''):'';
-  document.getElementById('pub-kol-available').value=k?(k.available||'sim'):'sim';
-  document.getElementById('pub-kol-platform').value=k?(k.platform||'instagram'):'instagram';
-  document.getElementById('pub-kol-deliverable').value=k?(k.deliverable||'reel'):'reel';
-  _buildNicheDropdown();
-  if(k&&k.niche){
-    document.getElementById('pub-kol-niche').value=k.niche;
-    kolUpdateSub1();
-    if(k.sub1){document.getElementById('pub-kol-sub1').value=k.sub1;kolUpdateSub2();}
-    if(k.sub2) document.getElementById('pub-kol-sub2').value=k.sub2;
-  } else {kolUpdateSub1();kolUpdateSub2();}
-  _buildFormatsGrid(k?k.formats:[]);
-  var ov=document.getElementById('ov-pub-kol');
-  ov.style.display='block';
-  ov.scrollTop=0;
+  var T=_i18n[_lang];
+  var nicheOpts=_KOL_NICHES.map(function(n){return '<option value="'+n.k+'"'+(k&&k.niche===n.k?' selected':'')+'>'+n.l+'</option>';}).join('');
+  // sub1 opts based on saved niche
+  var nObj=k&&k.niche?_KOL_NICHES.find(function(n){return n.k===k.niche;}):null;
+  var sub1Opts='<option value="">—</option>'+(nObj?nObj.s.map(function(s){return '<option value="'+s.k+'"'+(k&&k.sub1===s.k?' selected':'')+'>'+s.l+'</option>';}).join(''):'');
+  var s1Obj=k&&k.sub1&&nObj?nObj.s.find(function(s){return s.k===k.sub1;}):null;
+  var sub2Opts='<option value="">—</option>'+(s1Obj&&s1Obj.s2?(s1Obj.s2).map(function(x){return '<option value="'+x+'"'+(k&&k.sub2===x?' selected':'')+'>'+x+'</option>';}).join(''):'');
+  var formatsHtml=_KOL_FORMATS.map(function(f){
+    var checked=k&&k.formats&&k.formats.indexOf(f)>=0;
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid '+(checked?'var(--primary)':'var(--border)')+';border-radius:20px;cursor:pointer;background:'+(checked?'var(--primary-d)':'var(--card)')+';transition:all .15s">'+
+      '<input type="checkbox" value="'+f+'" '+(checked?'checked':'')+' onchange="_updateFormatBorder(this)" style="display:none">'+
+      '<span class="fmt-circle" style="flex-shrink:0;width:16px;height:16px;border-radius:50%;border:2px solid '+(checked?'var(--primary)':'#ccc')+';background:'+(checked?'var(--primary)':'transparent')+';display:flex;align-items:center;justify-content:center;transition:all .15s">'+
+        '<span class="fmt-dot" style="width:6px;height:6px;border-radius:50%;background:#fff;display:'+(checked?'block':'none')+'"></span>'+
+      '</span>'+
+      '<span style="font-size:11px;font-weight:500;color:var(--text)">'+f+'</span>'+
+    '</label>';
+  }).join('');
+  var isEdit=!!k;
+  var html=
+  // Header
+  '<div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">'+
+    '<button onclick="navTo(\'kols-registry\',null)" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text-m);font-size:13px;font-weight:500;cursor:pointer">← '+(T.back||'Voltar')+'</button>'+
+    '<div>'+
+      '<div style="font-size:20px;font-weight:800;color:var(--text)">'+(isEdit?(T.editKol||'Editar KOL'):(T.addKol||'Cadastrar KOL'))+'</div>'+
+      '<div style="font-size:12px;color:var(--text-s)">'+(T.kolFormSub||'Preencha o perfil do influenciador')+'</div>'+
+    '</div>'+
+  '</div>'+
+  '<input type="hidden" id="pub-kol-id" value="'+(k?k.id:'')+'">'+
+  '<input type="hidden" id="pub-kol-brand-id" value="'+(bid||'')+'">'+
+  // Section 1: Dados Básicos
+  '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">'+(T.basicData||'Dados Básicos')+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+      '<div class="ff"><label class="ff-lbl">'+(T.kolName||'Nome do influenciador')+' *</label><input class="ff-inp" id="pub-kol-name" placeholder="Nome completo" value="'+(k?escHtml(k.name):'')+'"></div>'+
+      '<div class="ff"><label class="ff-lbl">Instagram *</label>'+
+        '<div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">'+
+          '<span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>'+
+          '<input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-instagram" placeholder="ex: joaosilva" value="'+(k?escHtml(k.instagram||''):'')+'">'+
+        '</div>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.igUrl||'URL do perfil Instagram')+'</label><input class="ff-inp" id="pub-kol-ig-url" placeholder="https://instagram.com/seuusuario" value="'+(k?escHtml(k.igUrl||''):'')+'"></div>'+
+      '<div class="ff"><label class="ff-lbl">TikTok</label>'+
+        '<div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">'+
+          '<span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>'+
+          '<input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-tiktok" placeholder="ex: joaosilva" value="'+(k?escHtml(k.tiktok||''):'')+'">'+
+        '</div>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">YouTube ('+(T.optional||'opcional')+')</label>'+
+        '<div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--bg)">'+
+          '<span style="padding:0 10px;font-size:13px;color:var(--text-s);border-right:1px solid var(--border);height:38px;display:flex;align-items:center">@</span>'+
+          '<input style="flex:1;border:none;background:transparent;padding:8px 10px;font-size:13px;color:var(--text);outline:none" id="pub-kol-youtube" placeholder="ex: joaosilva" value="'+(k?escHtml(k.youtube||''):'')+'">'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+  // Section 2: Informações do Perfil
+  '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">'+(T.profileInfo||'Informações do Perfil')+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+      '<div class="ff"><label class="ff-lbl">'+(T.mainNiche||'Nicho Principal')+' *</label>'+
+        '<select class="ff-inp" id="pub-kol-niche" onchange="kolUpdateSub1()"><option value="">—</option>'+nicheOpts+'</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.subNiche||'Subnicho')+' *</label>'+
+        '<select class="ff-inp" id="pub-kol-sub1" onchange="kolUpdateSub2()">'+sub1Opts+'</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.subNiche2||'Subnicho 2')+' ('+(T.optional||'opcional')+')</label>'+
+        '<select class="ff-inp" id="pub-kol-sub2">'+sub2Opts+'</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.mainLang||'Idioma principal')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-lang">'+
+          '<option value="pt"'+((!k||k.lang==='pt')?' selected':'')+'>Português</option>'+
+          '<option value="es"'+(k&&k.lang==='es'?' selected':'')+'>Español</option>'+
+          '<option value="en"'+(k&&k.lang==='en'?' selected':'')+'>English</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.location||'Localização')+'</label><input class="ff-inp" id="pub-kol-location" placeholder="Ex: São Paulo, Brasil" value="'+(k?escHtml(k.location||''):'')+'"></div>'+
+      '<div class="ff"><label class="ff-lbl">Status</label>'+
+        '<select class="ff-inp" id="pub-kol-status">'+
+          '<option value="available"'+((!k||k.status==='available')?' selected':'')+'>✅ '+(T.available||'Disponível')+'</option>'+
+          '<option value="in_campaign"'+(k&&k.status==='in_campaign'?' selected':'')+'>🎯 '+(T.inCampaign||'Em campanha')+'</option>'+
+          '<option value="curadoria"'+(k&&k.status==='curadoria'?' selected':'')+'>🔍 '+(T.inCuration||'Em curadoria')+'</option>'+
+        '</select>'+
+      '</div>'+
+    '</div>'+
+    '<div class="ff" style="margin-top:4px"><label class="ff-lbl">✨ '+(T.bio||'Biografia do influenciador')+'</label>'+
+      '<textarea class="ff-inp" id="pub-kol-bio" rows="4" placeholder="'+(T.bioPlaceholder||'Descreva o máximo possível sobre o influenciador...')+'" style="resize:vertical;font-family:inherit">'+(k?escHtml(k.bio||''):'')+'</textarea>'+
+      '<div style="font-size:10px;color:var(--amber);margin-top:4px">💡 '+(T.bioTip||'Quanto mais completa a bio, mais fácil será encontrar o influenciador ideal.')+'</div>'+
+    '</div>'+
+  '</div>'+
+  // Section 3: Dados de Audiência
+  '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">'+
+    '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">'+(T.audienceData||'Dados de Audiência')+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">'+
+      '<div class="ff"><label class="ff-lbl">'+(T.igFollowers||'Seguidores Instagram')+' *</label><input class="ff-inp" type="number" id="pub-kol-ig-followers" placeholder="Ex: 50000" value="'+(k&&k.igFollowers?k.igFollowers:'')+'"></div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.tkFollowers||'Seguidores TikTok')+'</label><input class="ff-inp" type="number" id="pub-kol-tk-followers" placeholder="Ex: 30000" value="'+(k&&k.tkFollowers?k.tkFollowers:'')+'"></div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.ytFollowers||'Seguidores YouTube')+'</label><input class="ff-inp" type="number" id="pub-kol-yt-followers" placeholder="Ex: 10000" value="'+(k&&k.ytFollowers?k.ytFollowers:'')+'"></div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.gender||'Gênero predominante')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-gender">'+
+          '<option value=""'+((!k||!k.gender)?' selected':'')+'>—</option>'+
+          '<option value="feminino"'+(k&&k.gender==='feminino'?' selected':'')+'>'+(T.female||'Feminino')+'</option>'+
+          '<option value="masculino"'+(k&&k.gender==='masculino'?' selected':'')+'>'+(T.male||'Masculino')+'</option>'+
+          '<option value="misto"'+(k&&k.gender==='misto'?' selected':'')+'>'+(T.mixed||'Misto')+'</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.ageRange||'Faixa etária')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-age">'+
+          '<option value="">—</option>'+
+          ['13-17','18-24','25-34','35-44','45+'].map(function(a){return '<option value="'+a+'"'+(k&&k.age===a?' selected':'')+'>'+a+'</option>';}).join('')+
+        '</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.audLocation||'Localização da audiência')+'</label><input class="ff-inp" id="pub-kol-aud-location" placeholder="Ex: São Paulo, Brasil" value="'+(k?escHtml(k.audLocation||''):'')+'"></div>'+
+    '</div>'+
+  '</div>'+
+  // Section 4: Informações Comerciais
+  '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:28px">'+
+    '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">'+(T.commercialInfo||'Informações Comerciais')+'</div>'+
+    '<div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:10px">'+(T.contentFormats||'Formatos de conteúdo')+'</div>'+
+    '<div id="pub-kol-formats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">'+formatsHtml+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+      '<div class="ff"><label class="ff-lbl">'+(T.priceRange||'Faixa de preço')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-price">'+
+          '<option value=""'+((!k||!k.price)?' selected':'')+'>—</option>'+
+          '<option value="permuta"'+(k&&k.price==='permuta'?' selected':'')+'>Permuta / Gifting</option>'+
+          '<option value="ate500"'+(k&&k.price==='ate500'?' selected':'')+'>Até R$ 500</option>'+
+          '<option value="500-2k"'+(k&&k.price==='500-2k'?' selected':'')+'>R$ 500 – R$ 2.000</option>'+
+          '<option value="2k-5k"'+(k&&k.price==='2k-5k'?' selected':'')+'>R$ 2.000 – R$ 5.000</option>'+
+          '<option value="5k+"'+(k&&k.price==='5k+'?' selected':'')+'>Acima de R$ 5.000</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.availableForCampaigns||'Disponível para campanhas?')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-available">'+
+          '<option value="sim"'+((!k||k.available==='sim')?' selected':'')+'>'+(T.yes||'Sim')+'</option>'+
+          '<option value="nao"'+(k&&k.available==='nao'?' selected':'')+'>'+(T.no||'Não')+'</option>'+
+          '<option value="avaliar"'+(k&&k.available==='avaliar'?' selected':'')+'>'+(T.toEvaluate||'A avaliar')+'</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.mainPlatform||'Plataforma principal')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-platform">'+
+          '<option value="instagram"'+((!k||k.platform==='instagram')?' selected':'')+'>📸 Instagram</option>'+
+          '<option value="tiktok"'+(k&&k.platform==='tiktok'?' selected':'')+'>🎵 TikTok</option>'+
+          '<option value="youtube"'+(k&&k.platform==='youtube'?' selected':'')+'>▶️ YouTube</option>'+
+          '<option value="multi"'+(k&&k.platform==='multi'?' selected':'')+'>🌐 Multi-platform</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="ff"><label class="ff-lbl">'+(T.defaultDeliverable||'Deliverable padrão')+'</label>'+
+        '<select class="ff-inp" id="pub-kol-deliverable">'+
+          '<option value="reel"'+((!k||k.deliverable==='reel')?' selected':'')+'>Reel</option>'+
+          '<option value="stories"'+(k&&k.deliverable==='stories'?' selected':'')+'>Stories</option>'+
+          '<option value="short_video"'+(k&&k.deliverable==='short_video'?' selected':'')+'>Short Video</option>'+
+          '<option value="long_video"'+(k&&k.deliverable==='long_video'?' selected':'')+'>Long Video</option>'+
+          '<option value="post"'+(k&&k.deliverable==='post'?' selected':'')+'>Post</option>'+
+          '<option value="tiktok"'+(k&&k.deliverable==='tiktok'?' selected':'')+'>TikTok</option>'+
+        '</select>'+
+      '</div>'+
+    '</div>'+
+  '</div>'+
+  // Buttons
+  '<div style="display:flex;justify-content:flex-end;gap:12px">'+
+    '<button onclick="navTo(\'kols-registry\',null)" style="padding:12px 28px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text-m);font-size:13px;font-weight:600;cursor:pointer">'+(T.cancel||'Cancelar')+'</button>'+
+    '<button onclick="saveKolModal()" style="padding:12px 32px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px">👤 '+(isEdit?(T.saveChanges||'Salvar alterações'):(T.registerKol||'Cadastrar KOL'))+'</button>'+
+  '</div>';
+  document.getElementById('kol-form-content').innerHTML=html;
 }
 function saveKolModal(){
   var bid=document.getElementById('pub-kol-brand-id').value||_pubCurrentBid;
@@ -4776,10 +4910,9 @@ function saveKolModal(){
   var idx=kols.findIndex(function(k){return k.id===id;});
   if(idx>=0)kols[idx]=kol;else kols.push(kol);
   setKolRegistry(bid,kols);
-  closeOv('ov-pub-kol');
   renderPublicationCalendarInPlace(bid);
-  if(currentPage==='kols-registry') renderKolsRegistry();
   renderSidebar();
+  navTo('kols-registry',null);
 }
 function deleteKolFromRegistry(bid,kolId){
   if(!confirm('Remove this KOL?')) return;
