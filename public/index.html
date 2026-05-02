@@ -796,8 +796,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 </div>
   <div style="padding:8px;border-top:1px solid rgba(255,255,255,.07)">
     <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px">
-      <span id="sb-account-av" style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff">?</span>
-      <span id="sb-account-name" style="flex:1;font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Carregando...</span>
+      <span id="sb-account-av" onclick="openMyProfile()" title="Meu perfil" style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff;cursor:pointer;overflow:hidden">?</span>
+      <span id="sb-account-name" onclick="openMyProfile()" title="Meu perfil" style="flex:1;font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.55)'">Carregando...</span>
       <button onclick="authLogout()" title="Sair" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:10px;font-weight:600;cursor:pointer" onmouseover="this.style.background='rgba(248,113,113,.15)';this.style.color='#f87171'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.4)'">Sair</button>
     </div>
   </div>
@@ -1585,25 +1585,62 @@ async function _createWorkspace(user, workspaceName, fullname) {
 
 async function _onAuthSuccess(user) {
   _currentUser = user;
-  // Find workspace
-  var { data: members } = await supa.from('workspace_members').select('workspace_id, role, name').eq('user_id', user.id).limit(1);
-  if(!members || members.length === 0) {
-    // New user without workspace — prompt name again
-    showAuthError('login','Conta sem workspace. Crie uma conta primeiro.');
+  // Find workspace membership
+  var { data: wsmembers } = await supa.from('workspace_members').select('workspace_id, role, name').eq('user_id', user.id).limit(1);
+  if(!wsmembers || wsmembers.length === 0) {
+    showAuthError('login','Conta sem workspace. Contacte o administrador.');
     return;
   }
-  _workspaceId = members[0].workspace_id;
-  // Show app, load data
+  _workspaceId = wsmembers[0].workspace_id;
+  var wsRole = wsmembers[0].role || 'member'; // 'owner','admin','member'
+  var wsName = wsmembers[0].name || user.email;
+
+  // Show app
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-shell').style.display = '';
+
+  // Load all data first so ST.members is populated
   await loadAllFromSupabase();
+
+  // Find matching team_member by name (case-insensitive)
+  var matchedMember = ST.members.find(function(m){
+    return m.name && wsName && m.name.toLowerCase() === wsName.toLowerCase();
+  });
+
+  // Set legacy currentUser so isAdmin(), memberId etc. work
+  currentUser = {
+    id: user.id,
+    email: user.email,
+    role: (wsRole === 'owner' || wsRole === 'admin') ? 'admin' : 'member',
+    memberId: matchedMember ? matchedMember.id : null,
+    name: wsName
+  };
+
+  // Navegar para página correta
+  var _savedNav = null;
+  try { var _ns = localStorage.getItem('dg_nav'); if(_ns) _savedNav = JSON.parse(_ns); } catch(e){}
+  if(_savedNav && _savedNav.page && _savedNav.page !== 'brand' && _savedNav.page !== 'member') {
+    navTo(_savedNav.page, document.getElementById('sbi-'+_savedNav.page) || null);
+  } else if(isAdmin()) {
+    navTo('admin-home', document.getElementById('sbi-admin-home'));
+  } else {
+    navTo('member-home', document.getElementById('sbi-member-home'));
+  }
+
+  // Re-renderizar com permissões corretas e avatar
+  renderSidebar();
+  updateAccountUI();
+  renderAll();
 }
 
 async function authLogout() {
   await supa.auth.signOut();
-  _workspaceId = null; _currentUser = null;
+  _workspaceId = null; _currentUser = null; currentUser = null;
+  localStorage.removeItem('dg_nav');
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-password').value = '';
 }
 
 /* ── Carregar todos os dados do Supabase para o ST ── */
@@ -1689,29 +1726,19 @@ async function loadAllFromSupabase() {
     id:l.id, title:l.title, url:l.url, category:l.category, year:l.year, notes:l.notes
   })))); }catch(e){}
 
-  // Atualizar sidebar account info
-  var { data: wsMember } = await supa.from('workspace_members').select('name').eq('user_id',_currentUser.id).single();
-  if(wsMember) {
-    var nameEl=document.getElementById('sb-account-name');
-    var avEl=document.getElementById('sb-account-av');
-    if(nameEl) nameEl.textContent=wsMember.name||_currentUser.email;
-    if(avEl) avEl.textContent=(wsMember.name||'?')[0].toUpperCase();
+  // renderAll e navegação serão feitos pelo chamador (_onAuthSuccess)
+  // Para compatibilidade com chamadas diretas (ex: refresh), fazer navegação aqui também
+  if(!currentUser) {
+    renderSidebar();
+    var _savedNav2 = null;
+    try { var _ns2 = localStorage.getItem('dg_nav'); if(_ns2) _savedNav2 = JSON.parse(_ns2); } catch(e){}
+    if(_savedNav2 && _savedNav2.page && _savedNav2.page !== 'brand' && _savedNav2.page !== 'member') {
+      navTo(_savedNav2.page, null);
+    } else {
+      navTo('campaigns', document.getElementById('sbi-campaigns'));
+    }
+    renderAll();
   }
-
-  renderSidebar();
-
-  // Navegar para a última página salva ou para home
-  var _savedNav = null;
-  try { var _ns = localStorage.getItem('dg_nav'); if(_ns) _savedNav = JSON.parse(_ns); } catch(e){}
-  if(_savedNav && _savedNav.page && _savedNav.page !== 'brand' && _savedNav.page !== 'member') {
-    navTo(_savedNav.page, document.getElementById('sbi-' + _savedNav.page) || null);
-  } else if(isAdmin()) {
-    navTo('admin-home', document.getElementById('sbi-admin-home'));
-  } else {
-    navTo('member-home', document.getElementById('sbi-member-home'));
-  }
-
-  renderAll();
 }
 
 /* ── Wrappers para salvar no Supabase E no localStorage ── */
@@ -2719,7 +2746,7 @@ function memberAttendWidget(mid){
   '</div>';
 }
 
-function isAdmin(){ return currentUser&&(currentUser.role==='admin'||currentUser.role==='member+admin'); }
+function isAdmin(){ return currentUser&&(currentUser.role==='admin'||currentUser.role==='owner'||currentUser.role==='member+admin'); }
 function isOwnMember(mid){ return currentUser&&currentUser.memberId===mid; }
 function canEdit(mid){ return isAdmin()||isOwnMember(mid); }
 
@@ -4021,12 +4048,28 @@ function doLogout(){
 function updateAccountUI(){
   if(!currentUser) return;
   var m=currentUser.memberId?getMember(currentUser.memberId):null;
-  var name=m?m.name:currentUser.email.split('@')[0];
+  var name=m?m.name:(currentUser.name||currentUser.email.split('@')[0]);
   var ini=(name||'?')[0].toUpperCase();
   var avEl=document.getElementById('sb-account-av');
   var nmEl=document.getElementById('sb-account-name');
-  if(avEl) avEl.textContent=ini;
+  if(avEl){
+    var av=m?m.avatar:'';
+    if(av && av.length > 10){
+      avEl.innerHTML='<img src="'+av+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+    } else {
+      avEl.textContent=ini;
+    }
+  }
   if(nmEl) nmEl.textContent=name+(isAdmin()?' ★':'');
+}
+
+function openMyProfile(){
+  if(!currentUser) return;
+  if(currentUser.memberId){
+    openMemberDetail(currentUser.memberId);
+  } else {
+    navTo('settings', null);
+  }
 }
 
 function openAccount(){
