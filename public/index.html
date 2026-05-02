@@ -1698,6 +1698,19 @@ async function loadAllFromSupabase() {
     if(avEl) avEl.textContent=(wsMember.name||'?')[0].toUpperCase();
   }
 
+  renderSidebar();
+
+  // Navegar para a última página salva ou para home
+  var _savedNav = null;
+  try { var _ns = localStorage.getItem('dg_nav'); if(_ns) _savedNav = JSON.parse(_ns); } catch(e){}
+  if(_savedNav && _savedNav.page && _savedNav.page !== 'brand' && _savedNav.page !== 'member') {
+    navTo(_savedNav.page, document.getElementById('sbi-' + _savedNav.page) || null);
+  } else if(isAdmin()) {
+    navTo('admin-home', document.getElementById('sbi-admin-home'));
+  } else {
+    navTo('member-home', document.getElementById('sbi-member-home'));
+  }
+
   renderAll();
 }
 
