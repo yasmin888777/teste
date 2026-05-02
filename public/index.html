@@ -6550,9 +6550,6 @@ function renderAdminTeam(){
     '</div>';
   }).join('');
 
-  var activeCount=membersStatus.filter(function(s){return s.hasLogged;}).length;
-
-  // ── Member Progress Overview ──
   // ── Build HTML ──
   el.innerHTML=
     // Title
