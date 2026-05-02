@@ -19,17 +19,19 @@
    #f0f2f7  light gray   → backgrounds
 ════════════════════════════════════════════ */
 :root{
-  --bg:        #f0f2f7;
-  --sidebar:   #151e35;
-  --topbar:    #151e35;
+  --bg:        #f8f7fa;
+  --sidebar:   #ffffff;
+  --topbar:    #ffffff;
   --card:      #ffffff;
   --border:    #e5e7eb;
   --text:      #1a1f2e;
   --text-m:    #5a6072;
   --text-s:    #9aa0b0;
+  --sidebar-text: #374151;
+  --sidebar-muted: #9ca3af;
 
-  --primary:   #3b7ef8;
-  --primary-d: #e8edf8;
+  --primary:   #7c3aed;
+  --primary-d: #f5f0ff;
   --green:     #10b981;
   --green-d:   #dcfce7;
   --amber:     #f59e0b;
@@ -44,17 +46,21 @@
   --shadow:    0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04);
   --shadow-lg: 0 8px 40px rgba(0,0,0,.16);
   --font:      'Inter',sans-serif;
-  --sw:        230px;
+  --sw:        240px;
   --th:        58px;
 }
 html.dark{
   --bg:#0f1623;
+  --sidebar:#1a2236;
+  --topbar:#1a2236;
   --card:#1a2236;
   --border:#2a3550;
   --text:#e8edf8;
   --text-m:#8899bb;
   --text-s:#556080;
-  --primary-d:#1a2a4a;
+  --sidebar-text:#c5d0e6;
+  --sidebar-muted:#556080;
+  --primary-d:#2d1a52;
   --green-d:#0d2a1e;
   --amber-d:#2a1f05;
   --purple-d:#1e1535;
@@ -71,66 +77,111 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 /* ══════════ SIDEBAR ══════════ */
 .sidebar{
   width:var(--sw);flex-shrink:0;background:var(--sidebar);
+  border-right:1px solid var(--border);
   display:flex;flex-direction:column;overflow-y:auto;z-index:30;
 }
+.sb-header{
+  display:flex;align-items:center;gap:10px;
+  padding:16px 14px 14px;
+  border-bottom:1px solid var(--border);
+}
+.sb-logo{
+  width:32px;height:32px;border-radius:9px;
+  background:var(--primary);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;flex-shrink:0;color:#fff;
+}
+.sb-title{
+  font-size:14px;font-weight:700;color:var(--sidebar-text);line-height:1.2;flex:1;
+  cursor:pointer;
+}
+.sb-close-btn{
+  display:none;font-size:16px;color:var(--sidebar-muted);padding:2px 6px;
+  border-radius:5px;cursor:pointer;
+}
+.sb-close-btn:hover{color:var(--sidebar-text)}
+
+/* Keep legacy brand-row for backward compat */
 .sb-brand-row{
   display:flex;align-items:center;gap:10px;
   padding:18px 16px 16px;
-  border-bottom:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid var(--border);
 }
 .sb-icon{
   width:36px;height:36px;border-radius:9px;
-  background:transparent;
+  background:var(--primary);
   display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff;
 }
 .sb-app-name{
-  font-size:14px;font-weight:700;color:#fff;line-height:1.2;
+  font-size:14px;font-weight:700;color:var(--sidebar-text);line-height:1.2;
   cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s;
 }
-.sb-app-name:hover{border-color:rgba(255,255,255,.4)}
+.sb-app-name:hover{border-color:var(--border)}
 .sb-app-name-input{
-  font-size:14px;font-weight:700;background:rgba(255,255,255,.15);
-  border:1.5px solid rgba(255,255,255,.4);border-radius:6px;
-  padding:2px 8px;outline:none;color:#fff;width:130px;
+  font-size:14px;font-weight:700;background:var(--primary-d);
+  border:1.5px solid var(--primary);border-radius:6px;
+  padding:2px 8px;outline:none;color:var(--sidebar-text);width:130px;
 }
-.sb-app-sub{font-size:9px;color:rgba(255,255,255,.35);margin-top:2px;letter-spacing:.08em}
+.sb-app-sub{font-size:9px;color:var(--sidebar-muted);margin-top:2px;letter-spacing:.08em}
 
 .sb-sep{
   padding:14px 16px 4px;
-  font-size:9px;letter-spacing:.16em;text-transform:uppercase;
-  color:rgba(255,255,255,.25);font-weight:600;
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--sidebar-muted);font-weight:600;
 }
 .sb-nav{padding:0 8px}
 .sb-item{
   display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:8px;
-  font-size:12px;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;margin-bottom:2px;
+  font-size:12px;color:var(--sidebar-text);cursor:pointer;transition:all .15s;margin-bottom:2px;
 }
-.sb-item:hover{background:rgba(255,255,255,.08);color:#fff}
-.sb-item.active{background:var(--primary);color:#fff}
-.sb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sb-item svg{width:15px;height:15px;flex-shrink:0;opacity:.6}
+.sb-item:hover{background:#f5f0ff;color:var(--primary)}
+.sb-item:hover svg{opacity:1}
+.sb-item.active{background:#ede9fe;color:var(--primary);font-weight:600}
+.sb-item.active svg{opacity:1}
+.sb-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--sidebar-muted)}
 
 .sb-list{padding:4px 8px 8px}
 .sb-pill{
   display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;
-  font-size:11px;color:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;margin-bottom:2px;
+  font-size:11px;color:var(--sidebar-text);cursor:pointer;transition:all .15s;margin-bottom:2px;
 }
-.sb-pill:hover{background:rgba(255,255,255,.07);color:#fff}
-.sb-pill-active{background:rgba(59,126,248,.18)!important;color:#fff!important}
+.sb-pill:hover{background:#f5f0ff;color:var(--primary)}
+.sb-pill-active{background:#ede9fe!important;color:var(--primary)!important;font-weight:600}
 .sb-dot2{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
 .sb-member-pill{
   display:flex;align-items:center;gap:9px;padding:7px 12px;border-radius:8px;
-  font-size:11px;color:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;margin-bottom:2px;
+  font-size:11px;color:var(--sidebar-text);cursor:pointer;transition:all .15s;margin-bottom:2px;
 }
-.sb-member-pill:hover{background:rgba(255,255,255,.07);color:#fff}
-.sb-member-pill-active{background:rgba(59,126,248,.25)!important;color:#fff!important}
+.sb-member-pill:hover{background:#f5f0ff;color:var(--primary)}
+.sb-member-pill-active{background:#ede9fe!important;color:var(--primary)!important;font-weight:600}
 .sb-mem-av{
   width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;
-  border:1.5px solid rgba(255,255,255,.2);
+  border:1.5px solid var(--border);
   display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.1);
+  background:var(--primary-d);color:var(--primary);font-size:9px;font-weight:700;
 }
 .sb-mem-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+/* Sidebar footer */
+.sb-footer{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;margin:4px 8px 8px;
+  border-radius:10px;border:1px solid var(--border);
+  background:var(--bg);
+}
+.sb-footer-av{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--primary);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;flex-shrink:0;cursor:pointer;overflow:hidden;
+}
+.sb-footer-info{flex:1;min-width:0}
+.sb-footer-name{font-size:12px;font-weight:700;color:var(--sidebar-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-footer-email{font-size:10px;color:var(--sidebar-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-footer-gear{padding:4px;border-radius:6px;color:var(--sidebar-muted);font-size:14px;cursor:pointer}
+.sb-footer-gear:hover{color:var(--primary);background:var(--primary-d)}
 
 /* ══════════ MAIN ══════════ */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
@@ -139,26 +190,27 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 .topbar{
   height:var(--th);flex-shrink:0;background:var(--topbar);
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 22px;border-bottom:1px solid rgba(255,255,255,.07);z-index:20;
+  padding:0 22px;border-bottom:1px solid var(--border);
+  box-shadow:0 1px 4px rgba(0,0,0,.06);z-index:20;
 }
 .tb-left{display:flex;align-items:center;gap:14px}
-.tb-title{font-size:15px;font-weight:600;color:#fff}
+.tb-title{font-size:15px;font-weight:600;color:var(--text)}
 .tb-view{display:flex;gap:3px}
 .tb-vbtn{
   padding:5px 12px;border-radius:6px;font-size:11px;font-weight:500;
-  color:rgba(255,255,255,.4);transition:all .15s;
+  color:var(--text-s);transition:all .15s;
 }
-.tb-vbtn:hover{color:rgba(255,255,255,.8)}
-.tb-vbtn.active{background:rgba(255,255,255,.12);color:#fff}
+.tb-vbtn:hover{color:var(--text)}
+.tb-vbtn.active{background:var(--primary-d);color:var(--primary)}
 .tb-right{display:flex;align-items:center;gap:10px}
-.tb-time{font-size:10px;color:rgba(255,255,255,.3)}
+.tb-time{font-size:10px;color:var(--text-s)}
 .tb-btn{
   display:flex;align-items:center;gap:5px;padding:6px 13px;
-  border-radius:7px;font-size:11px;font-weight:500;color:#fff;transition:opacity .2s;
+  border-radius:7px;font-size:11px;font-weight:500;color:var(--text);transition:opacity .2s;
 }
-.tb-btn.refresh{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.08)}
-.tb-btn.refresh:hover{background:rgba(255,255,255,.18)}
-.tb-btn.export{background:var(--primary)}
+.tb-btn.refresh{background:var(--bg);border:1px solid var(--border)}
+.tb-btn.refresh:hover{background:var(--primary-d);color:var(--primary)}
+.tb-btn.export{background:var(--primary);color:#fff}
 .tb-btn.export:hover{opacity:.88}
 
 /* ══════════ CONTENT ══════════ */
@@ -573,8 +625,8 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   display:none;flex-direction:column;gap:5px;
   padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .2s;flex-shrink:0;
 }
-.hamburger:hover{background:rgba(255,255,255,.1)}
-.hamburger span{display:block;width:19px;height:2px;background:#fff;border-radius:2px}
+.hamburger:hover{background:var(--primary-d)}
+.hamburger span{display:block;width:19px;height:2px;background:var(--text-m);border-radius:2px}
 .sb-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25;
   display:none;
@@ -587,6 +639,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     z-index:30;transition:left .28s cubic-bezier(.4,0,.2,1);
   }
   .sidebar.mob-open{left:0}
+  .sb-close-btn{display:block}
   .main{width:100%}
   .topbar{padding:0 12px}
   .content{padding:14px 14px 70px}
@@ -735,47 +788,63 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 <!-- ══════════════════ SIDEBAR ══════════════════ -->
 <aside class="sidebar" id="sidebar">
-  <div class="sb-brand-row">
-    <div class="sb-icon" id="sb-icon" onclick="triggerAvatarUpload('site',null)" title="Clique para trocar a logo" style="cursor:pointer;overflow:hidden;padding:0">P</div>
-    <div>
-      <div class="sb-app-name" id="app-name-label" onclick="location.reload()" title="Refresh" style="cursor:pointer">DigitUly</div>
-      <div class="sb-app-sub">KOL Team Dashboard</div>
-    </div>
+  <!-- Header -->
+  <div class="sb-header">
+    <div class="sb-logo" id="sb-icon" onclick="triggerAvatarUpload('site',null)" title="Clique para trocar a logo" style="cursor:pointer;overflow:hidden">IH</div>
+    <span class="sb-title" id="app-name-label" onclick="location.reload()" title="Refresh">Influencer Hub</span>
+    <button class="sb-close-btn" onclick="closeSidebar()" id="sb-mobile-close">✕</button>
   </div>
 
+  <!-- Member home nav (role=member) -->
   <div id="sb-member-home-nav" style="display:none">
-    <div class="sb-sep">Member</div>
+    <div class="sb-sep">Management</div>
     <nav class="sb-nav">
       <div class="sb-item" id="sbi-member-home" onclick="navTo('member-home',this)">
-        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Home
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+        <span>Dashboard</span>
       </div>
     </nav>
   </div>
 
+  <!-- Admin nav -->
   <div id="sb-admin-nav" style="display:none">
-    <div class="sb-sep">Admin</div>
+    <div class="sb-sep">Management</div>
     <nav class="sb-nav">
       <div class="sb-item" id="sbi-admin-home" onclick="navTo('admin-home',this)">
-        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Home
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h4a1 1 0 001-1v-3h2v3a1 1 0 001 1h4a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+        <span>Dashboard</span>
       </div>
       <div class="sb-item" id="sbi-admin-team" onclick="navTo('admin-team',this)">
-        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Team Activity
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+        <span>Team</span>
       </div>
       <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
-        <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Documents
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
+        <span>Documents</span>
       </div>
     </nav>
   </div>
 
-  <div class="sb-sep" id="sb-nav-sep">Navigation</div>
+  <!-- Section 2: Navigation -->
+  <div class="sb-sep" id="sb-nav-sep">Management</div>
   <nav class="sb-nav">
     <div class="sb-item" id="sbi-campaigns" onclick="navTo('campaigns',this)">
-      <div class="sb-dot" style="background:rgba(255,255,255,.3)"></div> Campaigns
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
+      <span>Campanhas</span>
+    </div>
+    <div class="sb-item" id="sbi-all-brands" onclick="navTo('all-brands',this)">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      <span>Marcas</span>
+    </div>
+    <div class="sb-item" id="sbi-kols" onclick="navTo('kols-registry',null)">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+      <span>Influenciadores</span>
     </div>
   </nav>
   <nav class="sb-nav" id="sb-nav-admin-items"></nav>
   <nav class="sb-nav" id="sb-nav-member-items"></nav>
 
+  <!-- Dynamic lists -->
   <div class="sb-sep" id="sb-brands-sep">Brands</div>
   <div class="sb-list" id="sb-brands-list"></div>
 
@@ -787,19 +856,25 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
   <div style="flex:1"></div>
   <div style="padding:4px 8px 0">
-  <button id="dark-toggle" onclick="toggleDark()" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:11px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
-    <span id="dark-icon">🌙</span><span id="dark-lbl">Dark Mode</span>
-  </button>
-  <button onclick="openChangelog()" style="width:100%;margin-top:4px;padding:6px 12px;border-radius:8px;background:transparent;border:none;color:rgba(255,255,255,.25);font-size:10px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;text-align:left" onmouseover="this.style.color='rgba(255,255,255,.5)'" onmouseout="this.style.color='rgba(255,255,255,.25)'">
-    <span style="font-size:11px">&#128221;</span> System Updates
-  </button>
-</div>
-  <div style="padding:8px;border-top:1px solid rgba(255,255,255,.07)">
-    <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px">
-      <span id="sb-account-av" onclick="openMyProfile()" title="Meu perfil" style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff;cursor:pointer;overflow:hidden">?</span>
-      <span id="sb-account-name" onclick="openMyProfile()" title="Meu perfil" style="flex:1;font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.55)'">Carregando...</span>
-      <button onclick="authLogout()" title="Sair" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:10px;font-weight:600;cursor:pointer" onmouseover="this.style.background='rgba(248,113,113,.15)';this.style.color='#f87171'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.4)'">Sair</button>
+    <button id="dark-toggle" onclick="toggleDark()" style="width:100%;padding:8px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--sidebar-text);font-size:11px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--primary-d)'" onmouseout="this.style.background='var(--bg)'">
+      <span id="dark-icon">🌙</span><span id="dark-lbl">Dark Mode</span>
+    </button>
+    <button onclick="openChangelog()" style="width:100%;margin-top:4px;padding:6px 12px;border-radius:8px;background:transparent;border:none;color:var(--sidebar-muted);font-size:10px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;text-align:left;transition:color .15s" onmouseover="this.style.color='var(--sidebar-text)'" onmouseout="this.style.color='var(--sidebar-muted)'">
+      <span style="font-size:11px">&#128221;</span> System Updates
+    </button>
+  </div>
+
+  <!-- User profile footer -->
+  <div style="padding:8px 8px 10px;border-top:1px solid var(--border);margin-top:4px">
+    <div class="sb-footer">
+      <div class="sb-footer-av" id="sb-account-av" onclick="openMyProfile()" title="Meu perfil">?</div>
+      <div class="sb-footer-info">
+        <div class="sb-footer-name" id="sb-account-name" onclick="openMyProfile()" style="cursor:pointer">Carregando...</div>
+        <div class="sb-footer-email" id="sb-account-email"></div>
+      </div>
+      <button class="sb-footer-gear" onclick="navTo('settings',null)" title="Settings">⚙</button>
     </div>
+    <button onclick="authLogout()" title="Sair" style="width:100%;margin-top:4px;padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--sidebar-muted);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#fef2f2';this.style.color='#f87171';this.style.borderColor='#fca5a5'" onmouseout="this.style.background='transparent';this.style.color='var(--sidebar-muted)';this.style.borderColor='var(--border)'">Sair</button>
   </div>
 </aside>
 
@@ -2178,7 +2253,7 @@ function renderSidebar(){
   var _abActive=currentPage==='all-brands';
   document.getElementById('sb-brands-list').innerHTML=
     '<div class="sb-pill'+(_abActive?' sb-pill-active':'')+'" onclick="navTo(\'all-brands\',null)" style="font-weight:600">'+
-      '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
+      '<div class="sb-dot2" style="background:var(--primary)"></div>'+
       '<span>All Brands</span>'+
     '</div>'+
     ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).slice().sort(function(a,b){
@@ -2192,7 +2267,7 @@ function renderSidebar(){
       return a.name.localeCompare(b.name);
     }).map(b=>
       '<div class="sb-pill'+(b.id===_activeBrandId&&currentPage==='brand'?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
-        '<div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div>'+
+        '<div class="sb-dot2" style="background:'+(b.color||'var(--primary)')+'"></div>'+
         '<span>'+b.name+'</span>'+
       '</div>').join('');
 
@@ -2201,7 +2276,7 @@ function renderSidebar(){
   var _kolsActive=currentPage==='kols-registry';
   document.getElementById('sb-kols-list').innerHTML=
     '<div class="sb-pill'+(_kolsActive?' sb-pill-active':'')+'" onclick="navTo(\'kols-registry\',null)" style="font-weight:600;justify-content:space-between">'+
-      '<div style="display:flex;align-items:center;gap:8px"><div class="sb-dot2" style="background:rgba(255,255,255,.3)"></div><span>All KOLs</span></div>'+
+      '<div style="display:flex;align-items:center;gap:8px"><div class="sb-dot2" style="background:var(--primary)"></div><span>All KOLs</span></div>'+
       (_allKolsCount?'<span style="font-size:9px;font-weight:700;background:rgba(255,255,255,.15);border-radius:10px;padding:1px 6px">'+_allKolsCount+'</span>':'')+
     '</div>';
 
@@ -4052,6 +4127,7 @@ function updateAccountUI(){
   var ini=(name||'?')[0].toUpperCase();
   var avEl=document.getElementById('sb-account-av');
   var nmEl=document.getElementById('sb-account-name');
+  var emEl=document.getElementById('sb-account-email');
   if(avEl){
     var av=m?m.avatar:'';
     if(av && av.length > 10){
@@ -4061,6 +4137,7 @@ function updateAccountUI(){
     }
   }
   if(nmEl) nmEl.textContent=name+(isAdmin()?' ★':'');
+  if(emEl) emEl.textContent=currentUser.email||'';
 }
 
 function openMyProfile(){
@@ -4839,6 +4916,9 @@ var _i18n={
   pt:{
     // Sidebar
     navigation:'Navegação',brands:'Marcas',kols:'KOLs',team:'Time',
+    dashboard:'Dashboard',analytics:'Analytics',campaigns_label:'Campanhas',
+    brands_label:'Marcas',influencers:'Influenciadores',documents_label:'Documentos',
+    settings_label:'Configurações',management:'Gestão',
     darkMode:'Modo escuro',lightMode:'Modo claro',systemUpdates:'Atualizações do sistema',
     // Topbar
     refresh:'Atualizar',export:'Exportar',addMember:'+ Adicionar membro',remove:'🗑️ Remover',
@@ -4917,6 +4997,9 @@ var _i18n={
   en:{
     // Sidebar
     navigation:'Navigation',brands:'Brands',kols:'KOLs',team:'Team',
+    dashboard:'Dashboard',analytics:'Analytics',campaigns_label:'Campaigns',
+    brands_label:'Brands',influencers:'Influencers',documents_label:'Documents',
+    settings_label:'Settings',management:'Management',
     darkMode:'Dark mode',lightMode:'Light mode',systemUpdates:'System updates',
     // Topbar
     refresh:'Refresh',export:'Export',addMember:'+ Add Member',remove:'🗑️ Remove',
