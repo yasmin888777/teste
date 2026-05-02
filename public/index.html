@@ -719,7 +719,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
         <input id="auth-password" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authLogin()">
       </div>
-      <button onclick="authLogin()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Entrar →</button>
+      <button id="btn-auth-login" onclick="authLogin()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Entrar →</button>
       <div id="auth-error-login" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
     </div>
 
@@ -1534,10 +1534,10 @@ async function authLogin() {
   var email    = document.getElementById('auth-email').value.trim();
   var password = document.getElementById('auth-password').value;
   if(!email || !password) { showAuthError('login','Preencha email e senha.'); return; }
-  var btn = document.querySelector('#form-login button');
+  var btn = document.getElementById('btn-auth-login');
   btn.textContent = 'Entrando...'; btn.disabled = true;
   var { data, error } = await supa.auth.signInWithPassword({ email, password });
-  btn.textContent = 'Entrar'; btn.disabled = false;
+  btn.textContent = 'Entrar →'; btn.disabled = false;
   if(error) { showAuthError('login', _authErrMsg(error.message)); return; }
   await _onAuthSuccess(data.user);
 }
