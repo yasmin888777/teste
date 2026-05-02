@@ -987,13 +987,6 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
     <div class="page" id="page-admin-team">
       <div id="admin-team-content"></div>
       <div id="admin-overview-section">
-        <div class="mb16">
-          <div class="card">
-            <div class="sec" style="display:flex;align-items:center;justify-content:space-between"><div class="sec-t">Activity Trend <span class="sec-s" id="trend-period-label">last 14 days</span></div><select id="trend-period-sel" onchange="setTrendPeriod(this.value)" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);color:var(--text);cursor:pointer"><option value="14">Last 14 days</option><option value="30">Last 30 days</option><option value="60">Last 60 days</option></select></div>
-            <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
-            <div class="legend-row" id="legend-trend"></div>
-          </div>
-        </div>
         <div id="brand-progress-row"></div>
       </div>
     </div>
@@ -1919,6 +1912,8 @@ async function initSupabase() {
   });
 }
 
+window.addEventListener('popstate',function(e){if(e.state&&e.state.page){navTo(e.state.page,document.getElementById('sbi-'+e.state.page)||null,e.state.brandId||null);}});
+
 /* ══════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════ */
@@ -2174,6 +2169,12 @@ function navTo(page,el,brandId){
   const pageEl=document.getElementById('page-'+page);
   if(pageEl) pageEl.classList.add('active');
   const T2=_i18n[_lang];const T={overview:T2.overview,members:T2.members,campaigns:T2.campaigns,digest:T2.weeklyDigest,'admin-home':T2.home,'admin-team':T2.teamActivity,'member-home':T2.home,'links':T2.documents,brand:T2.brandDetail,report:T2.weeklyReport,'all-brands':T2.allBrands,settings:T2.settings,'kols-registry':T2.myInfluencers,'kol-form':T2.addKol};
+  // URL routing
+  var _urlRoutes={'admin-home':'/team/dashboard','admin-team':'/team/equipe','report':'/team/analytics','campaigns':'/management/campanhas','all-brands':'/management/marcas','kols-registry':'/management/influenciadores','links':'/management/documentos','settings':'/settings','member-home':'/member/dashboard','kol-form':'/management/influenciadores/novo'};
+  if(window.history&&window.history.pushState){
+    var _routeUrl=_urlRoutes[page]||(brandId?'/management/marca/'+brandId:'/'+page);
+    window.history.pushState({page:page,brandId:brandId||null},'',_routeUrl);
+  }
   if(page==='brand'&&_activeBrandId){const b=getBrand(_activeBrandId);document.getElementById('tb-title').textContent=b?b.name:'Brand Detail';}
   else document.getElementById('tb-title').textContent=T[page]||page;
   // Hide period selector on pages that don't need it
@@ -2230,7 +2231,7 @@ function renderAll(){
   renderBrandProgress();
   renderMembers();
   renderCampaigns();
-  if(currentPage==='overview'||currentPage==='admin-team') drawTrend();
+  if(currentPage==='overview'||currentPage==='admin-team'||currentPage==='admin-home') drawTrend();
   if(currentPage==='admin-home') renderAdminHome();
   if(currentPage==='admin-team') renderAdminTeam();
   if(currentPage==='digest') renderDigest();
@@ -5871,10 +5872,147 @@ function _myAllBrands(){
   return ST.brands.filter(function(b){return (userM.brands||[]).includes(b.id);});
 }
 
+function _fmtDateLocalized(dateObj){
+  var d=dateObj||new Date();
+  var dNames_pt=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  var mNames_pt=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var dNames_en=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var mNames_en=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(_lang==='pt'){
+    return dNames_pt[d.getDay()]+', '+d.getDate()+' de '+mNames_pt[d.getMonth()]+', '+d.getFullYear();
+  }
+  return dNames_en[d.getDay()]+', '+mNames_en[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+}
+function _fmtK(n){if(n>=1000000)return'R$ '+(n/1000000).toFixed(1)+'M';if(n>=1000)return'R$ '+(n/1000).toFixed(0)+'k';return'R$ '+n;}
+function _kpiBlockNew(val,lbl,sub,subColor,bgIco,fgIco,iconSvg){
+  return '<div class="card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
+    '<div>'+
+      '<div style="font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-m);margin-bottom:8px">'+lbl+'</div>'+
+      '<div style="font-size:28px;font-weight:800;line-height:1;color:var(--text)">'+val+'</div>'+
+      (sub?'<div style="font-size:11px;color:'+(subColor||'var(--text-s)')+';margin-top:5px">'+sub+'</div>':'')+
+    '</div>'+
+    '<div style="width:42px;height:42px;border-radius:11px;background:'+bgIco+';display:flex;align-items:center;justify-content:center;flex-shrink:0;color:'+fgIco+'">'+iconSvg+'</div>'+
+  '</div>';
+}
+function _renderCampProgressCards(){
+  var today=new Date();
+  var days=[];for(var i=6;i>=0;i--){var dd=new Date(today);dd.setDate(today.getDate()-i);days.push(dd.toISOString().split('T')[0]);}
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px">'+
+  ST.brands.map(function(b){
+    var allCamps=(ST.campaigns[b.id]||[]).filter(function(c){return(c.status||'ongoing')==='ongoing';});
+    var camp=allCamps[0];
+    var totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+    var totV=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'vids_published');},0);
+    var gCo=b.goals&&b.goals.confirmed?+b.goals.confirmed:(camp&&camp.goalConfirmed?+camp.goalConfirmed:0);
+    var gV=b.goals&&b.goals.videos?+b.goals.videos:(camp&&camp.goalVideos?+camp.goalVideos:0);
+    var pct=gCo>0?Math.min(Math.round(totCo/gCo*100),100):0;
+    var startLabel=camp&&camp.startDate?fmtDate(camp.startDate):'';
+    var endLabel=camp&&camp.endDate?fmtDate(camp.endDate):'';
+    var dateRange=startLabel&&endLabel?startLabel+' – '+endLabel:'';
+    var statusLabel=camp?(camp.status||'ongoing'):'ongoing';
+    var statusColor=statusLabel==='ongoing'?'#16a34a':statusLabel==='finished'?'#64748b':'#d97706';
+    var influencerCount=ST.members.reduce(function(s,m){return s+getKolRegistry(b.id).length;},0);
+    influencerCount=getKolRegistry(b.id).length;
+    return '<div class="card" onclick="navTo(\'all-brands\',null)" style="cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'\'">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--text)">'+b.name+'</div>'+
+        '<span style="font-size:10px;font-weight:600;color:'+statusColor+';background:'+statusColor+'18;padding:2px 8px;border-radius:10px">'+statusLabel+'</span>'+
+      '</div>'+
+      (camp?'<div style="font-size:10px;color:var(--text-s);margin-bottom:10px">'+camp.name+'</div>':'') +
+      (dateRange?'<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-m);margin-bottom:5px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><rect x="1" y="2" width="14" height="13" rx="2"/><path d="M1 6h14M5 1v2M11 1v2"/></svg>'+dateRange+'</div>':'')+
+      (influencerCount?'<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-m);margin-bottom:10px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><circle cx="6" cy="5" r="3"/><path d="M1 14a5 5 0 0110 0"/><circle cx="12" cy="5" r="2.5"/><path d="M14 13a4 4 0 00-3-3.5"/></svg>'+influencerCount+' influenciadores</div>':'')+
+      '<div style="height:5px;background:var(--border);border-radius:3px;margin-bottom:5px;overflow:hidden">'+
+        '<div style="height:100%;background:'+b.color+';border-radius:3px;width:'+pct+'%;transition:width 1s ease"></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-s)">'+
+        '<span>'+totCo+(gCo?' / '+gCo:'')+(gCo?' confirmados':'')+'</span>'+
+        '<span style="font-weight:700;color:var(--text)">'+pct+'%</span>'+
+      '</div>'+
+    '</div>';
+  }).join('')+'</div>';
+}
 function renderAdminHome(){
   var el=document.getElementById('admin-home-content');
-  if(!el) return;
-  _renderHomeContent(el);
+  if(!el)return;
+  var T=_i18n[_lang];
+  var now=new Date();
+  var h=parseInt(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo',hour:'numeric',hour12:false}))||0;
+  var greet=_lang==='pt'?(h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'):(h<12?'Good morning':h<18?'Good afternoon':'Good evening');
+  var userM=currentUser&&currentUser.memberId?getMember(currentUser.memberId):null;
+  var uname=userM?userM.name.split(' ')[0]:(currentUser?(currentUser.name||currentUser.email||'').split(/[@\s]/)[0]:'');
+  var dateStr=_fmtDateLocalized(now);
+
+  // KPI calculations
+  var allKols=ST.brands.reduce(function(s,b){return s.concat(getKolRegistry(b.id));},[]);
+  var totalKols=allKols.length;
+  var activeCamps=[],inReview=0;
+  ST.brands.forEach(function(b){(ST.campaigns[b.id]||[]).forEach(function(c){if((c.status||'ongoing')==='ongoing')activeCamps.push(c);else if(c.status==='review')inReview++;});});
+  var priceMap={'ate500':250,'500-2k':1250,'2k-5k':3500,'5k+':7500};
+  var totalSpent=allKols.filter(function(k){return k.price&&k.price!=='permuta';}).reduce(function(s,k){return s+(priceMap[k.price]||0);},0);
+
+  // Month-over-month (KOLs contacted as trend proxy)
+  var thisM=now.toISOString().substring(0,7);
+  var prevD=new Date(now);prevD.setMonth(prevD.getMonth()-1);
+  var prevM=prevD.toISOString().substring(0,7);
+  var allLogs=[];ST.members.forEach(function(m){allLogs=allLogs.concat(getLogs(m.id)||[]);});
+  var thisC=allLogs.filter(function(l){return l.date&&l.date.startsWith(thisM);}).reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
+  var prevC=allLogs.filter(function(l){return l.date&&l.date.startsWith(prevM);}).reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
+  var pct=prevC>0?Math.round((thisC-prevC)/prevC*100):null;
+  var pctHtml=pct!==null?'<span style="color:'+(pct>=0?'var(--green)':'var(--pink)')+'">&#9650; '+Math.abs(pct)+'% vs mês anterior</span>':'';
+  var inRevHtml=inReview>0?inReview+(T.inReview||' em revisão'):'';
+
+  // SVG icons for KPI cards
+  var icoUsers='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>';
+  var icoMega='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+  var icoDollar='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
+
+  // Period label
+  var periodLabels={pt:{14:'últimos 14 dias',30:'últimos 30 dias',60:'últimos 60 dias'},en:{14:'last 14 days',30:'last 30 days',60:'last 60 days'}};
+  var pLang=periodLabels[_lang]||periodLabels.pt;
+
+  el.innerHTML=
+    // ── Greeting
+    '<div style="margin-bottom:6px">'+
+      '<div style="font-size:26px;font-weight:800;color:var(--text)">'+greet+', '+uname+'! &#128075;</div>'+
+      '<div style="font-size:13px;color:var(--text-s);margin-top:4px">'+dateStr+'</div>'+
+    '</div>'+
+    '<div style="margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--border)">'+
+      '<div style="font-size:19px;font-weight:700;color:var(--text);margin-top:16px;margin-bottom:3px">Dashboard</div>'+
+      '<div style="font-size:12px;color:var(--text-s)">'+(T.dashboardSub||(_lang==='pt'?'Visão geral do seu time de marketing de influência':'Overview of your influencer marketing team'))+'</div>'+
+    '</div>'+
+    // ── KPI row (3 cards)
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px">'+
+      _kpiBlockNew(totalKols.toString(),(_lang==='pt'?'Total de Influenciadores':'Total Influencers'),pctHtml,'','var(--primary-d)','var(--primary)',icoUsers)+
+      _kpiBlockNew(activeCamps.length.toString(),(_lang==='pt'?'Campanhas Ativas':'Active Campaigns'),inRevHtml,'var(--amber)','#e0f2fe','#0284c7',icoMega)+
+      _kpiBlockNew(totalSpent>0?_fmtK(totalSpent):'—',(_lang==='pt'?'Total Gasto':'Total Spent'),null,null,'#fef3c7','#d97706',icoDollar)+
+    '</div>'+
+    // ── Team Activity chart
+    '<div class="card mb16">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+        '<div>'+
+          '<div style="font-size:13px;font-weight:700;color:var(--text)">Team Activity</div>'+
+          '<div style="font-size:11px;color:var(--text-s)" id="trend-period-label">'+pLang[_trendDays||30]+'</div>'+
+        '</div>'+
+        '<select id="trend-period-sel" onchange="setTrendPeriod(this.value)" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);cursor:pointer">'+
+          '<option value="14"'+((_trendDays||30)===14?' selected':'')+'>'+(_lang==='pt'?'Últimos 14 dias':'Last 14 days')+'</option>'+
+          '<option value="30"'+((_trendDays||30)===30?' selected':'')+'>'+(_lang==='pt'?'Últimos 30 dias':'Last 30 days')+'</option>'+
+          '<option value="60"'+((_trendDays||30)===60?' selected':'')+'>'+(_lang==='pt'?'Últimos 60 dias':'Last 60 days')+'</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="chart-wrap"><canvas id="chart-trend"></canvas></div>'+
+      '<div class="legend-row" id="legend-trend"></div>'+
+    '</div>'+
+    // ── Campaign Progress
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+      '<div>'+
+        '<div style="font-size:15px;font-weight:700;color:var(--text)">'+(_lang==='pt'?'Campanhas em Destaque':'Featured Campaigns')+'</div>'+
+        '<div style="font-size:11px;color:var(--text-s);margin-top:2px">'+(_lang==='pt'?'metas e KPIs por marca':'goals & KPIs per brand')+'</div>'+
+      '</div>'+
+      '<button onclick="navTo(\'campaigns\',document.getElementById(\'sbi-campaigns\'))" style="padding:7px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">'+(_lang==='pt'?'+ Nova Campanha':'+ New Campaign')+'</button>'+
+    '</div>'+
+    _renderCampProgressCards();
+
+  setTimeout(function(){drawTrend();},60);
 }
 
 function renderMemberHome(){
