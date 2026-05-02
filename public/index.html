@@ -3678,6 +3678,7 @@ function openMemberDetail(mid){
   const m=getMember(mid);if(!m)return;
   currentMemberId=mid;
   currentPage='member';
+  if(window.history&&window.history.pushState) window.history.pushState({page:'member',memberId:mid},'',' /team/'+_memberSlug(m.name));
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   document.querySelectorAll('.sb-member-pill').forEach(function(pill){
     pill.classList.toggle('sb-member-pill-active', pill.getAttribute('data-mid')===mid);
@@ -4934,7 +4935,7 @@ var _lang=localStorage.getItem('dg_lang')||'pt';
 var _i18n={
   pt:{
     // Sidebar
-    navigation:'Navegação',brands:'Marcas',kols:'KOLs',team:'Time',teamNav:'Equipe',
+    navigation:'Navegação',brands:'Marcas',kols:'KOLs',team:'Time',teamNav:'Membros',
     dashboard:'Dashboard',analytics:'Analytics',campaigns_label:'Campanhas',
     brands_label:'Marcas',influencers:'Influenciadores',documents_label:'Documentos',
     settings_label:'Configurações',management:'Gestão',
@@ -5015,7 +5016,7 @@ var _i18n={
   },
   en:{
     // Sidebar
-    navigation:'Navigation',brands:'Brands',kols:'KOLs',team:'Team',teamNav:'Team',
+    navigation:'Navigation',brands:'Brands',kols:'KOLs',team:'Team',teamNav:'Members',
     dashboard:'Dashboard',analytics:'Analytics',campaigns_label:'Campaigns',
     brands_label:'Brands',influencers:'Influencers',documents_label:'Documents',
     settings_label:'Settings',management:'Management',
@@ -6448,33 +6449,132 @@ function setHivePeriod(v){
   renderAdminTeam();
   drawTrend();
 }
+function _memberSlug(name){ return name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,''); }
+function _uniqueActiveBrands(){
+  var seen={};
+  ST.brands.forEach(function(b){
+    var active=(ST.campaigns[b.id]||[]).some(function(c){return(c.status||'ongoing')==='ongoing';});
+    if(active){ var base=b.name.replace(/\s*\([^)]*\)\s*$/,'').trim(); seen[base]=true; }
+  });
+  return Object.keys(seen).length;
+}
 function renderAdminTeam(){
   var el=document.getElementById('admin-team-content');
   if(!el) return;
+  var isPt=_lang==='pt';
   var today=todayStr();
 
-  // Only count non-admin members in team status
-  var teamMembers=ST.members.filter(function(m){
-    var u=_allUsers.find(function(u){return u.member_id===m.id;});
-    return !u||(u.role!=='admin');
-  });
+  // All members (include admin)
+  var teamMembers=ST.members;
 
-  var membersStatus=teamMembers.map(function(m){
-    var hasLogged=m.brands.some(function(bid){
-      return getLogs(m.id).some(function(l){return l.brandId===bid&&l.date===today;});
-    });
-    var tots=m.brands.reduce(function(acc,bid){
-      var log=getLogs(m.id).find(function(l){return l.brandId===bid&&l.date===today;});
-      if(log){acc.sourced+=+log.kols_sourced||0;acc.contacted+=+log.kols_contacted||0;acc.confirmed+=+log.confirmed||0;acc.vids+=+log.vids_published||0;}
-      return acc;
-    },{sourced:0,contacted:0,confirmed:0,vids:0});
-    return {m:m,hasLogged:hasLogged,tots:tots};
-  });
+  // KPI values
+  var totalCampsActive=0, totalCampsFinished=0;
+  ST.brands.forEach(function(b){ (ST.campaigns[b.id]||[]).forEach(function(c){ if((c.status||'ongoing')==='ongoing') totalCampsActive++; else if(c.status==='finished') totalCampsFinished++; }); });
+  var activeBrandsUnique=_uniqueActiveBrands();
+
+  // Icons
+  var icoUsers='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>';
+  var icoMega='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+  var icoTag='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>';
+
+  // Member cards
+  var nowDate=new Date();
+  var thisM=nowDate.toISOString().substring(0,7);
+  var memberCardsHTML=teamMembers.map(function(m){
+    var col=memberColor(m);
+    var avUrl=avatarUrl(m);
+    var ownerBrands=ST.brands.filter(function(b){return (m.roles&&m.roles[b.id])==='owner';});
+    var ownerCamps=[];
+    ownerBrands.forEach(function(b){ (ST.campaigns[b.id]||[]).forEach(function(c){ ownerCamps.push({c:c,b:b}); }); });
+    var activeCampsOwned=ownerCamps.filter(function(x){return(x.c.status||'ongoing')==='ongoing';});
+    // Stats
+    var statCamps=activeCampsOwned.length;
+    var statInfluencers=activeCampsOwned.reduce(function(s,x){return s+(+x.c.goalConfirmed||0);},0);
+    var statVideos=ownerBrands.reduce(function(s,b){return s+sumM(m.id,b.id,'vids_published');},0);
+    // Completed this month
+    var completedThisMonth=ownerCamps.filter(function(x){return x.c.status==='finished'&&x.c.endDate&&x.c.endDate.startsWith(thisM);}).length;
+    // Last log date
+    var allMyLogs=[];m.brands.forEach(function(bid){allMyLogs=allMyLogs.concat(getLogs(m.id).filter(function(l){return l.brandId===bid;}));});
+    allMyLogs.sort(function(a,b){return b.date>a.date?1:-1;});
+    var lastDate=allMyLogs.length?allMyLogs[0].date:'';
+    var lastLabel=lastDate?'Atualizado em '+lastDate.split('-').reverse().join('/'):'—';
+    // Campaign progress bars
+    var campBarsHTML=activeCampsOwned.slice(0,3).map(function(x){
+      var totCo=ST.members.reduce(function(s,mm){return s+sumM(mm.id,x.b.id,'confirmed');},0);
+      var goal=+(x.c.goalConfirmed)||0;
+      var pct=goal>0?Math.min(Math.round(totCo/goal*100),100):0;
+      var barColor=pct>=100?'var(--green)':pct>=60?'var(--primary)':'var(--amber)';
+      var statusLabel=x.c.status||'ongoing';
+      var statusColor=statusLabel==='ongoing'?'var(--green)':statusLabel==='finished'?'var(--text-s)':'var(--amber)';
+      var statusTxt=statusLabel==='ongoing'?(isPt?'Ativa':'Active'):statusLabel==='finished'?(isPt?'Concluída':'Finished'):(isPt?'Em revisão':'In review');
+      return '<div style="margin-bottom:10px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'+
+          '<span style="font-size:11px;font-weight:600;color:var(--text)">'+escHtml(x.c.name)+'</span>'+
+          '<span style="font-size:10px;font-weight:600;color:'+statusColor+'">'+statusTxt+'</span>'+
+        '</div>'+
+        '<div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:2px">'+
+          '<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px;transition:width 1s ease"></div>'+
+        '</div>'+
+        '<div style="text-align:right;font-size:10px;color:var(--text-s)">'+pct+'%</div>'+
+      '</div>';
+    }).join('');
+    var slug=_memberSlug(m.name);
+    return '<div class="card" style="cursor:pointer;transition:box-shadow .15s;display:flex;flex-direction:column;gap:0" '+
+        'onclick="openMemberDetail(\''+m.id+'\')" '+
+        'onmouseover="this.style.boxShadow=\'0 4px 18px rgba(0,0,0,.1)\'" onmouseout="this.style.boxShadow=\'\'">'+
+      // Header
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+        '<div style="width:44px;height:44px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">'+
+          (avUrl?'<img src="'+avUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">':'<span style="font-size:15px;font-weight:800;color:#fff">'+ini(m.name)+'</span>')+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:700;color:var(--text)">'+escHtml(m.name)+'</div>'+
+          '<div style="font-size:11px;color:var(--text-s);margin-top:1px">'+escHtml(m.role||'Team Member')+'</div>'+
+        '</div>'+
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--text-s)"><path d="M9 18l6-6-6-6"/></svg>'+
+      '</div>'+
+      // Stats row
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:14px">'+
+        '<div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">'+ownerBrands.length+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+(_lang==='pt'?'Projetos':'Projects')+'</div></div>'+
+        '<div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">'+statCamps+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+(_lang==='pt'?'Campanhas':'Campaigns')+'</div></div>'+
+        '<div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">'+statInfluencers+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Influencers</div></div>'+
+        '<div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">—</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Budget</div></div>'+
+      '</div>'+
+      // Campaign progress
+      (campBarsHTML||'<div style="font-size:11px;color:var(--text-s);padding:8px 0">'+(isPt?'Nenhuma campanha ativa como owner':'No active campaigns as owner')+'</div>')+
+      // Footer
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:10px;margin-top:6px">'+
+        '<span style="font-size:10px;color:var(--text-s)">'+lastLabel+'</span>'+
+        (completedThisMonth?'<span style="font-size:10px;font-weight:600;color:var(--primary)">'+completedThisMonth+(isPt?' concluídos este mês':' completed this month')+'</span>':'<span style="font-size:10px;color:var(--text-s)">'+statVideos+' videos</span>')+
+      '</div>'+
+    '</div>';
+  }).join('');
 
   var activeCount=membersStatus.filter(function(s){return s.hasLogged;}).length;
 
   // ── Member Progress Overview ──
-  var memberOverviewHTML=teamMembers.map(function(m){
+  // ── Build HTML ──
+  el.innerHTML=
+    // Title
+    '<div style="margin-bottom:20px">'+
+      '<div style="font-size:22px;font-weight:800;color:var(--text)">'+(isPt?'Visão da Equipe':'Team Activity')+'</div>'+
+      '<div style="font-size:12px;color:var(--text-s);margin-top:4px">'+(isPt?'Arquivo centralizado de atividades — visão geral do que cada membro está executando':'Centralized activity archive — overview of what each member is executing')+'</div>'+
+    '</div>'+
+    // KPI Row
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px">'+
+      _kpiBlockNew(teamMembers.length.toString(),(isPt?'Membros na Equipe':'Team Members'),teamMembers.length+' '+(isPt?'colaboradores ativos':'active members'),'var(--text-s)','var(--primary-d)','var(--primary)',icoUsers)+
+      _kpiBlockNew(totalCampsActive.toString(),(isPt?'Campanhas Ativas':'Active Campaigns'),totalCampsFinished+(isPt?' campanhas realizadas':' completed campaigns'),'var(--text-s)','#e0f2fe','#0284c7',icoMega)+
+      _kpiBlockNew(activeBrandsUnique.toString(),(isPt?'Marcas Ativas':'Active Brands'),(isPt?'marcas únicas com campanhas ativas':'unique brands with active campaigns'),'var(--text-s)','#fef3c7','#d97706',icoTag)+
+    '</div>'+
+    // Member cards grid
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text)">'+teamMembers.length+(isPt?' membros':' members')+'</div>'+
+      (isAdmin()?'<button class="sec-btn" onclick="event.stopPropagation();openAddMember()">+ '+(isPt?'Adicionar membro':'Add Member')+'</button>':'')+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">'+memberCardsHTML+'</div>';
+
+  /* dead code below kept as reference — replaced by memberCardsHTML above */
+  if(false){ var memberOverviewHTML=teamMembers.map(function(m){
     var assignedBrands=ST.brands.filter(function(b){return (m.brands||[]).includes(b.id);});
     var ownerBrands=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])==='owner';});
     var supportBrands=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])!=='owner';});
@@ -6601,9 +6701,7 @@ function renderAdminTeam(){
         '<tbody>'+perfRows+'</tbody>'+
       '</table>'+
     '</div>'+
-  '</div>';
-
-  el.innerHTML=html;
+  '</div>'; } // end if(false) dead code
 }
 
 function attendanceWidget(){
