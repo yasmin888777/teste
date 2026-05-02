@@ -6,6 +6,7 @@
 <title>DigitUly — KOL Team Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ════════════════════════════════════════════
    PALETTE
@@ -692,7 +693,75 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 </style>
 </head>
 <body>
-<div class="shell">
+
+<!-- ══════════════════════════════════════════════
+     TELA DE LOGIN / CADASTRO
+══════════════════════════════════════════════ -->
+<div id="auth-screen" style="display:none;position:fixed;inset:0;background:#f0f2f7;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif">
+  <div style="width:100%;max-width:420px;padding:24px">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="width:52px;height:52px;border-radius:14px;background:#151e35;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;margin-bottom:12px">D</div>
+      <div style="font-size:22px;font-weight:800;color:#1a1f2e">DigitUly</div>
+      <div style="font-size:13px;color:#5a6072;margin-top:4px">KOL Team Dashboard</div>
+    </div>
+
+    <!-- Card -->
+    <div style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e5e7eb">
+        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px 0;font-size:13px;font-weight:600;color:#3b7ef8;border:none;background:none;cursor:pointer;border-bottom:2px solid #3b7ef8;margin-bottom:-2px;transition:all .15s">Entrar</button>
+        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:10px 0;font-size:13px;font-weight:600;color:#9aa0b0;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s">Criar conta</button>
+      </div>
+
+      <!-- Login form -->
+      <div id="form-login">
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">EMAIL</label>
+          <input id="auth-email" type="email" placeholder="seu@email.com" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
+          <input id="auth-password" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authLogin()">
+        </div>
+        <button onclick="authLogin()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Entrar</button>
+        <div id="auth-error-login" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
+      </div>
+
+      <!-- Signup form -->
+      <div id="form-signup" style="display:none">
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">NOME DA AGÊNCIA / WORKSPACE</label>
+          <input id="auth-workspace" type="text" placeholder="Ex: Minha Agência" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SEU NOME</label>
+          <input id="auth-fullname" type="text" placeholder="Seu nome completo" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">EMAIL</label>
+          <input id="auth-email-signup" type="email" placeholder="seu@email.com" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
+          <input id="auth-password-signup" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authSignup()">
+        </div>
+        <button onclick="authSignup()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Criar conta grátis</button>
+        <div id="auth-error-signup" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
+        <div id="auth-success-signup" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:500"></div>
+      </div>
+
+    </div>
+
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#9aa0b0">
+      Seus dados são privados e seguros 🔒
+    </div>
+  </div>
+</div>
+
+<div class="shell" id="app-shell" style="display:none">
 
 <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
 
@@ -758,9 +827,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   </button>
 </div>
   <div style="padding:8px;border-top:1px solid rgba(255,255,255,.07)">
-    <div class="sb-item" id="sb-account-btn" style="font-size:11px;color:rgba(255,255,255,.5);gap:8px" onclick="openAccount()">
-      <span id="sb-account-av" style="width:22px;height:22px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;color:#fff">?</span>
-      <span id="sb-account-name">Loading...</span>
+    <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px">
+      <span id="sb-account-av" style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff">?</span>
+      <span id="sb-account-name" style="flex:1;font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Carregando...</span>
+      <button onclick="authLogout()" title="Sair" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:10px;font-weight:600;cursor:pointer" onmouseover="this.style.background='rgba(248,113,113,.15)';this.style.color='#f87171'" onmouseout="this.style.background='rgba(255,255,255,.06)';this.style.color='rgba(255,255,255,.4)'">Sair</button>
     </div>
   </div>
 </aside>
@@ -1462,6 +1532,289 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 <script>
 /* ══════════════════════════════════════════════
+   SUPABASE — inicialização
+══════════════════════════════════════════════ */
+const SUPA_URL = 'https://lntklnennunivlewoxqx.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxudGtsbmVubnVuaXZsZXdveHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTY4OTksImV4cCI6MjA5MzI5Mjg5OX0.a28hNzzcNF9AePel_jKnd3BhpabgLxGr0cyxjC30NKw';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// Workspace atual do usuário logado
+var _workspaceId = null;
+var _currentUser = null;
+
+/* ── Auth helpers ── */
+function switchAuthTab(tab) {
+  document.getElementById('form-login').style.display   = tab==='login'  ? '' : 'none';
+  document.getElementById('form-signup').style.display  = tab==='signup' ? '' : 'none';
+  document.getElementById('tab-login').style.color      = tab==='login'  ? '#3b7ef8' : '#9aa0b0';
+  document.getElementById('tab-login').style.borderBottomColor  = tab==='login'  ? '#3b7ef8' : 'transparent';
+  document.getElementById('tab-signup').style.color     = tab==='signup' ? '#3b7ef8' : '#9aa0b0';
+  document.getElementById('tab-signup').style.borderBottomColor = tab==='signup' ? '#3b7ef8' : 'transparent';
+}
+
+function showAuthError(form, msg) {
+  var el = document.getElementById('auth-error-'+form);
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideAuthError(form) {
+  document.getElementById('auth-error-'+form).style.display = 'none';
+}
+
+async function authLogin() {
+  hideAuthError('login');
+  var email    = document.getElementById('auth-email').value.trim();
+  var password = document.getElementById('auth-password').value;
+  if(!email || !password) { showAuthError('login','Preencha email e senha.'); return; }
+  var btn = document.querySelector('#form-login button');
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  var { data, error } = await supa.auth.signInWithPassword({ email, password });
+  btn.textContent = 'Entrar'; btn.disabled = false;
+  if(error) { showAuthError('login', _authErrMsg(error.message)); return; }
+  await _onAuthSuccess(data.user);
+}
+
+async function authSignup() {
+  hideAuthError('signup');
+  var workspace = document.getElementById('auth-workspace').value.trim();
+  var fullname  = document.getElementById('auth-fullname').value.trim();
+  var email     = document.getElementById('auth-email-signup').value.trim();
+  var password  = document.getElementById('auth-password-signup').value;
+  if(!workspace||!fullname||!email||!password) { showAuthError('signup','Preencha todos os campos.'); return; }
+  if(password.length < 6) { showAuthError('signup','A senha precisa ter pelo menos 6 caracteres.'); return; }
+  var btn = document.querySelector('#form-signup button');
+  btn.textContent = 'Criando conta...'; btn.disabled = true;
+  var { data, error } = await supa.auth.signUp({ email, password, options:{ data:{ full_name: fullname, workspace_name: workspace } } });
+  btn.textContent = 'Criar conta grátis'; btn.disabled = false;
+  if(error) { showAuthError('signup', _authErrMsg(error.message)); return; }
+  // Create workspace + member immediately
+  if(data.user) {
+    await _createWorkspace(data.user, workspace, fullname);
+    await _onAuthSuccess(data.user);
+  } else {
+    document.getElementById('auth-success-signup').textContent = 'Conta criada! Verifique seu email para confirmar.';
+    document.getElementById('auth-success-signup').style.display = 'block';
+  }
+}
+
+function _authErrMsg(msg) {
+  if(msg.includes('Invalid login')) return 'Email ou senha incorretos.';
+  if(msg.includes('already registered')) return 'Este email já está cadastrado. Faça login.';
+  if(msg.includes('Password should')) return 'A senha precisa ter pelo menos 6 caracteres.';
+  return msg;
+}
+
+async function _createWorkspace(user, workspaceName, fullname) {
+  // Create workspace
+  var { data: ws } = await supa.from('workspaces').insert({ name: workspaceName }).select().single();
+  if(!ws) return;
+  // Add user as owner
+  await supa.from('workspace_members').insert({
+    workspace_id: ws.id, user_id: user.id, role: 'owner', name: fullname
+  });
+  return ws;
+}
+
+async function _onAuthSuccess(user) {
+  _currentUser = user;
+  // Find workspace
+  var { data: members } = await supa.from('workspace_members').select('workspace_id, role, name').eq('user_id', user.id).limit(1);
+  if(!members || members.length === 0) {
+    // New user without workspace — prompt name again
+    showAuthError('login','Conta sem workspace. Crie uma conta primeiro.');
+    return;
+  }
+  _workspaceId = members[0].workspace_id;
+  // Show app, load data
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-shell').style.display = '';
+  await loadAllFromSupabase();
+}
+
+async function authLogout() {
+  await supa.auth.signOut();
+  _workspaceId = null; _currentUser = null;
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+}
+
+/* ── Carregar todos os dados do Supabase para o ST ── */
+async function loadAllFromSupabase() {
+  if(!_workspaceId) return;
+  var wid = _workspaceId;
+
+  var [brandsRes, membersRes, campsRes, kolsRes, schedRes, logsRes, linksRes] = await Promise.all([
+    supa.from('brands').select('*').eq('workspace_id', wid),
+    supa.from('team_members').select('*').eq('workspace_id', wid),
+    supa.from('campaigns').select('*').eq('workspace_id', wid),
+    supa.from('kols').select('*').eq('workspace_id', wid),
+    supa.from('kol_schedules').select('*').eq('workspace_id', wid),
+    supa.from('daily_logs').select('*').eq('workspace_id', wid),
+    supa.from('links').select('*').eq('workspace_id', wid),
+  ]);
+
+  // Mapear para o formato que o ST espera
+  ST.brands = (brandsRes.data||[]).map(b=>({
+    id: b.id, name: b.name, color: b.color||'#3b7ef8', logo: b.logo_url,
+    goalConfirmed: b.goal_confirmed||0, goalVideos: b.goal_videos||0, notes: b.notes||''
+  }));
+
+  ST.members = (membersRes.data||[]).map(m=>({
+    id: m.id, name: m.name, role: m.role||'support',
+    avatar: m.avatar_url||'', brands: m.brands||[]
+  }));
+
+  // Campanhas — agrupar por brand
+  var allCamps = campsRes.data||[];
+  ST.brands.forEach(b=>{
+    var bCamps = allCamps.filter(c=>c.brand_id===b.id).map(c=>({
+      id:c.id, name:c.name, period:c.period, status:c.status||'ongoing',
+      goalConfirmed:c.goal_confirmed||0, goalVideos:c.goal_videos||0,
+      samples:c.samples||0, shipmentStatus:c.shipment_status||0,
+      startDate:c.start_date, endDate:c.end_date, brandId:c.brand_id
+    }));
+    try{ localStorage.setItem('dg_campaigns_'+b.id, JSON.stringify(bCamps)); }catch(e){}
+  });
+
+  // KOLs — agrupar por brand
+  var allKols = kolsRes.data||[];
+  ST.brands.forEach(b=>{
+    var bKols = allKols.filter(k=>k.brand_id===b.id).map(k=>({
+      id:k.id, name:k.name, instagram:k.instagram, igUrl:k.ig_url,
+      tiktok:k.tiktok, youtube:k.youtube, niche:k.niche, sub1:k.sub1, sub2:k.sub2,
+      lang:k.lang, location:k.location, status:k.status||'available', bio:k.bio,
+      igFollowers:k.ig_followers||0, tkFollowers:k.tk_followers||0, ytFollowers:k.yt_followers||0,
+      gender:k.gender, age:k.age, audLocation:k.aud_location,
+      formats:k.formats||[], price:k.price, available:k.available||'sim',
+      platform:k.platform||'instagram', deliverable:k.deliverable||'reel', brandId:k.brand_id
+    }));
+    try{ localStorage.setItem('dg_kolreg_'+b.id, JSON.stringify(bKols)); }catch(e){}
+  });
+
+  // Schedules — agrupar por brand
+  var allSched = schedRes.data||[];
+  ST.brands.forEach(b=>{
+    var bSched = allSched.filter(s=>s.brand_id===b.id).map(s=>({
+      id:s.id, kolId:s.kol_id, kolName:s.kol_name, platform:s.platform,
+      deliverable:s.deliverable, date:s.scheduled_date, time:s.scheduled_time,
+      status:s.status||'scheduled'
+    }));
+    try{ localStorage.setItem('dg_pubsched2_'+b.id, JSON.stringify(bSched)); }catch(e){}
+  });
+
+  // Daily logs — agrupar por member+brand
+  var allLogs = logsRes.data||[];
+  ST.members.forEach(m=>{
+    ST.brands.forEach(b=>{
+      var key='dg_log_'+m.id+'_'+b.id;
+      var mLogs={};
+      allLogs.filter(l=>l.member_id===m.id&&l.brand_id===b.id).forEach(l=>{
+        mLogs[l.date]={kols_contacted:l.kols_contacted||0,confirmed:l.confirmed||0,vids_published:l.videos_published||0};
+      });
+      try{ localStorage.setItem(key, JSON.stringify(mLogs)); }catch(e){}
+    });
+  });
+
+  // Links
+  var allLinks = linksRes.data||[];
+  try{ localStorage.setItem('dg_links', JSON.stringify(allLinks.map(l=>({
+    id:l.id, title:l.title, url:l.url, category:l.category, year:l.year, notes:l.notes
+  })))); }catch(e){}
+
+  // Atualizar sidebar account info
+  var { data: wsMember } = await supa.from('workspace_members').select('name').eq('user_id',_currentUser.id).single();
+  if(wsMember) {
+    var nameEl=document.getElementById('sb-account-name');
+    var avEl=document.getElementById('sb-account-av');
+    if(nameEl) nameEl.textContent=wsMember.name||_currentUser.email;
+    if(avEl) avEl.textContent=(wsMember.name||'?')[0].toUpperCase();
+  }
+
+  renderAll();
+}
+
+/* ── Wrappers para salvar no Supabase E no localStorage ── */
+async function sbSaveBrand(brandData) {
+  if(!_workspaceId) return;
+  var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:brandData.goalConfirmed||0, goal_videos:brandData.goalVideos||0, notes:brandData.notes||'' };
+  if(brandData.id && !brandData.id.startsWith('b_')) {
+    await supa.from('brands').update(payload).eq('id',brandData.id);
+  } else {
+    var { data } = await supa.from('brands').insert(payload).select().single();
+    if(data) brandData.id = data.id;
+  }
+}
+
+async function sbSaveKol(kol, brandId) {
+  if(!_workspaceId) return;
+  var payload = {
+    workspace_id:_workspaceId, brand_id:brandId, name:kol.name,
+    instagram:kol.instagram, ig_url:kol.igUrl, tiktok:kol.tiktok, youtube:kol.youtube,
+    niche:kol.niche, sub1:kol.sub1, sub2:kol.sub2, lang:kol.lang, location:kol.location,
+    status:kol.status||'available', bio:kol.bio,
+    ig_followers:kol.igFollowers||0, tk_followers:kol.tkFollowers||0, yt_followers:kol.ytFollowers||0,
+    gender:kol.gender, age:kol.age, aud_location:kol.audLocation,
+    formats:kol.formats||[], price:kol.price, available:kol.available||'sim',
+    platform:kol.platform||'instagram', deliverable:kol.deliverable||'reel'
+  };
+  if(kol.id && !kol.id.startsWith('kol_')) {
+    await supa.from('kols').update(payload).eq('id',kol.id);
+  } else {
+    var { data } = await supa.from('kols').insert(payload).select().single();
+    if(data) kol.id = data.id;
+  }
+}
+
+async function sbDeleteKol(kolId) {
+  if(!_workspaceId || kolId.startsWith('kol_')) return;
+  await supa.from('kols').delete().eq('id',kolId);
+}
+
+async function sbSaveCampaign(camp, brandId) {
+  if(!_workspaceId) return;
+  var payload = {
+    workspace_id:_workspaceId, brand_id:brandId, name:camp.name,
+    period:camp.period, status:camp.status||'ongoing',
+    goal_confirmed:camp.goalConfirmed||0, goal_videos:camp.goalVideos||0,
+    samples:camp.samples||0, shipment_status:camp.shipmentStatus||0,
+    start_date:camp.startDate||null, end_date:camp.endDate||null
+  };
+  if(camp.id && !camp.id.startsWith('camp_')) {
+    await supa.from('campaigns').update(payload).eq('id',camp.id);
+  } else {
+    var { data } = await supa.from('campaigns').insert(payload).select().single();
+    if(data) camp.id = data.id;
+  }
+}
+
+async function sbSaveLog(memberId, brandId, date, logData) {
+  if(!_workspaceId) return;
+  await supa.from('daily_logs').upsert({
+    workspace_id:_workspaceId, member_id:memberId, brand_id:brandId, date:date,
+    kols_contacted:logData.kols_contacted||0, confirmed:logData.confirmed||0,
+    videos_published:logData.vids_published||0
+  }, { onConflict:'member_id,brand_id,date' });
+}
+
+/* ── Inicializar: checar sessão existente ── */
+async function initSupabase() {
+  var { data:{ session } } = await supa.auth.getSession();
+  if(session) {
+    await _onAuthSuccess(session.user);
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app-shell').style.display = 'none';
+  }
+  // Listener para mudanças de sessão
+  supa.auth.onAuthStateChange(async (event, session) => {
+    if(event === 'SIGNED_OUT') {
+      document.getElementById('app-shell').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'flex';
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
    CONFIG
 ══════════════════════════════════════════════ */
 
@@ -1524,26 +1877,10 @@ let ST = {
 
 async function loadState(){
   try{
-    // Verify JWT first
-    var token=authToken();
-    if(token){
-      var meRes=await fetch('/api/auth/me',{headers:authHeaders()});
-      var meData=await meRes.json();
-      if(meData.ok){ currentUser=meData.user; updateAccountUI(); }
-      else { localStorage.removeItem('dg_token'); currentUser=null; showLoginOverlay(); return; }
-    } else {
-      showLoginOverlay(); return;
-    }
-
-    const res = await fetch('/api/state', { headers: authHeaders() });
-    const data = await res.json();
-    ST = data;
-    if(!ST.customAvatars) ST.customAvatars={};
-    if(!ST.campaigns) ST.campaigns={};
-    if(!ST.logoUrl) ST.logoUrl='';
+    // Auth via Supabase — initSupabase() já cuida disso
+    // Esta função agora só faz a navegação inicial após dados carregados
     updateSiteLogo();
-    document.title=(ST.appName||'DigitUly')+' — KOL Team Dashboard';
-    renderAll();
+    document.title='DigitUly — KOL Team Dashboard';
     loadAdminData();
     // Restore last nav state if available
     var _savedNav=null;
@@ -6776,7 +7113,7 @@ function toggleDevMode(){
    BOOT
 ══════════════════════════════════════════════ */
 initDark();
-loadState();
+initSupabase();
 </script>
 
 <!-- NEW CAMPAIGN MODAL -->
@@ -6879,5 +7216,6 @@ loadState();
   <button onclick="navTo('digest',document.getElementById('sbi-digest'))" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.5);font-size:9px;font-weight:500;padding:6px 0;background:none;border:none">📅<span>Digest</span></button>
   <button onclick="openAccount()" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.5);font-size:9px;font-weight:500;padding:6px 0;background:none;border:none">⚙️<span>Account</span></button>
 </nav>
+</div><!-- end app-shell -->
 </body>
 </html>
