@@ -784,10 +784,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <button class="sec-btn" onclick="openAddMember()" style="padding:5px 12px;font-size:11px">+ Add Member</button>
         <button id="tb-remove-btn" style="padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;background:rgba(248,113,113,.1);color:#f87171;border:1px solid rgba(248,113,113,.2);cursor:pointer">&#128465; Remove</button>
       </div>
-      <div style="display:flex;gap:2px;align-items:center;margin-right:4px">
-  <button id="lang-btn-pt" onclick="setLang('pt')" title="Português" style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;font-size:17px;cursor:pointer;opacity:1;transition:opacity .15s;line-height:1" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='transparent'">🇧🇷</button>
-  <button id="lang-btn-en" onclick="setLang('en')" title="English" style="width:28px;height:28px;border-radius:6px;border:none;background:transparent;font-size:17px;cursor:pointer;opacity:.35;transition:opacity .15s;line-height:1" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='transparent'">🇺🇸</button>
-</div>
+      <div style="display:flex;gap:3px;align-items:center;margin-right:2px">
+        <button id="lang-btn-pt" onclick="setLang('pt')" title="Português" style="width:30px;height:30px;border-radius:6px;border:none;background:rgba(255,255,255,.12);font-size:16px;cursor:pointer;opacity:1;transition:all .15s;line-height:30px;text-align:center;display:flex;align-items:center;justify-content:center">🇧🇷</button>
+        <button id="lang-btn-en" onclick="setLang('en')" title="English" style="width:30px;height:30px;border-radius:6px;border:none;background:transparent;font-size:16px;cursor:pointer;opacity:.4;transition:all .15s;line-height:30px;text-align:center;display:flex;align-items:center;justify-content:center">🇺🇸</button>
+      </div>
       <div class="tb-time" id="tb-time"></div>
       <button class="tb-btn refresh" onclick="renderAll()">&#8635; Refresh</button>
       <button class="tb-btn export" onclick="exportDashboard()">&#11015; Export</button>
@@ -4639,8 +4639,13 @@ function setLang(lang){
   var ptBtn=document.getElementById('lang-btn-pt');
   var enBtn=document.getElementById('lang-btn-en');
   if(ptBtn&&enBtn){
-    if(lang==='pt'){ptBtn.style.opacity='1';enBtn.style.opacity='.35';}
-    else{enBtn.style.opacity='1';ptBtn.style.opacity='.35';}
+    if(lang==='pt'){
+      ptBtn.style.opacity='1';ptBtn.style.background='rgba(255,255,255,.18)';
+      enBtn.style.opacity='.4';enBtn.style.background='transparent';
+    } else {
+      enBtn.style.opacity='1';enBtn.style.background='rgba(255,255,255,.18)';
+      ptBtn.style.opacity='.4';ptBtn.style.background='transparent';
+    }
   }
   // Update sidebar static labels
   var T=_i18n[lang];
