@@ -709,54 +709,22 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
     <!-- Card -->
     <div style="background:#fff;border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+      <div style="font-size:15px;font-weight:700;color:#1a1f2e;margin-bottom:20px">Entrar na sua conta</div>
 
-      <!-- Tabs -->
-      <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #e5e7eb">
-        <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:10px 0;font-size:13px;font-weight:600;color:#3b7ef8;border:none;background:none;cursor:pointer;border-bottom:2px solid #3b7ef8;margin-bottom:-2px;transition:all .15s">Entrar</button>
-        <button id="tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:10px 0;font-size:13px;font-weight:600;color:#9aa0b0;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s">Criar conta</button>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">EMAIL</label>
+        <input id="auth-email" type="email" placeholder="seu@email.com" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
       </div>
-
-      <!-- Login form -->
-      <div id="form-login">
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">EMAIL</label>
-          <input id="auth-email" type="email" placeholder="seu@email.com" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
-        </div>
-        <div style="margin-bottom:20px">
-          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
-          <input id="auth-password" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authLogin()">
-        </div>
-        <button onclick="authLogin()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Entrar</button>
-        <div id="auth-error-login" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
+      <div style="margin-bottom:24px">
+        <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
+        <input id="auth-password" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authLogin()">
       </div>
-
-      <!-- Signup form -->
-      <div id="form-signup" style="display:none">
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">NOME DA AGÊNCIA / WORKSPACE</label>
-          <input id="auth-workspace" type="text" placeholder="Ex: Minha Agência" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
-        </div>
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SEU NOME</label>
-          <input id="auth-fullname" type="text" placeholder="Seu nome completo" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
-        </div>
-        <div style="margin-bottom:14px">
-          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">EMAIL</label>
-          <input id="auth-email-signup" type="email" placeholder="seu@email.com" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
-        </div>
-        <div style="margin-bottom:20px">
-          <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
-          <input id="auth-password-signup" type="password" placeholder="Mínimo 6 caracteres" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authSignup()">
-        </div>
-        <button onclick="authSignup()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Criar conta grátis</button>
-        <div id="auth-error-signup" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
-        <div id="auth-success-signup" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:500"></div>
-      </div>
-
+      <button onclick="authLogin()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Entrar →</button>
+      <div id="auth-error-login" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
     </div>
 
     <div style="text-align:center;margin-top:20px;font-size:11px;color:#9aa0b0">
-      Seus dados são privados e seguros 🔒
+      Acesso restrito à equipe interna 🔒
     </div>
   </div>
 </div>
