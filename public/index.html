@@ -765,12 +765,12 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
       <div style="font-size:15px;font-weight:700;color:#1a1f2e;margin-bottom:20px">Entrar na sua conta</div>
 
       <div style="margin-bottom:14px">
-        <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">EMAIL</label>
-        <input id="auth-email" type="email" placeholder="seu@email.com" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'">
+        <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">USUÁRIO</label>
+        <input id="auth-email" type="text" placeholder="ex: yasmin" autocomplete="username" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')document.getElementById('auth-password').focus()">
       </div>
       <div style="margin-bottom:24px">
         <label style="font-size:11px;font-weight:600;color:#5a6072;display:block;margin-bottom:6px">SENHA</label>
-        <input id="auth-password" type="password" placeholder="••••••••" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authLogin()">
+        <input id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:9px;font-size:13px;font-family:inherit;color:#1a1f2e;outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='#3b7ef8'" onblur="this.style.borderColor='#e5e7eb'" onkeydown="if(event.key==='Enter')authLogin()">
       </div>
       <button id="btn-auth-login" onclick="authLogin()" style="width:100%;padding:12px;border-radius:9px;background:#3b7ef8;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Entrar →</button>
       <div id="auth-error-login" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#fef2f2;color:#dc2626;font-size:12px;font-weight:500"></div>
@@ -1492,7 +1492,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <span style="font-size:9px;padding:2px 7px;border-radius:10px;background:var(--amber-d);color:var(--amber);font-weight:600">&#128274; Admin only</span>
       </div>
       <div id="prof-user-info" style="font-size:11px;color:var(--text-m);margin-bottom:10px"></div>
-      <input class="goal-inp" type="email" id="prof-user-email" placeholder="Email address"/>
+      <input class="goal-inp" type="text" id="prof-user-email" placeholder="Nome de usuário (ex: yasmin)" autocomplete="off"/>
       <input class="goal-inp" type="password" id="prof-user-pwd" placeholder="New password (leave blank to keep)" style="margin-top:6px"/>
       <div style="margin-top:8px">
         <label style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-s);display:block;margin-bottom:5px">Account Type</label>
@@ -1619,6 +1619,10 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 const SUPA_URL = 'https://lntklnennunivlewoxqx.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxudGtsbmVubnVuaXZsZXdveHF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTY4OTksImV4cCI6MjA5MzI5Mjg5OX0.a28hNzzcNF9AePel_jKnd3BhpabgLxGr0cyxjC30NKw';
 const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+// ── Username ↔ Supabase email helpers ──
+const _AUTH_DOMAIN = '@kol.team';
+function _toAuthEmail(u){ return u&&u.includes('@') ? u : (u||'')+_AUTH_DOMAIN; }
+function _fromAuthEmail(e){ return e ? e.replace(/@kol\.team$/,'') : ''; }
 
 // Workspace atual do usuário logado
 var _workspaceId = null;
@@ -1645,11 +1649,12 @@ function hideAuthError(form) {
 
 async function authLogin() {
   hideAuthError('login');
-  var email    = document.getElementById('auth-email').value.trim();
+  var username = document.getElementById('auth-email').value.trim();
   var password = document.getElementById('auth-password').value;
-  if(!email || !password) { showAuthError('login','Preencha email e senha.'); return; }
+  if(!username || !password) { showAuthError('login','Preencha usuário e senha.'); return; }
   var btn = document.getElementById('btn-auth-login');
   btn.textContent = 'Entrando...'; btn.disabled = true;
+  var email = _toAuthEmail(username);
   var { data, error } = await supa.auth.signInWithPassword({ email, password });
   btn.textContent = 'Entrar →'; btn.disabled = false;
   if(error) { showAuthError('login', _authErrMsg(error.message)); return; }
@@ -3220,10 +3225,11 @@ async function saveProfileUser(){
     if(!email){msg.style.color='#f87171';msg.textContent='Email obrigatório para criar conta.';return;}
     if(!pwd||pwd.length<6){msg.style.color='#f87171';msg.textContent='Senha mínima: 6 caracteres.';return;}
     // Use raw fetch to avoid replacing current admin session
+    var authEmail=_toAuthEmail(email); // email var here holds the username input
     var signupRes=await fetch(SUPA_URL+'/auth/v1/signup',{
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:email,password:pwd})
+      body:JSON.stringify({email:authEmail,password:pwd})
     });
     var signupData=await signupRes.json();
     if(!signupData.id){
@@ -7872,22 +7878,28 @@ function renderSettings(){
     '</div>'+
     (isAdmin()?
       '<div class="card mb16" style="margin-top:16px">'+
-        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">&#128101; Account Management</div>'+
-        '<div style="font-size:12px;color:var(--text-s);margin-bottom:12px">Manage login account types for team members.</div>'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">'+
+          '<div style="font-size:14px;font-weight:700;color:var(--text)">👥 Gerenciar Contas</div>'+
+          '<button onclick="openCreateAccountModal()" style="padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Nova Conta</button>'+
+        '</div>'+
+        '<div style="font-size:12px;color:var(--text-s);margin-bottom:16px">Crie e edite contas de login para os membros da equipe.</div>'+
         '<div id="acct-mgmt-list">'+
-          ST.members.map(function(m){
-            var u=_allUsers.find(function(u){return u.member_id===m.id;});
-            var role=u?u.role:'member';
-            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
-              '<div style="font-size:12px;font-weight:600;flex:1">'+escHtml(m.name)+'</div>'+
-              '<select id="acct-role-'+m.id+'" style="padding:5px 8px;border-radius:7px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:11px">'+
-                '<option value="member"'+(role==='member'?' selected':'')+'>Member</option>'+
-                '<option value="member+admin"'+(role==='member+admin'?' selected':'')+'>Member + Admin</option>'+
-                '<option value="admin"'+(role==='admin'?' selected':'')+'>Admin only</option>'+
-              '</select>'+
-              '<button onclick="saveAcctMgmtRole(\''+m.id+'\')" style="padding:5px 12px;border-radius:7px;background:var(--primary);color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer">Save</button>'+
-            '</div>';
-          }).join('')+
+        ST.members.map(function(m){
+          var u=_allUsers.find(function(u){return u.member_id===m.id;});
+          var hasAcct=!!(u&&u.user_id);
+          var uname=hasAcct?_fromAuthEmail(u.email||m.name):null;
+          var role=u?u.role:'—';
+          return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">'+
+            '<div style="flex:1;min-width:0">'+
+              '<div style="font-size:12px;font-weight:700;color:var(--text)">'+m.name+'</div>'+
+              (hasAcct
+                ?'<div style="font-size:10px;color:var(--text-s);margin-top:1px">@'+(uname||m.name.toLowerCase())+'&nbsp;·&nbsp;<span style="color:var(--primary)">'+role+'</span></div>'
+                :'<div style="font-size:10px;color:var(--amber)">Sem conta de login</div>'
+              )+
+            '</div>'+
+            '<button onclick="openEditAccountModal(\''+m.id+'\')" style="padding:5px 12px;border-radius:7px;background:var(--bg);border:1.5px solid var(--border);color:var(--text-m);font-size:11px;font-weight:600;cursor:pointer">'+(hasAcct?'✎ Editar':'+ Criar')+'</button>'+
+          '</div>';
+        }).join('')+
         '</div>'+
       '</div>'
     :'')+
@@ -7958,6 +7970,133 @@ async function saveAcctMgmtRole(memberId){
 /* ══════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   ACCOUNT MANAGEMENT MODAL
+══════════════════════════════════════════════ */
+var _acctModalMemberId = null;
+
+function openCreateAccountModal() {
+  _acctModalMemberId = null;
+  document.getElementById('acct-modal-title').textContent = 'Nova Conta';
+  document.getElementById('acct-modal-member-sel').style.display = '';
+  document.getElementById('acct-modal-username').value = '';
+  document.getElementById('acct-modal-pwd').value = '';
+  document.getElementById('acct-modal-role').value = 'member';
+  document.getElementById('acct-modal-msg').textContent = '';
+  // populate member select
+  var sel = document.getElementById('acct-modal-member-sel-input');
+  sel.innerHTML = '<option value="">Selecione o membro...</option>' +
+    ST.members.map(function(m){ return '<option value="'+m.id+'">'+m.name+'</option>'; }).join('');
+  openOv('ov-acct-modal');
+}
+
+function openEditAccountModal(memberId) {
+  _acctModalMemberId = memberId;
+  var m = getMember(memberId);
+  if(!m) return;
+  document.getElementById('acct-modal-title').textContent = 'Editar Conta — '+m.name;
+  document.getElementById('acct-modal-member-sel').style.display = 'none';
+  var u = _allUsers.find(function(u){ return u.member_id===memberId; });
+  var uname = u ? _fromAuthEmail(u.email||'') : m.name.toLowerCase().replace(/\s+/g,'');
+  document.getElementById('acct-modal-username').value = uname || '';
+  document.getElementById('acct-modal-pwd').value = '';
+  document.getElementById('acct-modal-role').value = u ? (u.role||'member') : 'member';
+  document.getElementById('acct-modal-msg').textContent = '';
+  openOv('ov-acct-modal');
+}
+
+async function saveAccountModal() {
+  var msg = document.getElementById('acct-modal-msg');
+  msg.style.color = 'var(--text-s)'; msg.textContent = 'Salvando...';
+  var username = document.getElementById('acct-modal-username').value.trim().toLowerCase().replace(/\s+/g,'');
+  var pwd = document.getElementById('acct-modal-pwd').value;
+  var role = document.getElementById('acct-modal-role').value;
+
+  if(!username){ msg.style.color='#f87171'; msg.textContent='Usuário obrigatório.'; return; }
+
+  var authEmail = _toAuthEmail(username);
+
+  if(!_acctModalMemberId) {
+    // CREATE — get member from select
+    var memberId = document.getElementById('acct-modal-member-sel-input').value;
+    if(!memberId){ msg.style.color='#f87171'; msg.textContent='Selecione um membro.'; return; }
+    if(!pwd||pwd.length<6){ msg.style.color='#f87171'; msg.textContent='Senha mínima: 6 caracteres.'; return; }
+    var m = getMember(memberId);
+
+    // Create Supabase Auth user via raw fetch (doesn't affect admin session)
+    var res = await fetch(SUPA_URL+'/auth/v1/signup', {
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:authEmail, password:pwd})
+    });
+    var d = await res.json();
+    if(!d.id){ msg.style.color='#f87171'; msg.textContent=d.msg||d.error_description||d.message||'Erro ao criar conta.'; return; }
+
+    var newUserId = d.id;
+    var insertToken = d.access_token || null;
+
+    // Insert workspace_members — try with new user's token first
+    var insErr = null;
+    if(insertToken){
+      var ir = await fetch(SUPA_URL+'/rest/v1/workspace_members',{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+insertToken,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({workspace_id:_workspaceId,user_id:newUserId,role:role,name:m?m.name:username})
+      });
+      if(!ir.ok){ var ib=await ir.json(); insErr=ib; }
+    } else {
+      var {error:_ie}=await supa.from('workspace_members').insert({workspace_id:_workspaceId,user_id:newUserId,role:role,name:m?m.name:username});
+      insErr=_ie||null;
+    }
+
+    if(insErr){
+      msg.style.color='#f59e0b';
+      msg.textContent='Conta criada! Execute no Supabase SQL Editor: INSERT INTO workspace_members (workspace_id,user_id,role,name) VALUES (\''+_workspaceId+'\',\''+newUserId+'\',\''+role+'\',\''+(m?m.name:username)+'\');';
+      return;
+    }
+    _allUsers.push({id:newUserId,user_id:newUserId,email:authEmail,role:role,member_id:memberId,has_password:true});
+    msg.style.color='var(--green)'; msg.textContent='✓ Conta criada com sucesso!';
+    if(currentPage==='settings') renderSettings();
+
+  } else {
+    // EDIT existing account
+    var u = _allUsers.find(function(u){ return u.member_id===_acctModalMemberId; });
+
+    if(u && u.user_id) {
+      // Update role in workspace_members
+      var {error:rErr}=await supa.from('workspace_members').update({role:role}).eq('user_id',u.user_id).eq('workspace_id',_workspaceId);
+      if(rErr){ msg.style.color='#f87171'; msg.textContent='Erro ao atualizar role: '+rErr.message; return; }
+      u.role = role;
+
+      // If password provided, update via Supabase Admin API
+      if(pwd && pwd.length >= 6) {
+        // Try updating password for the user using admin endpoint
+        var pwdRes = await fetch(SUPA_URL+'/auth/v1/admin/users/'+u.user_id, {
+          method:'PUT',
+          headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+          body:JSON.stringify({password:pwd})
+        });
+        if(!pwdRes.ok){
+          msg.style.color='#f59e0b';
+          msg.textContent='Role atualizado, mas troca de senha requer service role key no painel Supabase.';
+          return;
+        }
+      }
+      msg.style.color='var(--green)'; msg.textContent='✓ Conta atualizada!';
+      if(currentPage==='settings') renderSettings();
+    } else {
+      // No account yet — create one
+      if(!pwd||pwd.length<6){ msg.style.color='#f87171'; msg.textContent='Senha mínima: 6 caracteres para criar conta.'; return; }
+      _acctModalMemberId = null; // pretend it's a create
+      var selEl = document.getElementById('acct-modal-member-sel-input');
+      if(selEl) selEl.value = _acctModalMemberId||'';
+      // re-trigger as create
+      var mId = document.getElementById('acct-modal-title').textContent.split('—')[1]||'';
+      msg.style.color='#f87171'; msg.textContent='Use "+ Nova Conta" para criar a conta deste membro.';
+    }
+  }
+}
+
 initDark();
 initSupabase();
 </script>
@@ -8063,5 +8202,48 @@ initSupabase();
   <button onclick="openAccount()" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;color:rgba(255,255,255,.5);font-size:9px;font-weight:500;padding:6px 0;background:none;border:none">⚙️<span>Account</span></button>
 </nav>
 </div><!-- end app-shell -->
+
+<!-- ACCOUNT MANAGEMENT MODAL -->
+<div class="overlay" id="ov-acct-modal" onclick="ovBg('ov-acct-modal',event)">
+  <div class="modal" style="max-width:420px;width:100%">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div id="acct-modal-title" style="font-size:15px;font-weight:700;color:var(--text-h)">Nova Conta</div>
+      <button class="modal-x" onclick="closeOv('ov-acct-modal')">&#10005;</button>
+    </div>
+
+    <!-- Member selector (only for create) -->
+    <div id="acct-modal-member-sel" style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;color:var(--text-s);display:block;margin-bottom:6px">MEMBRO</label>
+      <select id="acct-modal-member-sel-input" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text-h);font-size:13px;font-family:inherit;outline:none"></select>
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;color:var(--text-s);display:block;margin-bottom:6px">USUÁRIO</label>
+      <input id="acct-modal-username" type="text" placeholder="ex: yasmin" autocomplete="off" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text-h);font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+    </div>
+
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;font-weight:600;color:var(--text-s);display:block;margin-bottom:6px">SENHA <span style="color:var(--text-s);font-weight:400">(deixe em branco para não alterar)</span></label>
+      <input id="acct-modal-pwd" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text-h);font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+    </div>
+
+    <div style="margin-bottom:20px">
+      <label style="font-size:11px;font-weight:600;color:var(--text-s);display:block;margin-bottom:6px">TIPO DE CONTA</label>
+      <select id="acct-modal-role" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text-h);font-size:13px;font-family:inherit;outline:none">
+        <option value="member">Membro</option>
+        <option value="member+admin">Membro + Admin</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <div id="acct-modal-msg" style="min-height:18px;font-size:12px;font-weight:500;margin-bottom:12px;color:var(--text-s)"></div>
+
+    <div style="display:flex;gap:10px">
+      <button onclick="closeOv('ov-acct-modal')" style="flex:1;padding:11px;border-radius:9px;background:var(--bg);color:var(--text-m);border:1.5px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+      <button onclick="saveAccountModal()" style="flex:1;padding:11px;border-radius:9px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Salvar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
