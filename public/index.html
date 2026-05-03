@@ -869,16 +869,11 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
   <div class="sb-list" id="sb-brands-list"></div>
   <div class="sb-sep" id="sb-kols-sep">KOLs</div>
   <div class="sb-list" id="sb-kols-list"></div>
-  <div class="sb-sep" id="sb-team-sep">Team</div>
-  <div class="sb-list" id="sb-team-list"></div>
 
   <div style="flex:1"></div>
   <div style="padding:4px 8px 0">
     <button id="dark-toggle" onclick="toggleDark()" style="width:100%;padding:8px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--sidebar-text);font-size:11px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--primary-d)'" onmouseout="this.style.background='var(--bg)'">
       <span id="dark-icon">🌙</span><span id="dark-lbl">Dark Mode</span>
-    </button>
-    <button onclick="openChangelog()" style="width:100%;margin-top:4px;padding:6px 12px;border-radius:8px;background:transparent;border:none;color:var(--sidebar-muted);font-size:10px;font-weight:500;display:flex;align-items:center;gap:6px;cursor:pointer;text-align:left;transition:color .15s" onmouseover="this.style.color='var(--sidebar-text)'" onmouseout="this.style.color='var(--sidebar-muted)'">
-      <span style="font-size:11px">&#128221;</span> <span id="dark-updates-lbl">System Updates</span>
     </button>
   </div>
 
@@ -962,9 +957,16 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
             <option value="ongoing">Ongoing</option>
             <option value="finished">Finished</option>
           </select>
+          <div style="display:flex;gap:3px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:3px" id="camp-view-btns">
+            <button onclick="_reportView='weekly';document.querySelectorAll('#camp-view-btns button').forEach(function(b){b.style.background='transparent';b.style.color='var(--text-s)'});this.style.background='var(--primary)';this.style.color='#fff'" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:var(--primary);color:#fff;transition:all .15s">Weekly</button>
+            <button onclick="_reportView='monthly';document.querySelectorAll('#camp-view-btns button').forEach(function(b){b.style.background='transparent';b.style.color='var(--text-s)'});this.style.background='var(--primary)';this.style.color='#fff'" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--text-s);transition:all .15s">Monthly</button>
+            <button onclick="_reportView='annual';document.querySelectorAll('#camp-view-btns button').forEach(function(b){b.style.background='transparent';b.style.color='var(--text-s)'});this.style.background='var(--primary)';this.style.color='#fff'" style="padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--text-s);transition:all .15s">Annual</button>
+          </div>
+          <button class="sec-btn" onclick="exportDashboard()">&#8681; Download Report</button>
           <button class="sec-btn" id="btn-new-campaign" onclick="openNewCampaignModal()">+ New Campaign</button>
         </div>
       </div>
+      <div id="camp-kpi-row"></div>
       <div id="campaign-cards"></div>
       <div id="camp-progress-wrap"></div>
     </div>
@@ -1332,19 +1334,25 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
 
 <!-- ══════════════════ MODAL: EDIT CAMPAIGN ══════════════════ -->
 <div class="overlay" id="ov-edit-campaign" onclick="ovBg('ov-edit-campaign',event)">
-  <div class="modal goals-modal" style="max-width:420px">
+  <div class="modal goals-modal" style="max-width:480px;max-height:90vh;overflow-y:auto">
     <div class="modal-hd">
       <div style="font-size:22px">&#9998;</div>
-      <div><div class="modal-title">Edit Campaign</div><div class="modal-sub" id="edit-camp-sub"></div></div>
+      <div><div class="modal-title">Edit Campaign</div><div class="modal-sub" id="edit-camp-sub">Select brand &amp; campaign</div></div>
       <button class="modal-x" onclick="closeOv('ov-edit-campaign')">&#10005;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Brand</label>
+        <select id="ec-brand-sel" class="ff-inp" style="cursor:pointer" onchange="_ecBrandChanged()"></select>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Campaign</label>
+        <select id="ec-camp-sel" class="ff-inp" style="cursor:pointer" onchange="_ecCampChanged()"></select>
+      </div>
     </div>
     <div class="ff" style="margin-bottom:10px">
       <label class="ff-lbl">Campaign Name *</label>
       <input class="ff-inp" id="ec-name" placeholder="e.g. MYWLK Summer Y1"/>
-    </div>
-    <div class="ff" style="margin-bottom:10px">
-      <label class="ff-lbl">Period (optional)</label>
-      <input class="ff-inp" id="ec-period" placeholder="e.g. Q1 2026"/>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div class="ff">
@@ -1356,15 +1364,30 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         <input class="ff-inp" id="ec-end" type="date"/>
       </div>
     </div>
-    <div class="ff" style="margin-bottom:10px">
-      <label class="ff-lbl">&#128230; Samples Quantity</label>
-      <input class="ff-inp" id="ec-samples" type="number" min="0" placeholder="0"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Target KOLs</label>
+        <input class="ff-inp" id="ec-goal-kols" type="number" min="0" placeholder="0"/>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Target Videos</label>
+        <input class="ff-inp" id="ec-goal-vids" type="number" min="0" placeholder="0"/>
+      </div>
     </div>
-    <div class="ff" style="margin-bottom:14px">
-      <label class="ff-lbl">&#128666; Shipped (units sent)</label>
-      <input class="ff-inp" id="ec-shipment-status" type="number" min="0" placeholder="0"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="ff">
+        <label class="ff-lbl">Owner</label>
+        <select id="ec-owner-sel" class="ff-inp" style="cursor:pointer"></select>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Support</label>
+        <select id="ec-support-sel" class="ff-inp" style="cursor:pointer"></select>
+      </div>
     </div>
-    <button class="save-btn" onclick="saveEditCampaign()">Save Changes</button>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="save-btn" style="background:var(--bg);color:var(--text-m);border:1.5px solid var(--border);flex:0 0 auto;width:auto;padding:11px 18px" onclick="closeOv('ov-edit-campaign')">Cancel</button>
+      <button class="save-btn" style="flex:1" onclick="saveEditCampaign()">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -1877,7 +1900,8 @@ async function sbSaveCampaign(camp, brandId) {
     period:camp.period, status:camp.status||'ongoing',
     goal_confirmed:camp.goalConfirmed||0, goal_videos:camp.goalVideos||0,
     samples:camp.samples||0, shipment_status:camp.shipmentStatus||0,
-    start_date:camp.startDate||null, end_date:camp.endDate||null
+    start_date:camp.startDate||null, end_date:camp.endDate||null,
+    owner_id:camp.ownerId||null, support_id:camp.supportId||null
   };
   if(camp.id && !camp.id.startsWith('camp_')) {
     await supa.from('campaigns').update(payload).eq('id',camp.id);
@@ -2297,8 +2321,8 @@ function renderAll(){
   var sbMemHome=document.getElementById('sbi-member-home');
   if(sbAdminHome) sbAdminHome.style.display=isAdmin()?'':'none';
   if(sbMemHome) sbMemHome.style.display=pureMember?'':'none';
-  // Brands + Team sep+list always visible (team content filtered in renderSidebar)
-  ['sb-brands-sep','sb-brands-list','sb-team-sep','sb-team-list'].forEach(function(id){
+  // Brands + KOLs sep+list always visible
+  ['sb-brands-sep','sb-brands-list','sb-kols-sep','sb-kols-list'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.style.display='';
   });
   // Topbar view + export: hidden for members, and hidden on home/no-period pages
@@ -2342,23 +2366,26 @@ function renderSidebar(){
       (_allKolsCount?'<span style="font-size:9px;font-weight:700;background:rgba(255,255,255,.15);border-radius:10px;padding:1px 6px">'+_allKolsCount+'</span>':'')+
     '</div>';
 
-  var pureMember=currentUser&&currentUser.role==='member';
-  var membersToShow=pureMember
-    ? ST.members.filter(function(m){return currentUser&&currentUser.memberId===m.id;})
-    : ST.members;
-  document.getElementById('sb-team-list').innerHTML=membersToShow.map(function(m){
-    var uRole=_allUsers.find(function(u){return u.member_id===m.id;});
-    var isAdminMember=uRole&&(uRole.role==='admin'||uRole.role==='member+admin');
-    return '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')" style="justify-content:space-between">'+
-      '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+
-        '<div class="sb-mem-av">'+
-          (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.style.display=\'none\'"/>':'')+
+  var sbTeamListEl=document.getElementById('sb-team-list');
+  if(sbTeamListEl){
+    var pureMember=currentUser&&currentUser.role==='member';
+    var membersToShow=pureMember
+      ? ST.members.filter(function(m){return currentUser&&currentUser.memberId===m.id;})
+      : ST.members;
+    sbTeamListEl.innerHTML=membersToShow.map(function(m){
+      var uRole=_allUsers.find(function(u){return u.member_id===m.id;});
+      var isAdminMember=uRole&&(uRole.role==='admin'||uRole.role==='member+admin');
+      return '<div class="sb-member-pill'+(currentMemberId===m.id?' sb-member-pill-active':'')+'" data-mid="'+m.id+'" onclick="openMemberDetail(\''+m.id+'\')" style="justify-content:space-between">'+
+        '<div style="display:flex;align-items:center;gap:9px;min-width:0">'+
+          '<div class="sb-mem-av">'+
+            (avatarUrl(m)?'<img src="'+avatarUrl(m)+'" alt="'+m.name+'" onerror="this.style.display=\'none\'"/>':'')+
+          '</div>'+
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.name+'</span>'+
         '</div>'+
-        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+m.name+'</span>'+
-      '</div>'+
-      '<span style="font-size:10px;flex-shrink:0;margin-left:4px;opacity:.7">'+(isAdminMember?'★':'&#128100;')+'</span>'+
-    '</div>';
-  }).join('');
+        '<span style="font-size:10px;flex-shrink:0;margin-left:4px;opacity:.7">'+(isAdminMember?'★':'&#128100;')+'</span>'+
+      '</div>';
+    }).join('');
+  }
 }
 
 /* KPIs */
@@ -3396,6 +3423,15 @@ function initSumBlockDrag(){
    CHANGELOG
 ══════════════════════════════════════════════ */
 var CHANGELOG=[
+  {date:'May 2, 2026',items:[
+    'Campaigns: added KPI blocks (Active Campaigns, Active Brands, Total KOL Goal)',
+    'Campaigns: redesigned Campaign Progress with per-campaign blocks, Conv.Rate%, video target progress',
+    'Campaigns: new campaign modal redesigned with Owner/Support member selectors, Target KOLs/Videos',
+    'Campaigns: edit campaign modal with brand/campaign selector, renamed goals to Target KOLs/Videos',
+    'Analytics: weekly/monthly/annual view toggle with 3 pie charts and dynamic download button label',
+    'Settings: System Updates moved into Settings page, added Account Management for role changes',
+    'Sidebar: removed Team quick-access list and System Updates button',
+  ]},
   {date:'Apr 10, 2026',items:[
     'Weekly Report: pure admin accounts (e.g. Allen) no longer appear in the Team Performance table',
     'Admin-editable Summary: added "✎ Edit" button on campaign cards and brand detail — allows overriding Confirmed KOLs, Published Videos, Shipped and Received totals',
@@ -3443,42 +3479,113 @@ function renderCampaigns(){
   var brands=ST.brands.filter(function(b){
     return (b.status||'ongoing')===statusFilter;
   });
+
+  // KPI blocks
+  var kpiWrap=document.getElementById('camp-kpi-row');
+  if(kpiWrap){
+    var ongoingBrands=ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';});
+    var activeCampsCount=ongoingBrands.reduce(function(s,b){return s+((ST.campaigns&&ST.campaigns[b.id])||[]).length;},0);
+    var activeBrandsCount=ongoingBrands.length;
+    var totalKolGoal=ongoingBrands.reduce(function(s,b){return s+(b.goals&&b.goals.confirmed?+b.goals.confirmed:0);},0);
+    kpiWrap.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'+
+      '<div class="card" style="text-align:center;padding:18px 12px"><div style="font-size:28px;font-weight:800;color:var(--primary)">'+activeCampsCount+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-s);margin-top:4px">Active Campaigns</div></div>'+
+      '<div class="card" style="text-align:center;padding:18px 12px"><div style="font-size:28px;font-weight:800;color:var(--primary)">'+activeBrandsCount+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-s);margin-top:4px">Active Brands</div></div>'+
+      '<div class="card" style="text-align:center;padding:18px 12px"><div style="font-size:28px;font-weight:800;color:var(--primary)">'+totalKolGoal+'</div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-s);margin-top:4px">Total KOL Goal</div></div>'+
+    '</div>';
+  }
+
   if(!brands.length){
     el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text-s)">'+(statusFilter==='finished'?'No finished brands yet.':'No ongoing brands.')+'</div>';
+    var cpWrap2=document.getElementById('camp-progress-wrap');
+    if(cpWrap2) cpWrap2.innerHTML='';
     return;
   }
   el.innerHTML='<div style="display:flex;flex-direction:column;gap:20px">'+brands.map(function(b,i){return campaignCardHTML(b,i);}).join('')+'</div>';
   initGoalBoxDrag();
   initSumBlockDrag();
-  // render campaign progress section below
+
+  // Per-campaign progress blocks
   var cpWrap=document.getElementById('camp-progress-wrap');
   if(cpWrap){
     var allBrands=ST.brands;
     if(!allBrands.length){cpWrap.innerHTML='';return;}
-    var days7=[];for(var _i=6;_i>=0;_i--){var _d=new Date();_d.setDate(_d.getDate()-_i);days7.push(_d.toISOString().split('T')[0]);}
-    var cpHtml='<div class="sec" style="margin-top:28px"><div class="sec-t">Campaign Progress</div><div class="sec-s">confirmed KOLs vs goal per brand</div></div>'+
-    '<div class="g3">'+allBrands.map(function(b){
-      var totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
-      var weekC=ST.members.reduce(function(s,m){return s+getLogsInRange(m.id,b.id,days7).reduce(function(ss,l){return ss+(+l.kols_contacted||0);},0);},0);
-      var weekCo=ST.members.reduce(function(s,m){return s+getLogsInRange(m.id,b.id,days7).reduce(function(ss,l){return ss+(+l.confirmed||0);},0);},0);
-      var gCo=b.goals&&b.goals.confirmed?+b.goals.confirmed:0;
-      var pct=gCo>0?Math.min(Math.round(totCo/gCo*100),100):0;
-      var pColor=pct>=100?'var(--green)':pct>=60?'var(--primary)':'var(--amber)';
-      return '<div class="card" style="border-top:3px solid '+b.color+'">'+
-        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">'+
-          '<span style="width:10px;height:10px;border-radius:50%;background:'+b.color+';flex-shrink:0;display:inline-block"></span>'+
-          '<span style="font-size:13px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+b.name+'</span>'+
-          '<span class="badge '+(b.status||'ongoing')+'">'+((b.status||'ongoing')==='ongoing'?'Ongoing':'Finished')+'</span>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
-          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:17px;font-weight:800;color:var(--primary)">'+weekC+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Contacted this week</div></div>'+
-          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:17px;font-weight:800;color:var(--green)">'+weekCo+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Confirmed this week</div></div>'+
-        '</div>'+
-        '<div style="font-size:11px;color:var(--text-m);margin-bottom:5px">Total confirmed: <strong>'+totCo+'</strong> / <strong>'+(gCo||'—')+'</strong></div>'+
-        '<div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;background:'+pColor+';border-radius:4px;width:'+pct+'%;transition:width .4s"></div></div>'+
-        '<div style="font-size:10px;color:var(--text-s);margin-top:4px;font-weight:600">'+pct+'% of goal</div>'+
-      '</div>';
-    }).join('')+'</div>';
+    var campBlocks=[];
+    allBrands.forEach(function(b){
+      var bCamps=(ST.campaigns&&ST.campaigns[b.id])||[];
+      if(!bCamps.length){
+        // show a no-campaign block per brand
+        bCamps=[{id:'__none__'+b.id,name:'(no campaign)',startDate:null,endDate:null,_noCamp:true}];
+      }
+      bCamps.forEach(function(c){
+        // Determine date range
+        var rangeDays=null;
+        if(c.startDate&&c.endDate){
+          var sd=new Date(c.startDate),ed=new Date(c.endDate);
+          rangeDays=[];
+          for(var d=new Date(sd);d<=ed;d.setDate(d.getDate()+1)){
+            rangeDays.push(d.toISOString().split('T')[0]);
+          }
+        }
+        // Aggregate across all members
+        var contacted=ST.members.reduce(function(s,m){
+          if(rangeDays){
+            return s+getLogsInRange(m.id,b.id,rangeDays).reduce(function(ss,l){return ss+(+l.kols_contacted||0);},0);
+          }
+          return s+sumM(m.id,b.id,'kols_contacted');
+        },0);
+        var confirmed=ST.members.reduce(function(s,m){
+          if(rangeDays){
+            return s+getLogsInRange(m.id,b.id,rangeDays).reduce(function(ss,l){return ss+(+l.confirmed||0);},0);
+          }
+          return s+sumM(m.id,b.id,'confirmed');
+        },0);
+        var vidsLogs=ST.members.reduce(function(s,m){
+          if(rangeDays){
+            return s+getLogsInRange(m.id,b.id,rangeDays).reduce(function(ss,l){return ss+(+l.vids_published||0);},0);
+          }
+          return s+sumM(m.id,b.id,'vids_published');
+        },0);
+        var campVids=(ST.campLogs[b.id]||[]).reduce(function(s,l){return s+(+l.videos||0);},0);
+        var videos=vidsLogs+campVids;
+        var convRate=contacted>0?((confirmed/contacted)*100).toFixed(1):null;
+        var rejRate=contacted>0?(((contacted-confirmed)/contacted)*100).toFixed(1):null;
+        var convColor=convRate!==null?(+convRate>20?'var(--green)':(+convRate>10?'var(--amber)':'#f87171')):'var(--text-s)';
+        var goalVids=b.goals&&b.goals.videos?+b.goals.videos:0;
+        var vidPct=goalVids>0?Math.min(Math.round(videos/goalVids*100),100):0;
+        var vidPColor=vidPct>=100?'var(--green)':vidPct>=60?'var(--primary)':'var(--amber)';
+        var bStatus=b.status||'ongoing';
+        var statusBadgeHtml='<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;'+(bStatus==='ongoing'?'background:#dcfce7;color:#16a34a':'background:#f3f4f6;color:#9ca3af')+'">'+
+          (bStatus==='ongoing'?'● Ongoing':'○ Finished')+'</span>';
+        if(!c._noCamp){
+          campBlocks.push(
+            '<div class="card" style="border-top:3px solid '+b.color+';margin-bottom:12px">'+
+              '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+                '<span style="width:9px;height:9px;border-radius:50%;background:'+b.color+';flex-shrink:0;display:inline-block"></span>'+
+                '<span style="font-size:13px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(b.name)+' — '+escHtml(c.name)+'</span>'+
+                statusBadgeHtml+
+              '</div>'+
+              '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px">'+
+                '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:17px;font-weight:800;color:var(--primary)">'+contacted+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Contacted</div></div>'+
+                '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:17px;font-weight:800;color:var(--green)">'+confirmed+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Confirmed</div></div>'+
+                '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center">'+
+                  '<div style="font-size:17px;font-weight:800;color:'+convColor+'">'+(convRate!==null?convRate+'%':'—')+'</div>'+
+                  '<div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Conv. Rate</div>'+
+                  (rejRate!==null?'<div style="font-size:9px;color:#f87171;font-weight:600;margin-top:2px">-'+rejRate+'% rej.</div>':'')+
+                '</div>'+
+                '<div style="background:var(--bg);border-radius:8px;padding:10px 12px;text-align:center"><div style="font-size:17px;font-weight:800;color:var(--text)">'+videos+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Videos Published</div></div>'+
+              '</div>'+
+              (goalVids>0?
+                '<div style="font-size:11px;color:var(--text-m);margin-bottom:5px">Target Videos: <strong>'+videos+'</strong> / <strong>'+goalVids+'</strong></div>'+
+                '<div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;background:'+vidPColor+';border-radius:4px;width:'+vidPct+'%;transition:width .4s"></div></div>'+
+                '<div style="font-size:10px;color:var(--text-s);margin-top:4px;font-weight:600">'+vidPct+'% of video goal</div>'
+              :'')+
+            '</div>'
+          );
+        }
+      });
+    });
+    var cpHtml='<div class="sec" style="margin-top:28px"><div class="sec-t">Campaign Progress</div><div class="sec-s">per-campaign KPIs</div></div>'+
+      '<div class="g3">'+campBlocks.join('')+'</div>';
     cpWrap.innerHTML=cpHtml;
   }
 }
@@ -4420,13 +4527,10 @@ function openNewCampaignModal(){
     ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).map(function(b){
       return '<option value="'+b.id+'">'+escHtml(b.name)+'</option>';
     }).join('');
-  document.getElementById('nnc-camp-name').value='';
-  document.getElementById('nnc-period').value='';
-  document.getElementById('nnc-start').value='';
-  document.getElementById('nnc-end').value='';
-  document.getElementById('nnc-samples').value='';
-  document.getElementById('nnc-goal-conf').value='';
-  document.getElementById('nnc-goal-vid').value='';
+  var memberOpts='<option value="">Select member...</option>'+ST.members.map(function(m){return '<option value="'+m.id+'">'+escHtml(m.name)+'</option>';}).join('');
+  document.getElementById('nnc-owner-sel').innerHTML=memberOpts;
+  document.getElementById('nnc-support-sel').innerHTML='<option value="">None (optional)</option>'+ST.members.map(function(m){return '<option value="'+m.id+'">'+escHtml(m.name)+'</option>';}).join('');
+  ['nnc-camp-name','nnc-start','nnc-end','nnc-goal-conf','nnc-goal-vid'].forEach(function(id){document.getElementById(id).value='';});
   sel.onchange=function(){
     var b=getBrand(sel.value);
     if(b&&b.goals){
@@ -4444,16 +4548,16 @@ function saveNewCampaignFull(){
   if(!brandId){alert('Please select a brand');return;}
   var name=document.getElementById('nnc-camp-name').value.trim();
   if(!name){alert('Please enter a campaign name');return;}
-  var period=document.getElementById('nnc-period').value.trim();
   var startDate=document.getElementById('nnc-start').value||null;
   var endDate=document.getElementById('nnc-end').value||null;
-  var samples=+(document.getElementById('nnc-samples').value)||0;
+  var ownerId=document.getElementById('nnc-owner-sel').value||null;
+  var supportId=document.getElementById('nnc-support-sel').value||null;
   var gConf=+(document.getElementById('nnc-goal-conf').value)||0;
   var gVid=+(document.getElementById('nnc-goal-vid').value)||0;
   var id='camp_'+Date.now();
   if(!ST.campaigns) ST.campaigns={};
   if(!ST.campaigns[brandId]) ST.campaigns[brandId]=[];
-  ST.campaigns[brandId].push({id:id,brandId:brandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,shipmentStatus:''});
+  ST.campaigns[brandId].push({id:id,brandId:brandId,name:name,startDate:startDate,endDate:endDate,ownerId:ownerId,supportId:supportId,goalConfirmed:gConf,goalVideos:gVid});
   var _nc1=ST.campaigns[brandId][ST.campaigns[brandId].length-1];
   sbSaveCampaign(_nc1,brandId);
   var b=getBrand(brandId);
@@ -4490,19 +4594,68 @@ function saveNewCampaign(){
   closeOv('ov-add-campaign');
 }
 var _editCampId=null,_editCampBrandId=null;
-function openEditCampaign(campId,brandId){
-  _editCampId=campId;_editCampBrandId=brandId;
-  const camps=(ST.campaigns&&ST.campaigns[brandId])||[];
-  const c=camps.find(function(x){return x.id===campId;});
+function _ecPopulateBrandSel(){
+  var bSel=document.getElementById('ec-brand-sel');
+  if(!bSel) return;
+  bSel.innerHTML='<option value="">Select brand...</option>'+ST.brands.map(function(b){return '<option value="'+b.id+'">'+escHtml(b.name)+'</option>';}).join('');
+}
+function _ecPopulateMemberSels(){
+  var memberOpts='<option value="">Select member...</option>'+ST.members.map(function(m){return '<option value="'+m.id+'">'+escHtml(m.name)+'</option>';}).join('');
+  var ownerSel=document.getElementById('ec-owner-sel');
+  var suppSel=document.getElementById('ec-support-sel');
+  if(ownerSel) ownerSel.innerHTML=memberOpts;
+  if(suppSel) suppSel.innerHTML='<option value="">None (optional)</option>'+ST.members.map(function(m){return '<option value="'+m.id+'">'+escHtml(m.name)+'</option>';}).join('');
+}
+function _ecBrandChanged(){
+  var bSel=document.getElementById('ec-brand-sel');
+  var cSel=document.getElementById('ec-camp-sel');
+  if(!bSel||!cSel) return;
+  var brandId=bSel.value;
+  _editCampBrandId=brandId||null;
+  _editCampId=null;
+  var camps=(ST.campaigns&&ST.campaigns[brandId])||[];
+  cSel.innerHTML='<option value="">Select campaign...</option>'+camps.map(function(c){return '<option value="'+c.id+'">'+escHtml(c.name)+'</option>';}).join('');
+  ['ec-name','ec-start','ec-end','ec-goal-kols','ec-goal-vids'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+}
+function _ecCampChanged(){
+  var bSel=document.getElementById('ec-brand-sel');
+  var cSel=document.getElementById('ec-camp-sel');
+  if(!bSel||!cSel) return;
+  var brandId=bSel.value;
+  var campId=cSel.value;
+  _editCampId=campId||null;
+  _editCampBrandId=brandId||null;
+  if(!campId||!brandId) return;
+  var camps=(ST.campaigns&&ST.campaigns[brandId])||[];
+  var c=camps.find(function(x){return x.id===campId;});
+  var b=getBrand(brandId);
   if(!c) return;
-  const b=getBrand(brandId);
-  document.getElementById('edit-camp-sub').textContent=b?b.name:'Edit Campaign';
   document.getElementById('ec-name').value=c.name||'';
-  document.getElementById('ec-period').value=c.period||'';
   document.getElementById('ec-start').value=c.startDate||'';
   document.getElementById('ec-end').value=c.endDate||'';
-  document.getElementById('ec-samples').value=c.samples||0;
-  document.getElementById('ec-shipment-status').value=c.shipmentStatus||0;
+  document.getElementById('ec-goal-kols').value=c.goalConfirmed||(b&&b.goals?b.goals.confirmed:'')||'';
+  document.getElementById('ec-goal-vids').value=c.goalVideos||(b&&b.goals?b.goals.videos:'')||'';
+  var ownerSel=document.getElementById('ec-owner-sel');
+  var suppSel=document.getElementById('ec-support-sel');
+  if(ownerSel) ownerSel.value=c.ownerId||'';
+  if(suppSel) suppSel.value=c.supportId||'';
+}
+function openEditCampaign(campId,brandId){
+  _ecPopulateBrandSel();
+  _ecPopulateMemberSels();
+  var bSel=document.getElementById('ec-brand-sel');
+  var cSel=document.getElementById('ec-camp-sel');
+  if(brandId&&bSel){
+    bSel.value=brandId;
+    _editCampBrandId=brandId;
+    var camps=(ST.campaigns&&ST.campaigns[brandId])||[];
+    if(cSel) cSel.innerHTML='<option value="">Select campaign...</option>'+camps.map(function(c){return '<option value="'+c.id+'">'+escHtml(c.name)+'</option>';}).join('');
+  }
+  if(campId&&cSel){
+    cSel.value=campId;
+    _editCampId=campId;
+    _ecCampChanged();
+  }
   openOv('ov-edit-campaign');
 }
 function renderCampCustomFieldRow(container,label,value,idx){
@@ -4521,17 +4674,25 @@ function addCampCustomField(){
   renderCampCustomFieldRow(cfEl,'','',idx);
 }
 function saveEditCampaign(){
-  if(!_editCampId||!_editCampBrandId) return;
+  if(!_editCampId||!_editCampBrandId){alert('Please select a brand and campaign');return;}
   const name=document.getElementById('ec-name').value.trim();
   if(!name){alert('Please enter a campaign name');return;}
-  const period=document.getElementById('ec-period').value.trim();
   const startDate=document.getElementById('ec-start').value||null;
   const endDate=document.getElementById('ec-end').value||null;
-  const samples=+(document.getElementById('ec-samples').value)||0;
-  const shipmentStatus=+(document.getElementById('ec-shipment-status').value)||0;
+  const goalConfirmed=+(document.getElementById('ec-goal-kols').value)||0;
+  const goalVideos=+(document.getElementById('ec-goal-vids').value)||0;
+  const ownerId=document.getElementById('ec-owner-sel').value||null;
+  const supportId=document.getElementById('ec-support-sel').value||null;
   const camps=(ST.campaigns&&ST.campaigns[_editCampBrandId])||[];
   const c=camps.find(function(x){return x.id===_editCampId;});
-  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.shipmentStatus=shipmentStatus;sbSaveCampaign(c,_editCampBrandId);}
+  if(c){
+    c.name=name;c.startDate=startDate;c.endDate=endDate;
+    c.goalConfirmed=goalConfirmed;c.goalVideos=goalVideos;
+    c.ownerId=ownerId;c.supportId=supportId;
+    sbSaveCampaign(c,_editCampBrandId);
+  }
+  var b=getBrand(_editCampBrandId);
+  if(b){if(!b.goals)b.goals={};b.goals.confirmed=goalConfirmed;b.goals.videos=goalVideos;sbSaveBrand(b);}
   renderAll();
   if(_activeBrandId===_editCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-edit-campaign');
@@ -7615,6 +7776,32 @@ function renderSettings(){
       '<div style="font-size:12px;font-weight:700;color:#27ae60;margin-bottom:6px">&#10003; Read-only mode active</div>'+
       '<div style="font-size:11px;color:var(--text-s)">Data is protected. Enable developer mode only when you need to make structural changes.</div>'+
     '</div>')+
+    '<div class="card mb16" style="margin-top:16px">'+
+      '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">&#128203; System Updates</div>'+
+      '<div style="font-size:12px;color:var(--text-s);margin-bottom:12px">View the history of changes and updates to the dashboard.</div>'+
+      '<button onclick="openChangelog()" style="padding:9px 18px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;font-size:12px;font-weight:600;color:var(--text-m);cursor:pointer">View Update History</button>'+
+    '</div>'+
+    (isAdmin()?
+      '<div class="card mb16" style="margin-top:16px">'+
+        '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">&#128101; Account Management</div>'+
+        '<div style="font-size:12px;color:var(--text-s);margin-bottom:12px">Manage login account types for team members.</div>'+
+        '<div id="acct-mgmt-list">'+
+          ST.members.map(function(m){
+            var u=_allUsers.find(function(u){return u.member_id===m.id;});
+            var role=u?u.role:'member';
+            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+              '<div style="font-size:12px;font-weight:600;flex:1">'+escHtml(m.name)+'</div>'+
+              '<select id="acct-role-'+m.id+'" style="padding:5px 8px;border-radius:7px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:11px">'+
+                '<option value="member"'+(role==='member'?' selected':'')+'>Member</option>'+
+                '<option value="member+admin"'+(role==='member+admin'?' selected':'')+'>Member + Admin</option>'+
+                '<option value="admin"'+(role==='admin'?' selected':'')+'>Admin only</option>'+
+              '</select>'+
+              '<button onclick="saveAcctMgmtRole(\''+m.id+'\')" style="padding:5px 12px;border-radius:7px;background:var(--primary);color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer">Save</button>'+
+            '</div>';
+          }).join('')+
+        '</div>'+
+      '</div>'
+    :'')+
     '</div>';
 }
 
@@ -7624,6 +7811,18 @@ function toggleDevMode(){
   _refreshAcctDevMode();
   if(currentPage==='settings') renderSettings();
   renderAll();
+}
+
+async function saveAcctMgmtRole(memberId){
+  var sel=document.getElementById('acct-role-'+memberId);
+  if(!sel) return;
+  var newRole=sel.value;
+  var u=_allUsers.find(function(u){return u.member_id===memberId;});
+  if(!u){alert('No login account found for this member.');return;}
+  var result=await supa.from('workspace_members').update({role:newRole}).eq('user_id',u.user_id).eq('workspace_id',_workspaceId);
+  if(result.error){alert('Error: '+result.error.message);return;}
+  u.role=newRole;
+  alert('Role updated for '+((getMember(memberId)||{}).name||memberId));
 }
 
 /* ══════════════════════════════════════════════
@@ -7651,16 +7850,6 @@ initSupabase();
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div class="ff">
-        <label class="ff-lbl">Period</label>
-        <input id="nnc-period" class="ff-inp" placeholder="e.g. Q2 2026"/>
-      </div>
-      <div class="ff">
-        <label class="ff-lbl">Samples</label>
-        <input id="nnc-samples" class="ff-inp" type="number" placeholder="0"/>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div class="ff">
         <label class="ff-lbl">Start Date</label>
         <input id="nnc-start" class="ff-inp" type="date"/>
       </div>
@@ -7669,15 +7858,25 @@ initSupabase();
         <input id="nnc-end" class="ff-inp" type="date"/>
       </div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="ff">
+        <label class="ff-lbl">Owner</label>
+        <select id="nnc-owner-sel" class="ff-inp" style="cursor:pointer"></select>
+      </div>
+      <div class="ff">
+        <label class="ff-lbl">Support</label>
+        <select id="nnc-support-sel" class="ff-inp" style="cursor:pointer"></select>
+      </div>
+    </div>
     <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
       <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Brand Goals</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="ff">
-          <label class="ff-lbl">Confirmed KOLs Goal</label>
+          <label class="ff-lbl">Target KOLs</label>
           <input id="nnc-goal-conf" class="ff-inp" type="number" placeholder="e.g. 20"/>
         </div>
         <div class="ff">
-          <label class="ff-lbl">Published Videos Goal</label>
+          <label class="ff-lbl">Target Videos</label>
           <input id="nnc-goal-vid" class="ff-inp" type="number" placeholder="e.g. 15"/>
         </div>
       </div>
