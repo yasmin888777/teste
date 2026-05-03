@@ -3232,16 +3232,45 @@ async function saveProfileUser(){
       return;
     }
     var newUserId=signupData.id;
-    // Insert into workspace_members
-    var {error:insErr}=await supa.from('workspace_members').insert({
-      workspace_id:_workspaceId, user_id:newUserId, role:role, name:profileMember.name
-    });
-    if(insErr){msg.style.color='#f87171';msg.textContent='Conta criada mas erro ao vincular: '+insErr.message;return;}
+    // Try to insert workspace_members using the new user's own token (bypasses RLS)
+    // If email confirm is off, signupData.access_token exists; otherwise use admin session
+    var insertToken=signupData.access_token||null;
+    var insErr=null;
+    if(insertToken){
+      // New user inserts their own row — RLS allows this
+      var insRes=await fetch(SUPA_URL+'/rest/v1/workspace_members',{
+        method:'POST',
+        headers:{
+          'apikey':SUPA_KEY,
+          'Authorization':'Bearer '+insertToken,
+          'Content-Type':'application/json',
+          'Prefer':'return=minimal'
+        },
+        body:JSON.stringify({workspace_id:_workspaceId,user_id:newUserId,role:role,name:profileMember.name})
+      });
+      if(!insRes.ok){var insBody=await insRes.json();insErr=insBody;}
+    } else {
+      // Email confirm required — try via admin session, might fail if RLS blocks it
+      var {error:_ie}=await supa.from('workspace_members').insert({
+        workspace_id:_workspaceId,user_id:newUserId,role:role,name:profileMember.name
+      });
+      insErr=_ie||null;
+    }
+    if(insErr){
+      msg.style.color='#f59e0b';
+      msg.innerHTML='✓ Conta Supabase criada (id: <code>'+newUserId+'</code>), mas a vinculação falhou por RLS.<br>'+
+        'Execute no <strong>Supabase SQL Editor</strong>:<br>'+
+        '<code style="font-size:10px;display:block;margin-top:4px;padding:6px;background:var(--bg);border-radius:6px;white-space:pre-wrap">'+
+        'INSERT INTO workspace_members (workspace_id, user_id, role, name)\n'+
+        'VALUES (\''+_workspaceId+'\', \''+newUserId+'\', \''+role+'\', \''+escHtml(profileMember.name)+'\');'+
+        '</code>';
+      return;
+    }
     userSection._userId=newUserId;
     _allUsers.push({id:newUserId,user_id:newUserId,email:email,role:role,member_id:profileMember.id,has_password:true});
     var infoEl=document.getElementById('prof-user-info');
     if(infoEl) infoEl.innerHTML='<span style="color:var(--green)">✓ Conta criada e vinculada</span> · Role: <strong>'+role+'</strong>';
-    msg.style.color='var(--green)';msg.textContent='Conta criada com sucesso! Um email de confirmação foi enviado.';
+    msg.style.color='var(--green)';msg.textContent='Conta criada com sucesso!'+(signupData.access_token?'':' Um email de confirmação foi enviado.');
   } else {
     // UPDATE existing account role (email/password changes require Supabase dashboard)
     var {error:updErr}=await supa.from('workspace_members').update({role:role}).eq('user_id',uid).eq('workspace_id',_workspaceId);
