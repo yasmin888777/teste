@@ -1115,9 +1115,10 @@ html.dark .skeleton{
       </button>
       <div class="tb-title" id="tb-title">Overview</div>
       <div class="tb-view">
-        <button class="tb-vbtn active" onclick="setTimeView('daily',this)">Daily</button>
+        <button class="tb-vbtn active" onclick="setTimeView('daily',this)">Today</button>
         <button class="tb-vbtn" onclick="setTimeView('weekly',this)">Weekly</button>
         <button class="tb-vbtn" onclick="setTimeView('monthly',this)">Monthly</button>
+        <button class="tb-vbtn" onclick="setTimeView('total',this)">Total</button>
       </div>
     </div>
     <div class="tb-right">
@@ -3139,10 +3140,50 @@ function renderMemberPage(mid){
   var supportCount=assignedBrands.filter(function(b){return (m.roles&&m.roles[b.id])==='support';}).length;
   var totalProjects=assignedBrands.length;
 
-  var periodLabel=timeView==='daily'?'today':timeView==='weekly'?'this week':'last 30 days';
   var weekHTML=renderMemberWeekly(mid);
 
-  // Right side: all brands as color chips (admins can toggle assignment)
+  // ── Aggregate KPI for selected period ──────────────────────────────────
+  var periodDates=[];
+  var _tnow=new Date();
+  if(timeView==='daily'){
+    periodDates=[todayStr()];
+  } else if(timeView==='weekly'){
+    var _day=_tnow.getDay();
+    var _mo=_day===0?-6:1-_day;
+    for(var _i=0;_i<7;_i++){var _d=new Date(_tnow);_d.setDate(_tnow.getDate()+_mo+_i);periodDates.push(_d.toISOString().split('T')[0]);}
+  } else if(timeView==='total'){
+    periodDates=null; // null = all dates
+  } else {
+    for(var _i=29;_i>=0;_i--){var _d=new Date(_tnow);_d.setDate(_tnow.getDate()-_i);periodDates.push(_d.toISOString().split('T')[0]);}
+  }
+  var _allLogs=getLogs(mid).filter(function(l){return assignedBrands.some(function(b){return b.id===l.brandId;});});
+  var _periodLogs=periodDates?_allLogs.filter(function(l){return periodDates.indexOf(l.date)>=0;}):_allLogs;
+  var _agSourced=_periodLogs.reduce(function(s,l){return s+(+l.kols_sourced||0);},0);
+  var _agContacted=_periodLogs.reduce(function(s,l){return s+(+l.kols_contacted||0);},0);
+  var _agConfirmed=_periodLogs.reduce(function(s,l){return s+(+l.confirmed||0);},0);
+  var _agVids=_periodLogs.reduce(function(s,l){return s+(+l.vids_published||0);},0);
+
+  var kpiBlocks=
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">'+
+      '<div class="card" style="padding:16px 18px">'+
+        '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">KOLs Researched</div>'+
+        '<div style="font-size:28px;font-weight:800;color:var(--text)">'+_agSourced+'</div>'+
+      '</div>'+
+      '<div class="card" style="padding:16px 18px">'+
+        '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Contacted</div>'+
+        '<div style="font-size:28px;font-weight:800;color:var(--primary)">'+_agContacted+'</div>'+
+      '</div>'+
+      '<div class="card" style="padding:16px 18px">'+
+        '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Confirmed</div>'+
+        '<div style="font-size:28px;font-weight:800;color:var(--green)">'+_agConfirmed+'</div>'+
+      '</div>'+
+      '<div class="card" style="padding:16px 18px">'+
+        '<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Videos Published</div>'+
+        '<div style="font-size:28px;font-weight:800;color:#8b5cf6">'+_agVids+'</div>'+
+      '</div>'+
+    '</div>';
+
+  // ── Assigned brands list ───────────────────────────────────────────────
   var brandListHTML=ST.brands.filter(function(b){return b.status!=='finished';}).map(function(b){
     var on=m.brands.includes(b.id);
     var role=(m.roles&&m.roles[b.id])||'';
@@ -3157,45 +3198,56 @@ function renderMemberPage(mid){
   }).join('');
 
   var html=
-    '<div class="mp-hero">'+
-      '<div class="mp-av-wrap">'+
-        '<div class="mp-av" onclick="triggerAvatarUpload(\'member\',\''+mid+'\')" title="Trocar foto">'+
-          (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:20px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:20px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
-          '<div class="mp-av-icon">&#128247;</div>'+
+    kpiBlocks+
+
+    // ── Profile card + Attendance + Brands ──────────────────────────────
+    '<div class="mp-hero" style="align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:16px">'+
+      // Left: avatar + info + buttons
+      '<div style="display:flex;align-items:flex-start;gap:16px;flex:1;min-width:260px">'+
+        '<div class="mp-av-wrap">'+
+          '<div class="mp-av" onclick="triggerAvatarUpload(\'member\',\''+mid+'\')" title="Trocar foto">'+
+            (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:20px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:20px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
+            '<div class="mp-av-icon">&#128247;</div>'+
+          '</div>'+
+          '<div class="mp-av-hint">click to<br>change photo</div>'+
         '</div>'+
-        '<div class="mp-av-hint">click to<br>change photo</div>'+
+        '<div class="mp-mid" style="flex:1">'+
+          '<div class="mp-name-row" style="display:flex;align-items:center;gap:6px">'+
+            '<div class="mp-name" onclick="startEditMpName(\''+mid+'\',this)" title="Click to rename">'+m.name+'</div>'+
+            (isAdminMember?'<span style="font-size:13px;color:var(--amber)" title="Admin">★</span>':'')+
+          '</div>'+
+          '<div style="font-size:10px;color:var(--text-s);margin-bottom:4px">'+roleLabel+'</div>'+
+          (streak>0?'<div class="mp-streak" style="margin-bottom:8px">&#128293; '+streak+' day streak</div>':'')+
+          '<div style="font-size:11px;color:var(--text-m);margin-bottom:2px">'+
+            'Total projects: <strong style="color:var(--text)">'+totalProjects+'</strong>'+
+            (ownerCount?' &nbsp;·&nbsp; <strong style="color:var(--primary)">'+ownerCount+'</strong> owner':'')+
+            (supportCount?' &nbsp;·&nbsp; <strong style="color:var(--amber)">'+supportCount+'</strong> support':'')+
+          '</div>'+
+          '<div class="mp-cfg-btns" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">'+
+            (canEdit(mid)?'<button onclick="openLog(\''+mid+'\')" style="font-size:12px;padding:7px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:5px">&#43; Log Activity</button>':'')+
+            '<button onclick="openReportHistory(\''+mid+'\')" style="font-size:12px;padding:7px 14px;border-radius:8px;background:var(--bg);color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:5px">&#128196; Report History</button>'+
+            (isAdmin()?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
+          '</div>'+
+        '</div>'+
       '</div>'+
-      '<div class="mp-mid">'+
-        '<div class="mp-name-row" style="display:flex;align-items:center;gap:6px">'+
-          '<div class="mp-name" onclick="startEditMpName(\''+mid+'\',this)" title="Click to rename">'+m.name+'</div>'+
-          (isAdminMember?'<span style="font-size:13px;color:var(--amber)" title="Admin">★</span>':'')+
-        '</div>'+
-        '<div style="font-size:10px;color:var(--text-s);margin-bottom:5px">'+roleLabel+'</div>'+
-        (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
-        '<div style="font-size:12px;color:var(--text-m);margin:8px 0 4px">'+
-          'Total projects: <strong style="color:var(--text)">'+totalProjects+'</strong>'+
-        '</div>'+
-        '<div style="font-size:12px;color:var(--text-s);line-height:1.5">'+
-          m.name+' is currently '+
-          (ownerCount?'owning <strong style="color:var(--primary)">'+ownerCount+'</strong> brand'+(ownerCount!==1?'s':''):'owning <strong>0</strong> brands')+
-          ' and being support for <strong style="color:var(--amber)">'+supportCount+'</strong> brand'+(supportCount!==1?'s':'')+'.'+
-        '</div>'+
-        '<div class="mp-cfg-btns" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">'+
-          (canEdit(mid)?'<button onclick="openLog(\''+mid+'\')" style="font-size:12px;padding:7px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:5px">&#43; Log Activity</button>':'')+
-          '<button onclick="openReportHistory(\''+mid+'\')" style="font-size:12px;padding:7px 14px;border-radius:8px;background:var(--bg);color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:5px">&#128196; Report History</button>'+
-          (isAdmin()?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
-        '</div>'+
-      '</div>'+
+      // Middle: Attendance
       memberAttendWidget(mid)+
-      '<div class="mp-right">'+
+      // Right: Assigned brands
+      '<div class="mp-right" style="min-width:180px">'+
         '<div class="mp-proj-lbl">Assigned Brands</div>'+
         '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">'+brandListHTML+'</div>'+
       '</div>'+
     '</div>'+
 
+    // ── Performance Analytics chart ──────────────────────────────────────
     '<div class="mp-chart-card mb16">'+
       '<div class="sec" style="margin-bottom:12px">'+
-        '<div><div class="sec-t" style="font-size:13px">Activity History</div><div style="font-size:10px;color:var(--text-s);margin-top:1px">Contacted + Follow-ups per day</div></div>'+
+        '<div>'+
+          '<div class="sec-t" style="font-size:13px">Performance Analytics</div>'+
+          '<div style="font-size:10px;color:var(--text-s);margin-top:1px">Visualizando dados para o período '+
+            (timeView==='daily'?'Today':timeView==='weekly'?'Weekly':timeView==='total'?'All Time':'Monthly')+
+          '</div>'+
+        '</div>'+
         '<select id="mp-month-sel" onchange="drawMemberChart(currentMemberId)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;background:#fff;cursor:pointer;color:var(--text)">'+
           buildMonthOptions()+
         '</select>'+
@@ -3203,7 +3255,10 @@ function renderMemberPage(mid){
       '<div class="mp-chart-wrap"><canvas id="mp-chart"></canvas></div>'+
     '</div>'+
 
+    // ── Brand KPI summary cards ──────────────────────────────────────────
     (brandCards?'<div class="mp-row2">'+brandCards+'</div>':'')+
+
+    // ── Per-brand campaign metric tables ────────────────────────────────
     weekHTML;
 
   document.getElementById('mp-content').innerHTML=html;
@@ -3381,14 +3436,11 @@ function renderMemberWeekly(mid){
   if(!memberBrands.length) return '<div class="card mb16" style="font-size:11px;color:var(--text-s);padding:16px">No brands assigned.</div>';
 
   var today=new Date();
-  var periodLabel='';
   var columns=[];  // [{label, dates}]
 
   if(timeView==='daily'){
-    periodLabel='daily view';
     columns=[{label:'Today',dates:[todayStr()],isToday:true}];
   } else if(timeView==='weekly'){
-    periodLabel='weekly view';
     var day=today.getDay();
     var mondayOffset=day===0?-6:1-day;
     var dayLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -3397,9 +3449,12 @@ function renderMemberWeekly(mid){
       var ds=d.toISOString().split('T')[0];
       columns.push({label:dayLabels[i],dates:[ds],isToday:ds===todayStr()});
     }
+  } else if(timeView==='total'){
+    // All-time: single column with every date that has logs
+    var allDates=getLogs(mid).map(function(l){return l.date;}).filter(Boolean);
+    columns=[{label:'All Time',dates:allDates,isToday:false}];
   } else {
     // monthly: last 30 days split into 4 weeks
-    periodLabel='monthly view';
     for(var w=0;w<4;w++){
       var wDates=[];
       for(var wd=0;wd<7;wd++){
@@ -3443,7 +3498,6 @@ function renderMemberWeekly(mid){
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
         '<div style="width:10px;height:10px;border-radius:50%;background:'+b.color+'"></div>'+
         '<span style="font-size:13px;font-weight:700;color:var(--text)">'+b.name+'</span>'+
-        '<span class="sec-s">'+periodLabel+'</span>'+
       '</div>'+
       '<div class="mp-table-wrap">'+
         '<table class="mp-table">'+
@@ -5696,7 +5750,7 @@ var _i18n={
     darkMode:'Modo escuro',lightMode:'Modo claro',systemUpdates:'Atualizações do sistema',
     // Topbar
     refresh:'Atualizar',export:'Exportar',addMember:'+ Adicionar membro',remove:'🗑️ Remover',
-    daily:'Diário',weekly:'Semanal',monthly:'Mensal',
+    daily:'Hoje',weekly:'Semanal',monthly:'Mensal',total:'Total',
     // Pages / nav
     overview:'Visão geral',campaigns:'Campanhas',members:'Atividade do time',
     documents:'Documentos e Planilhas',home:'Home',settings:'Configurações',
@@ -5777,7 +5831,7 @@ var _i18n={
     darkMode:'Dark mode',lightMode:'Light mode',systemUpdates:'System updates',
     // Topbar
     refresh:'Refresh',export:'Export',addMember:'+ Add Member',remove:'🗑️ Remove',
-    daily:'Daily',weekly:'Weekly',monthly:'Monthly',
+    daily:'Today',weekly:'Weekly',monthly:'Monthly',total:'Total',
     // Pages / nav
     overview:'Overview',campaigns:'Campaigns',members:'Team Activity',
     documents:'Documents & Spreadsheets',home:'Home',settings:'Settings',
@@ -5889,7 +5943,7 @@ function setLang(lang){
   if(tbExport) tbExport.innerHTML='&#11015; '+T.export;
   // tb-view buttons
   var vbtns=document.querySelectorAll('.tb-vbtn');
-  var viewLabels=[T.daily,T.weekly,T.monthly];
+  var viewLabels=[T.daily,T.weekly,T.monthly,T.total||'Total'];
   vbtns.forEach(function(b,i){if(viewLabels[i])b.textContent=viewLabels[i];});
   // tb-member-actions
   var addMbrBtn=document.querySelector('#tb-member-actions .sec-btn');
