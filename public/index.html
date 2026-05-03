@@ -2650,10 +2650,9 @@ function renderAll(){
   var sbMemHome=document.getElementById('sbi-member-home');
   if(sbAdminHome) sbAdminHome.style.display=isAdmin()?'':'none';
   if(sbMemHome) sbMemHome.style.display=pureMember?'':'none';
-  // Brands + KOLs sep+list: hide for pure members (brands shown in hero slot)
-  var _pm=currentUser&&currentUser.role==='member';
+  // Brands + KOLs sep+list: hide only for pure members (shown in hero slot instead)
   ['sb-brands-sep','sb-brands-list','sb-kols-sep','sb-kols-list'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.style.display=_pm?'none':'';
+    var el=document.getElementById(id);if(el)el.style.display=pureMember?'none':'';
   });
   // Topbar view + export: hidden for members, and hidden on home/no-period pages
   var _noPeriodPages=['campaigns','links','report','all-brands','admin-home','admin-team','member-home','brand','settings'];
@@ -2668,10 +2667,11 @@ function renderAll(){
 function renderSidebar(){
   // ── Member hero (avatar, name, streak) at top of sidebar ──
   var pureMember=currentUser&&currentUser.role==='member';
+  var hasMemberHero=currentUser&&currentUser.memberId&&(currentUser.role==='member'||currentUser.role==='member+admin');
   var heroSlot=document.getElementById('sb-mem-hero-slot');
   var mainHeader=document.getElementById('sb-main-header');
   if(heroSlot){
-    if(pureMember&&currentUser.memberId){
+    if(hasMemberHero){
       var hM=getMember(currentUser.memberId);
       var hName=hM?hM.name:(currentUser.name||currentUser.email||'');
       var hFirst=hName.split(' ')[0];
@@ -2789,7 +2789,8 @@ function renderSidebar(){
           '<div style="padding:0 16px 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-s);border-top:1px solid var(--border);padding-top:10px">Assigned Brands</div>'+
           '<div style="padding:0 10px 12px;display:flex;flex-direction:column;gap:4px">'+hBrandsHTML+'</div>'
         :'');
-      if(mainHeader) mainHeader.style.display='none';
+      // Pure members: hide IH header (hero replaces it). Admins: keep header visible
+      if(mainHeader) mainHeader.style.display=pureMember?'none':'';
     } else {
       heroSlot.innerHTML='';
       if(mainHeader) mainHeader.style.display='';
