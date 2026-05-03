@@ -1876,17 +1876,18 @@ async function loadAllFromSupabase() {
 
 /* ── Wrappers para salvar no Supabase E no localStorage ── */
 async function sbSaveBrand(brandData) {
-  if(!_workspaceId) return;
+  if(!_workspaceId) return null;
   var _bg=brandData.goals||{};
   var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:_bg.confirmed||brandData.goalConfirmed||0, goal_videos:_bg.videos||brandData.goalVideos||0, status:brandData.status||'active', notes:brandData.notes||'' };
-  // Supabase UUIDs contain '-'; local temp IDs do not
   if(brandData.id && brandData.id.includes('-')) {
-    await supa.from('brands').update(payload).eq('id',brandData.id);
+    var {error:uErr} = await supa.from('brands').update(payload).eq('id',brandData.id);
+    if(uErr){ console.error('sbSaveBrand update error:', uErr.message); return uErr; }
   } else {
     var { data:bData, error:bErr } = await supa.from('brands').insert(payload).select().single();
     if(bData) brandData.id = bData.id;
-    if(bErr) console.error('sbSaveBrand insert error:', bErr.message);
+    if(bErr){ console.error('sbSaveBrand insert error:', bErr.message); return bErr; }
   }
+  return null;
 }
 
 async function sbSaveKol(kol, brandId) {
@@ -1915,26 +1916,28 @@ async function sbDeleteKol(kolId) {
 }
 
 async function sbSaveCampaign(camp, brandId) {
-  if(!_workspaceId) return;
+  if(!_workspaceId) return null;
   var payload = {
     workspace_id:_workspaceId, brand_id:brandId, name:camp.name,
-    period:camp.period, status:camp.status||'ongoing',
+    period:camp.period||'', status:camp.status||'ongoing',
     goal_confirmed:camp.goalConfirmed||0, goal_videos:camp.goalVideos||0,
     samples:camp.samples||0, shipment_status:camp.shipmentStatus||0,
     start_date:camp.startDate||null, end_date:camp.endDate||null,
     owner_id:camp.ownerId||null, support_id:camp.supportId||null
   };
   if(camp.id && camp.id.includes('-')) {
-    await supa.from('campaigns').update(payload).eq('id',camp.id);
+    var {error:uErr} = await supa.from('campaigns').update(payload).eq('id',camp.id);
+    if(uErr){ console.error('sbSaveCampaign update error:', uErr.message); return uErr; }
   } else {
     var { data:cData, error:cErr } = await supa.from('campaigns').insert(payload).select().single();
     if(cData) camp.id = cData.id;
-    if(cErr) console.error('sbSaveCampaign insert error:', cErr.message);
+    if(cErr){ console.error('sbSaveCampaign insert error:', cErr.message); return cErr; }
   }
+  return null;
 }
 
 async function sbSaveLog(memberId, brandId, date, logData) {
-  if(!_workspaceId) return;
+  if(!_workspaceId) return null;
   var {error} = await supa.from('daily_logs').upsert({
     workspace_id:_workspaceId, member_id:memberId, brand_id:brandId, date:date,
     kols_sourced:logData.kols_sourced||0,
@@ -1944,7 +1947,8 @@ async function sbSaveLog(memberId, brandId, date, logData) {
     videos_published:logData.vids_published||0,
     note:logData.note||''
   }, { onConflict:'member_id,brand_id,date' });
-  if(error) console.error('sbSaveLog error:',error.message);
+  if(error){ console.error('sbSaveLog error:',error.message); return error; }
+  return null;
 }
 async function sbDeleteLog(memberId, brandId, date) {
   if(!_workspaceId||!memberId||!memberId.includes('-')) return;
@@ -2223,6 +2227,13 @@ function toggleDark(){
   document.getElementById('dark-lbl').textContent=on?(T.lightModeLabel||'Light Mode'):(T.darkModeLabel||'Dark Mode');
   if(trendChart){trendChart.destroy();trendChart=null;drawTrend();}
   if(memberChart){memberChart.destroy();memberChart=null;if(currentMemberId)drawMemberChart(currentMemberId);}
+}
+function showToast(msg, color){
+  var t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:'+(color||'#1a1f2e')+';color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center';
+  document.body.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(function(){t.remove();},400);},3500);
 }
 function initDark(){
   if(localStorage.getItem('dg_dark_mode')==='1'){
@@ -3908,7 +3919,7 @@ function prefillLog(){
   }).join('');
   document.getElementById('log-note').value=e.note||'';
 }
-function saveLog(){
+async function saveLog(){
   if(!logMember||!logBrand)return;
   const date=document.getElementById('log-date').value;
   if(!date){alert('Please select a date');return;}
@@ -3916,11 +3927,16 @@ function saveLog(){
   const campaignId=campSel?campSel.value||null:null;
   const entry={date:date,brandId:logBrand.id,campaignId:campaignId,note:document.getElementById('log-note').value};
   METRICS.forEach(function(mt){entry[mt.key]=+(document.getElementById('li-'+mt.key)?.value)||0;});
-  addLog(logMember.id,entry);
-  renderLogHistory();renderAll();
   const btn=document.getElementById('log-save-btn');
-  btn.textContent='Saved!';btn.style.background='var(--green)';
-  setTimeout(function(){btn.textContent='Save Entry';btn.style.background='';},1800);
+  btn.textContent='Salvando...';btn.disabled=true;
+  addLog(logMember.id,entry); // adds to ST and calls sbSaveLog
+  // wait for sbSaveLog inside addLog — but addLog is sync calling async sbSaveLog
+  // So we call sbSaveLog directly here and check result
+  var err=await sbSaveLog(logMember.id, logBrand.id, date, entry);
+  btn.disabled=false;
+  if(err){showToast('Erro ao salvar log: '+err.message,'#f87171');}
+  else{btn.textContent='Saved!';btn.style.background='var(--green)';setTimeout(function(){btn.textContent='Save Entry';btn.style.background='';},1800);}
+  renderLogHistory();renderAll();
 }
 function openNotePanel(note,dateLabel){
   document.getElementById('note-panel-content').textContent=note||'(no note)';
@@ -4131,7 +4147,7 @@ function pickCustomColor(inp){
   document.querySelectorAll('#nb-colors .color-swatch').forEach(function(s){s.classList.remove('active');});
   newBrandColor=inp.value;
 }
-function saveBrand(){
+async function saveBrand(){
   const name=document.getElementById('nb-name').value.trim();
   if(!name){alert('Please enter a brand name');return;}
   const goals={confirmed:+document.getElementById('nb-goal-conf').value||0,videos:+document.getElementById('nb-goal-vid').value||0};
@@ -4139,14 +4155,17 @@ function saveBrand(){
   if(_editingBrandId){
     var b=getBrand(_editingBrandId);
     if(b){b.name=name;b.color=newBrandColor;b.goals=goals;b.status=newStatus;}
-    sbSaveBrand(b);
+    var err=await sbSaveBrand(b);
+    if(err){showToast('Erro ao salvar marca: '+err.message,'#f87171');return;}
     _nbSaveMeta(_editingBrandId);
     renderAll();closeOv('ov-brand');
   } else {
-    const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
-    ST.brands.push({id:id,name:name,color:newBrandColor,goals:goals,status:newStatus});
-    sbSaveBrand(ST.brands[ST.brands.length-1]);
-    _nbSaveMeta(id);
+    const tempId=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
+    var newB={id:tempId,name:name,color:newBrandColor,goals:goals,status:newStatus};
+    ST.brands.push(newB);
+    var err2=await sbSaveBrand(newB); // updates newB.id to UUID
+    if(err2){ST.brands=ST.brands.filter(function(x){return x.id!==tempId;});showToast('Erro ao salvar marca: '+err2.message,'#f87171');return;}
+    _nbSaveMeta(newB.id);
     renderAll();closeOv('ov-brand');
     document.getElementById('nb-name').value='';
   }
@@ -4672,7 +4691,7 @@ function openNewCampaignModal(){
   };
   openOv('ov-new-campaign');
 }
-function saveNewCampaignFull(){
+async function saveNewCampaignFull(){
   var brandId=document.getElementById('nnc-brand-sel').value;
   if(!brandId){alert('Please select a brand');return;}
   var name=document.getElementById('nnc-camp-name').value.trim();
@@ -4683,12 +4702,12 @@ function saveNewCampaignFull(){
   var supportId=document.getElementById('nnc-support-sel').value||null;
   var gConf=+(document.getElementById('nnc-goal-conf').value)||0;
   var gVid=+(document.getElementById('nnc-goal-vid').value)||0;
-  var id='camp_'+Date.now();
+  var newCamp={id:'camp_'+Date.now(),brandId:brandId,name:name,startDate:startDate,endDate:endDate,ownerId:ownerId,supportId:supportId,goalConfirmed:gConf,goalVideos:gVid};
   if(!ST.campaigns) ST.campaigns={};
   if(!ST.campaigns[brandId]) ST.campaigns[brandId]=[];
-  ST.campaigns[brandId].push({id:id,brandId:brandId,name:name,startDate:startDate,endDate:endDate,ownerId:ownerId,supportId:supportId,goalConfirmed:gConf,goalVideos:gVid});
-  var _nc1=ST.campaigns[brandId][ST.campaigns[brandId].length-1];
-  sbSaveCampaign(_nc1,brandId);
+  ST.campaigns[brandId].push(newCamp);
+  var err=await sbSaveCampaign(newCamp,brandId);
+  if(err){ST.campaigns[brandId]=ST.campaigns[brandId].filter(function(c){return c!==newCamp;});showToast('Erro ao salvar campanha: '+err.message,'#f87171');return;}
   var b=getBrand(brandId);
   if(b){b.goals={confirmed:gConf,videos:gVid};sbSaveBrand(b);}
   renderAll();
@@ -4704,20 +4723,20 @@ function openAddCampaign(brandId){
   document.getElementById('nc-samples').value='';
   openOv('ov-add-campaign');
 }
-function saveNewCampaign(){
+async function saveNewCampaign(){
   const name=document.getElementById('nc-name').value.trim();
   if(!name){alert('Please enter a campaign name');return;}
   if(!_addCampBrandId) return;
-  const id='camp_'+Date.now();
   const period=document.getElementById('nc-period').value.trim();
   const startDate=document.getElementById('nc-start').value||null;
   const endDate=document.getElementById('nc-end').value||null;
   const samples=+(document.getElementById('nc-samples').value)||0;
+  var newCamp={id:'camp_'+Date.now(),name:name,brandId:_addCampBrandId,period:period,startDate:startDate,endDate:endDate,samples:samples};
   if(!ST.campaigns) ST.campaigns={};
   if(!ST.campaigns[_addCampBrandId]) ST.campaigns[_addCampBrandId]=[];
-  ST.campaigns[_addCampBrandId].push({id:id,name:name,brandId:_addCampBrandId,period:period,startDate:startDate,endDate:endDate,samples:samples});
-  var _nc2=ST.campaigns[_addCampBrandId][ST.campaigns[_addCampBrandId].length-1];
-  sbSaveCampaign(_nc2,_addCampBrandId);
+  ST.campaigns[_addCampBrandId].push(newCamp);
+  var err=await sbSaveCampaign(newCamp,_addCampBrandId);
+  if(err){ST.campaigns[_addCampBrandId]=ST.campaigns[_addCampBrandId].filter(function(c){return c!==newCamp;});showToast('Erro ao salvar campanha: '+err.message,'#f87171');return;}
   renderAll();
   if(_activeBrandId===_addCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-add-campaign');
