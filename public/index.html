@@ -1767,7 +1767,7 @@ async function loadAllFromSupabase() {
   if(!_workspaceId) return;
   var wid = _workspaceId;
 
-  var [brandsRes, membersRes, campsRes, kolsRes, schedRes, logsRes, linksRes] = await Promise.all([
+  var [brandsRes, membersRes, campsRes, kolsRes, schedRes, logsRes, linksRes, wsmRes] = await Promise.all([
     supa.from('brands').select('*').eq('workspace_id', wid),
     supa.from('team_members').select('*').eq('workspace_id', wid),
     supa.from('campaigns').select('*').eq('workspace_id', wid),
@@ -1775,7 +1775,19 @@ async function loadAllFromSupabase() {
     supa.from('kol_schedules').select('*').eq('workspace_id', wid),
     supa.from('daily_logs').select('*').eq('workspace_id', wid),
     supa.from('links').select('*').eq('workspace_id', wid),
+    supa.from('workspace_members').select('user_id,role,name,member_id').eq('workspace_id', wid),
   ]);
+
+  // Build set of member_ids that are pure admins (role='admin' or 'owner', NOT 'member+admin')
+  var _adminOnlyMemberIds = new Set();
+  (wsmRes.data||[]).forEach(function(w){
+    if(w.role==='admin'||w.role==='owner'){
+      if(w.member_id) _adminOnlyMemberIds.add(w.member_id);
+      // also match by name fallback
+      _adminOnlyMemberIds.add('__name__'+((w.name||'').trim().toLowerCase()));
+    }
+  });
+  ST._adminOnlyMemberIds = _adminOnlyMemberIds;
 
   // ── Brands ──
   ST.brands = (brandsRes.data||[]).map(b=>({
@@ -1786,8 +1798,11 @@ async function loadAllFromSupabase() {
     notes: b.notes||''
   }));
 
-  // ── Members ──
-  ST.members = (membersRes.data||[]).map(m=>({
+  // ── Members — exclude pure admin accounts ──
+  ST.members = (membersRes.data||[]).filter(function(m){
+    var nameKey = '__name__'+((m.name||'').trim().toLowerCase());
+    return !_adminOnlyMemberIds.has(m.id) && !_adminOnlyMemberIds.has(nameKey);
+  }).map(m=>({
     id: m.id, name: m.name, role: m.role||'support',
     avatarUrl: m.avatar_url||'', avatar_url: m.avatar_url||'', avatar: m.avatar_url||'',
     brands: m.brands||[], roles: m.roles||{}
