@@ -7906,12 +7906,53 @@ async function saveAcctMgmtRole(memberId){
   var sel=document.getElementById('acct-role-'+memberId);
   if(!sel) return;
   var newRole=sel.value;
+  var m=getMember(memberId);
+  if(!m){alert('Membro não encontrado.');return;}
+
+  // Try _allUsers first (matched by member_id)
   var u=_allUsers.find(function(u){return u.member_id===memberId;});
-  if(!u){alert('No login account found for this member.');return;}
-  var result=await supa.from('workspace_members').update({role:newRole}).eq('user_id',u.user_id).eq('workspace_id',_workspaceId);
-  if(result.error){alert('Error: '+result.error.message);return;}
+
+  // If not found, try matching workspace_members by name directly from Supabase
+  if(!u){
+    var {data:wsRows}=await supa.from('workspace_members')
+      .select('user_id,role,name')
+      .eq('workspace_id',_workspaceId)
+      .ilike('name',m.name)
+      .limit(1);
+    if(wsRows&&wsRows.length){
+      u={user_id:wsRows[0].user_id,role:wsRows[0].role,member_id:memberId};
+      _allUsers.push(u);
+    }
+  }
+
+  if(!u||!u.user_id){
+    // No account at all — update role in workspace_members by name as fallback
+    var {data:allRows}=await supa.from('workspace_members')
+      .select('user_id,role,name')
+      .eq('workspace_id',_workspaceId);
+    var btn=document.getElementById('acct-role-'+memberId);
+    var msgEl=btn?btn.parentElement:null;
+    if(msgEl) msgEl.insertAdjacentHTML('afterend','<div style="color:#f87171;font-size:11px;margin-top:4px">Sem conta de login vinculada. Crie uma conta primeiro.</div>');
+    return;
+  }
+
+  var {error}=await supa.from('workspace_members')
+    .update({role:newRole})
+    .eq('user_id',u.user_id)
+    .eq('workspace_id',_workspaceId);
+  if(error){alert('Erro: '+error.message);return;}
   u.role=newRole;
-  alert('Role updated for '+((getMember(memberId)||{}).name||memberId));
+
+  // Visual feedback without alert
+  var btn=document.getElementById('acct-role-'+memberId);
+  if(btn){
+    var row=btn.closest?btn.closest('[style*="display:flex"]'):null;
+    var fb=document.createElement('span');
+    fb.textContent='✓ Salvo';
+    fb.style.cssText='color:var(--green);font-size:11px;font-weight:600;margin-left:6px';
+    btn.parentElement.appendChild(fb);
+    setTimeout(function(){try{fb.remove();}catch(e){}},2000);
+  }
 }
 
 /* ══════════════════════════════════════════════
