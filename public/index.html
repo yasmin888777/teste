@@ -1725,7 +1725,7 @@ async function _onAuthSuccess(user) {
   currentUser = {
     id: user.id,
     email: user.email,
-    role: (wsRole === 'owner' || wsRole === 'admin') ? 'admin' : 'member',
+    role: (wsRole === 'owner' || wsRole === 'admin' || wsRole === 'member+admin') ? 'admin' : 'member',
     memberId: matchedMember ? matchedMember.id : null,
     name: wsName
   };
@@ -1772,30 +1772,36 @@ async function loadAllFromSupabase() {
     supa.from('links').select('*').eq('workspace_id', wid),
   ]);
 
-  // Mapear para o formato que o ST espera
+  // ── Brands ──
   ST.brands = (brandsRes.data||[]).map(b=>({
     id: b.id, name: b.name, color: b.color||'#3b7ef8', logo: b.logo_url,
-    goalConfirmed: b.goal_confirmed||0, goalVideos: b.goal_videos||0, notes: b.notes||''
+    status: b.status||'ongoing',
+    goalConfirmed: b.goal_confirmed||0, goalVideos: b.goal_videos||0,
+    goals: { confirmed: b.goal_confirmed||0, videos: b.goal_videos||0 },
+    notes: b.notes||''
   }));
 
+  // ── Members ──
   ST.members = (membersRes.data||[]).map(m=>({
     id: m.id, name: m.name, role: m.role||'support',
-    avatar: m.avatar_url||'', brands: m.brands||[]
+    avatarUrl: m.avatar_url||'', avatar_url: m.avatar_url||'', avatar: m.avatar_url||'',
+    brands: m.brands||[], roles: m.roles||{}
   }));
 
-  // Campanhas — agrupar por brand
+  // ── Campaigns → ST.campaigns[brandId] ──
+  ST.campaigns = {};
   var allCamps = campsRes.data||[];
   ST.brands.forEach(b=>{
-    var bCamps = allCamps.filter(c=>c.brand_id===b.id).map(c=>({
-      id:c.id, name:c.name, period:c.period, status:c.status||'ongoing',
+    ST.campaigns[b.id] = allCamps.filter(c=>c.brand_id===b.id).map(c=>({
+      id:c.id, name:c.name, period:c.period||'', status:c.status||'ongoing',
       goalConfirmed:c.goal_confirmed||0, goalVideos:c.goal_videos||0,
       samples:c.samples||0, shipmentStatus:c.shipment_status||0,
-      startDate:c.start_date, endDate:c.end_date, brandId:c.brand_id
+      startDate:c.start_date||null, endDate:c.end_date||null,
+      brandId:c.brand_id, ownerId:c.owner_id||null, supportId:c.support_id||null
     }));
-    try{ localStorage.setItem('dg_campaigns_'+b.id, JSON.stringify(bCamps)); }catch(e){}
   });
 
-  // KOLs — agrupar por brand
+  // ── KOLs → localStorage (read by existing helpers) ──
   var allKols = kolsRes.data||[];
   ST.brands.forEach(b=>{
     var bKols = allKols.filter(k=>k.brand_id===b.id).map(k=>({
@@ -1810,7 +1816,7 @@ async function loadAllFromSupabase() {
     try{ localStorage.setItem('dg_kolreg_'+b.id, JSON.stringify(bKols)); }catch(e){}
   });
 
-  // Schedules — agrupar por brand
+  // ── Schedules → localStorage ──
   var allSched = schedRes.data||[];
   ST.brands.forEach(b=>{
     var bSched = allSched.filter(s=>s.brand_id===b.id).map(s=>({
@@ -1821,24 +1827,32 @@ async function loadAllFromSupabase() {
     try{ localStorage.setItem('dg_pubsched2_'+b.id, JSON.stringify(bSched)); }catch(e){}
   });
 
-  // Daily logs — agrupar por member+brand
+  // ── Daily logs → ST.logs[memberId] (array) ──
+  ST.logs = {};
   var allLogs = logsRes.data||[];
-  ST.members.forEach(m=>{
-    ST.brands.forEach(b=>{
-      var key='dg_log_'+m.id+'_'+b.id;
-      var mLogs={};
-      allLogs.filter(l=>l.member_id===m.id&&l.brand_id===b.id).forEach(l=>{
-        mLogs[l.date]={kols_contacted:l.kols_contacted||0,confirmed:l.confirmed||0,vids_published:l.videos_published||0};
-      });
-      try{ localStorage.setItem(key, JSON.stringify(mLogs)); }catch(e){}
+  allLogs.forEach(function(l){
+    if(!ST.logs[l.member_id]) ST.logs[l.member_id]=[];
+    ST.logs[l.member_id].push({
+      brandId:l.brand_id, date:l.date,
+      kols_sourced:l.kols_sourced||0,
+      kols_contacted:l.kols_contacted||0,
+      kols_followedup:l.kols_followedup||0,
+      confirmed:l.confirmed||0,
+      vids_published:l.videos_published||0,
+      note:l.note||''
     });
   });
+  // Sort each member's logs by date desc
+  Object.keys(ST.logs).forEach(function(mid){
+    ST.logs[mid].sort(function(a,b){return b.date.localeCompare(a.date);});
+  });
 
-  // Links
+  // ── Links ──
   var allLinks = linksRes.data||[];
-  try{ localStorage.setItem('dg_links', JSON.stringify(allLinks.map(l=>({
+  ST.links = allLinks.map(l=>({
     id:l.id, title:l.title, url:l.url, category:l.category, year:l.year, notes:l.notes
-  })))); }catch(e){}
+  }));
+  try{ localStorage.setItem('dg_links', JSON.stringify(ST.links)); }catch(e){}
 
   // renderAll e navegação serão feitos pelo chamador (_onAuthSuccess)
   // Para compatibilidade com chamadas diretas (ex: refresh), fazer navegação aqui também
@@ -1860,11 +1874,13 @@ async function sbSaveBrand(brandData) {
   if(!_workspaceId) return;
   var _bg=brandData.goals||{};
   var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:_bg.confirmed||brandData.goalConfirmed||0, goal_videos:_bg.videos||brandData.goalVideos||0, status:brandData.status||'active', notes:brandData.notes||'' };
-  if(brandData.id && !brandData.id.startsWith('b_')) {
+  // Supabase UUIDs contain '-'; local temp IDs do not
+  if(brandData.id && brandData.id.includes('-')) {
     await supa.from('brands').update(payload).eq('id',brandData.id);
   } else {
-    var { data } = await supa.from('brands').insert(payload).select().single();
-    if(data) brandData.id = data.id;
+    var { data:bData, error:bErr } = await supa.from('brands').insert(payload).select().single();
+    if(bData) brandData.id = bData.id;
+    if(bErr) console.error('sbSaveBrand insert error:', bErr.message);
   }
 }
 
@@ -1903,24 +1919,30 @@ async function sbSaveCampaign(camp, brandId) {
     start_date:camp.startDate||null, end_date:camp.endDate||null,
     owner_id:camp.ownerId||null, support_id:camp.supportId||null
   };
-  if(camp.id && !camp.id.startsWith('camp_')) {
+  if(camp.id && camp.id.includes('-')) {
     await supa.from('campaigns').update(payload).eq('id',camp.id);
   } else {
-    var { data } = await supa.from('campaigns').insert(payload).select().single();
-    if(data) camp.id = data.id;
+    var { data:cData, error:cErr } = await supa.from('campaigns').insert(payload).select().single();
+    if(cData) camp.id = cData.id;
+    if(cErr) console.error('sbSaveCampaign insert error:', cErr.message);
   }
 }
 
 async function sbSaveLog(memberId, brandId, date, logData) {
   if(!_workspaceId) return;
-  await supa.from('daily_logs').upsert({
+  var {error} = await supa.from('daily_logs').upsert({
     workspace_id:_workspaceId, member_id:memberId, brand_id:brandId, date:date,
-    kols_contacted:logData.kols_contacted||0, confirmed:logData.confirmed||0,
-    videos_published:logData.vids_published||0
+    kols_sourced:logData.kols_sourced||0,
+    kols_contacted:logData.kols_contacted||0,
+    kols_followedup:logData.kols_followedup||0,
+    confirmed:logData.confirmed||0,
+    videos_published:logData.vids_published||0,
+    note:logData.note||''
   }, { onConflict:'member_id,brand_id,date' });
+  if(error) console.error('sbSaveLog error:',error.message);
 }
 async function sbDeleteLog(memberId, brandId, date) {
-  if(!_workspaceId) return;
+  if(!_workspaceId||!memberId||!memberId.includes('-')) return;
   await supa.from('daily_logs').delete().eq('member_id',memberId).eq('brand_id',brandId).eq('date',date);
 }
 async function sbSaveMember(m, isNew) {
