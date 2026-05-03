@@ -2227,11 +2227,16 @@ var _allUsers=[]; // populated for admins: [{id, email, role, member_id, has_pas
 
 async function loadAdminData(){
   if(!isAdmin()||!_workspaceId) return;
-  var {data:wsm}=await supa.from('workspace_members').select('user_id,role,name').eq('workspace_id',_workspaceId);
+  var {data:wsm}=await supa.from('workspace_members').select('user_id,role,name,member_id').eq('workspace_id',_workspaceId);
   if(wsm){
     _allUsers=wsm.map(function(u){
-      var m=ST.members.find(function(m){return m.name===u.name;});
-      return {id:u.user_id,user_id:u.user_id,email:'',role:u.role,member_id:m?m.id:null,has_password:true};
+      // prefer member_id column if available, fallback to name match
+      var mid = u.member_id || null;
+      if(!mid){
+        var m=ST.members.find(function(m){return m.name&&u.name&&m.name.trim().toLowerCase()===u.name.trim().toLowerCase();});
+        mid = m?m.id:null;
+      }
+      return {id:u.user_id,user_id:u.user_id,email:_toAuthEmail(u.name?u.name.toLowerCase().replace(/\s+/g,''):''),role:u.role,member_id:mid,has_password:true};
     });
   }
   renderSidebar();
@@ -8005,6 +8010,47 @@ function openEditAccountModal(memberId) {
   openOv('ov-acct-modal');
 }
 
+async function _sbCreateAccount(authEmail, pwd, role, memberId, memberName) {
+  // Create Supabase Auth user via raw fetch (doesn't affect admin session)
+  var res = await fetch(SUPA_URL+'/auth/v1/signup', {
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:authEmail, password:pwd})
+  });
+  var d = await res.json();
+  // If user already exists, d.id may be missing but error will say so
+  if(d.error==='user_already_exists'||d.code==='user_already_exists'){
+    return {ok:false, msg:'Usuário já existe com este nome.'};
+  }
+  if(!d.id){ return {ok:false, msg:d.msg||d.error_description||d.message||'Erro ao criar conta.'}; }
+
+  var newUserId = d.id;
+  var insertToken = d.access_token || null;
+
+  // Try insert workspace_members with new user token first
+  var insErr = null;
+  if(insertToken){
+    var ir = await fetch(SUPA_URL+'/rest/v1/workspace_members',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+insertToken,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({workspace_id:_workspaceId,user_id:newUserId,role:role,name:memberName,member_id:memberId})
+    });
+    if(!ir.ok){ var ib=await ir.json(); insErr=ib; }
+  }
+  // If that failed or no token, try with admin session
+  if(insErr||!insertToken){
+    var {error:_ie}=await supa.from('workspace_members').insert({workspace_id:_workspaceId,user_id:newUserId,role:role,name:memberName,member_id:memberId});
+    if(!_ie) insErr=null; else insErr=_ie;
+  }
+
+  if(insErr){
+    // Even if insert fails, return user id so caller can show SQL
+    return {ok:false, sqlFallback:true, userId:newUserId,
+      sql:"INSERT INTO workspace_members (workspace_id,user_id,role,name,member_id) VALUES ('"+_workspaceId+"','"+newUserId+"','"+role+"','"+memberName+"','"+memberId+"');"};
+  }
+  return {ok:true, userId:newUserId};
+}
+
 async function saveAccountModal() {
   var msg = document.getElementById('acct-modal-msg');
   msg.style.color = 'var(--text-s)'; msg.textContent = 'Salvando...';
@@ -8017,60 +8063,42 @@ async function saveAccountModal() {
   var authEmail = _toAuthEmail(username);
 
   if(!_acctModalMemberId) {
-    // CREATE — get member from select
+    // ── CREATE new account ──
     var memberId = document.getElementById('acct-modal-member-sel-input').value;
     if(!memberId){ msg.style.color='#f87171'; msg.textContent='Selecione um membro.'; return; }
     if(!pwd||pwd.length<6){ msg.style.color='#f87171'; msg.textContent='Senha mínima: 6 caracteres.'; return; }
     var m = getMember(memberId);
+    var mName = m?m.name:username;
 
-    // Create Supabase Auth user via raw fetch (doesn't affect admin session)
-    var res = await fetch(SUPA_URL+'/auth/v1/signup', {
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:authEmail, password:pwd})
-    });
-    var d = await res.json();
-    if(!d.id){ msg.style.color='#f87171'; msg.textContent=d.msg||d.error_description||d.message||'Erro ao criar conta.'; return; }
+    var result = await _sbCreateAccount(authEmail, pwd, role, memberId, mName);
 
-    var newUserId = d.id;
-    var insertToken = d.access_token || null;
-
-    // Insert workspace_members — try with new user's token first
-    var insErr = null;
-    if(insertToken){
-      var ir = await fetch(SUPA_URL+'/rest/v1/workspace_members',{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+insertToken,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({workspace_id:_workspaceId,user_id:newUserId,role:role,name:m?m.name:username})
-      });
-      if(!ir.ok){ var ib=await ir.json(); insErr=ib; }
-    } else {
-      var {error:_ie}=await supa.from('workspace_members').insert({workspace_id:_workspaceId,user_id:newUserId,role:role,name:m?m.name:username});
-      insErr=_ie||null;
-    }
-
-    if(insErr){
+    if(result.sqlFallback){
+      // Still track in _allUsers so edit works this session
+      _allUsers.push({id:result.userId,user_id:result.userId,email:authEmail,role:role,member_id:memberId,has_password:true});
       msg.style.color='#f59e0b';
-      msg.textContent='Conta criada! Execute no Supabase SQL Editor: INSERT INTO workspace_members (workspace_id,user_id,role,name) VALUES (\''+_workspaceId+'\',\''+newUserId+'\',\''+role+'\',\''+(m?m.name:username)+'\');';
+      msg.innerHTML='Conta criada! Execute no <a href="https://supabase.com/dashboard/project/lntklnennunivlewoxqx/sql" target="_blank" style="color:inherit;font-weight:700">Supabase SQL Editor</a>:<br><code style="font-size:10px;word-break:break-all;user-select:all">'+result.sql+'</code>';
+      renderSettings();
       return;
     }
-    _allUsers.push({id:newUserId,user_id:newUserId,email:authEmail,role:role,member_id:memberId,has_password:true});
+    if(!result.ok){ msg.style.color='#f87171'; msg.textContent=result.msg; return; }
+
+    _allUsers.push({id:result.userId,user_id:result.userId,email:authEmail,role:role,member_id:memberId,has_password:true});
     msg.style.color='var(--green)'; msg.textContent='✓ Conta criada com sucesso!';
-    if(currentPage==='settings') renderSettings();
+    renderSettings();
 
   } else {
-    // EDIT existing account
-    var u = _allUsers.find(function(u){ return u.member_id===_acctModalMemberId; });
+    // ── EDIT existing account ──
+    var targetMemberId = _acctModalMemberId; // save before any modification
+    var u = _allUsers.find(function(u){ return u.member_id===targetMemberId; });
 
     if(u && u.user_id) {
-      // Update role in workspace_members
+      // Update role
       var {error:rErr}=await supa.from('workspace_members').update({role:role}).eq('user_id',u.user_id).eq('workspace_id',_workspaceId);
       if(rErr){ msg.style.color='#f87171'; msg.textContent='Erro ao atualizar role: '+rErr.message; return; }
       u.role = role;
 
-      // If password provided, update via Supabase Admin API
+      // Update password if provided (requires service_role — will silently skip if denied)
       if(pwd && pwd.length >= 6) {
-        // Try updating password for the user using admin endpoint
         var pwdRes = await fetch(SUPA_URL+'/auth/v1/admin/users/'+u.user_id, {
           method:'PUT',
           headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
@@ -8078,21 +8106,34 @@ async function saveAccountModal() {
         });
         if(!pwdRes.ok){
           msg.style.color='#f59e0b';
-          msg.textContent='Role atualizado, mas troca de senha requer service role key no painel Supabase.';
+          msg.textContent='Tipo atualizado! Troca de senha requer a service_role key no Supabase.';
+          if(currentPage==='settings') renderSettings();
           return;
         }
       }
       msg.style.color='var(--green)'; msg.textContent='✓ Conta atualizada!';
       if(currentPage==='settings') renderSettings();
+
     } else {
-      // No account yet — create one
-      if(!pwd||pwd.length<6){ msg.style.color='#f87171'; msg.textContent='Senha mínima: 6 caracteres para criar conta.'; return; }
-      _acctModalMemberId = null; // pretend it's a create
-      var selEl = document.getElementById('acct-modal-member-sel-input');
-      if(selEl) selEl.value = _acctModalMemberId||'';
-      // re-trigger as create
-      var mId = document.getElementById('acct-modal-title').textContent.split('—')[1]||'';
-      msg.style.color='#f87171'; msg.textContent='Use "+ Nova Conta" para criar a conta deste membro.';
+      // Member has no account yet — create one from the Edit flow
+      if(!pwd||pwd.length<6){ msg.style.color='#f87171'; msg.textContent='Este membro não tem conta. Informe uma senha para criar.'; return; }
+      var mEdit = getMember(targetMemberId);
+      var mNameEdit = mEdit?mEdit.name:username;
+
+      var result2 = await _sbCreateAccount(authEmail, pwd, role, targetMemberId, mNameEdit);
+
+      if(result2.sqlFallback){
+        _allUsers.push({id:result2.userId,user_id:result2.userId,email:authEmail,role:role,member_id:targetMemberId,has_password:true});
+        msg.style.color='#f59e0b';
+        msg.innerHTML='Conta criada! Execute no <a href="https://supabase.com/dashboard/project/lntklnennunivlewoxqx/sql" target="_blank" style="color:inherit;font-weight:700">Supabase SQL Editor</a>:<br><code style="font-size:10px;word-break:break-all;user-select:all">'+result2.sql+'</code>';
+        renderSettings();
+        return;
+      }
+      if(!result2.ok){ msg.style.color='#f87171'; msg.textContent=result2.msg; return; }
+
+      _allUsers.push({id:result2.userId,user_id:result2.userId,email:authEmail,role:role,member_id:targetMemberId,has_password:true});
+      msg.style.color='var(--green)'; msg.textContent='✓ Conta criada com sucesso!';
+      if(currentPage==='settings') renderSettings();
     }
   }
 }
