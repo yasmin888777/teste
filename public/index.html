@@ -1834,7 +1834,8 @@ async function loadAllFromSupabase() {
 /* ── Wrappers para salvar no Supabase E no localStorage ── */
 async function sbSaveBrand(brandData) {
   if(!_workspaceId) return;
-  var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:brandData.goalConfirmed||0, goal_videos:brandData.goalVideos||0, notes:brandData.notes||'' };
+  var _bg=brandData.goals||{};
+  var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:_bg.confirmed||brandData.goalConfirmed||0, goal_videos:_bg.videos||brandData.goalVideos||0, status:brandData.status||'active', notes:brandData.notes||'' };
   if(brandData.id && !brandData.id.startsWith('b_')) {
     await supa.from('brands').update(payload).eq('id',brandData.id);
   } else {
@@ -1892,6 +1893,47 @@ async function sbSaveLog(memberId, brandId, date, logData) {
     kols_contacted:logData.kols_contacted||0, confirmed:logData.confirmed||0,
     videos_published:logData.vids_published||0
   }, { onConflict:'member_id,brand_id,date' });
+}
+async function sbDeleteLog(memberId, brandId, date) {
+  if(!_workspaceId) return;
+  await supa.from('daily_logs').delete().eq('member_id',memberId).eq('brand_id',brandId).eq('date',date);
+}
+async function sbSaveMember(m, isNew) {
+  if(!_workspaceId) return;
+  var payload = { workspace_id:_workspaceId, name:m.name, role:m.role||'support', avatar_url:m.avatarUrl||m.avatar_url||null, brands:m.brands||[] };
+  if(isNew) {
+    var { data } = await supa.from('team_members').insert(payload).select().single();
+    if(data) m.id = data.id;
+    await supa.from('workspace_members').insert({ workspace_id:_workspaceId, user_id:m.userId||null, role:'member', name:m.name });
+  } else {
+    await supa.from('team_members').update(payload).eq('id',m.id);
+  }
+}
+async function sbDeleteMember(memberId) {
+  if(!_workspaceId) return;
+  await supa.from('team_members').delete().eq('id',memberId);
+}
+async function sbUpdateMemberAvatar(memberId, avatarUrl) {
+  if(!_workspaceId) return;
+  await supa.from('team_members').update({ avatar_url:avatarUrl }).eq('id',memberId);
+}
+async function sbDeleteCampaign(campId) {
+  if(!_workspaceId) return;
+  await supa.from('campaigns').delete().eq('id',campId);
+}
+async function sbSaveLink(link, isNew) {
+  if(!_workspaceId) return;
+  var payload = { workspace_id:_workspaceId, title:link.title, url:link.url||null, category:link.category||null, year:link.year||null, notes:link.notes||null };
+  if(isNew) {
+    var { data } = await supa.from('links').insert(payload).select().single();
+    if(data) link.id = data.id;
+  } else {
+    await supa.from('links').update(payload).eq('id',link.id);
+  }
+}
+async function sbDeleteLink(linkId) {
+  if(!_workspaceId) return;
+  await supa.from('links').delete().eq('id',linkId);
 }
 
 /* ── Inicializar: checar sessão existente ── */
@@ -2054,12 +2096,12 @@ function addLog(mid,entry){
   ST.logs[mid]=ST.logs[mid].filter(l=>!(l.date===entry.date&&l.brandId===entry.brandId));
   ST.logs[mid].push(entry);
   ST.logs[mid].sort((a,b)=>b.date.localeCompare(a.date));
-  apiPost('/api/logs',{memberId:mid,brandId:entry.brandId,date:entry.date,...entry});
+  sbSaveLog(mid, entry.brandId, entry.date, entry);
 }
 function delLog(mid,date,bid){
   if(!ST.logs[mid]) return;
   ST.logs[mid]=ST.logs[mid].filter(l=>!(l.date===date&&l.brandId===bid));
-  apiDel('/api/logs/'+mid+'/'+bid+'/'+date);
+  sbDeleteLog(mid, bid, date);
 }
 function avatarUrl(m){
   if(m.avatarUrl) return m.avatarUrl;
@@ -2562,7 +2604,7 @@ function startEditName(mid,el){
   el.replaceWith(inp);inp.focus();inp.select();
   var done=function(){
     const newName=inp.value.trim()||m.name;
-    if(newName!==m.name){ m.name=newName; apiPut('/api/members/'+mid,{name:newName}); }
+    if(newName!==m.name){ m.name=newName; sbSaveMember(m, false); }
     renderAll();
   };
   inp.onblur=done;
@@ -2571,7 +2613,7 @@ function startEditName(mid,el){
 function toggleBrand(mid,bid){
   const m=getMember(mid);if(!m)return;
   m.brands.includes(bid)?m.brands=m.brands.filter(function(x){return x!==bid;}):m.brands.push(bid);
-  apiPut('/api/members/'+mid,{brands:m.brands,roles:m.roles||{}});
+  sbSaveMember(m,false);
   renderAll();
 }
 
@@ -2864,7 +2906,7 @@ function startEditMpName(mid,el){
   el.replaceWith(inp);inp.focus();inp.select();
   var done=function(){
     var newName=inp.value.trim()||m.name;
-    if(newName!==m.name){m.name=newName;apiPut('/api/members/'+mid,{name:newName});renderSidebar();}
+    if(newName!==m.name){m.name=newName;sbSaveMember(m,false);renderSidebar();}
     var newEl=document.createElement('div');
     newEl.className='mp-name';newEl.title='Click to rename';newEl.textContent=newName;
     newEl.onclick=function(){startEditMpName(mid,newEl);};
@@ -2878,7 +2920,7 @@ function mpToggleBrand(mid,bid){
   var m=getMember(mid);if(!m)return;
   if(m.brands.includes(bid)){m.brands=m.brands.filter(function(x){return x!==bid;});}
   else{m.brands.push(bid);}
-  apiPut('/api/members/'+mid,{brands:m.brands,roles:m.roles||{}});
+  sbSaveMember(m,false);
   renderSidebar();
   renderMemberPage(mid);
 }
@@ -3037,7 +3079,7 @@ function saveNewMember(){
   const checks=document.querySelectorAll('#nm-brands input[type=checkbox]:checked');
   const brands=[];checks.forEach(function(c){brands.push(c.value);});
   ST.members.push({id:id,name:name,avatarKey:id,avatarUrl:avatarUrl,brands:brands,roles:{}});
-  apiPost('/api/members',{id:id,name:name,avatarUrl:avatarUrl,brands:brands,roles:{}});
+  sbSaveMember(ST.members[ST.members.length-1],true);
   renderAll();closeOv('ov-add-member');
 }
 
@@ -3103,7 +3145,7 @@ function saveProfile(){
     const sel=document.getElementById('role-'+bid);
     if(sel) profileMember.roles[bid]=sel.value;
   });
-  apiPut('/api/members/'+profileMember.id,{brands:profileMember.brands,roles:profileMember.roles});
+  sbSaveMember(profileMember,false);
   renderAll();closeOv('ov-profile');
 }
 function saveProfileUser(){
@@ -3202,7 +3244,7 @@ function saveCampInfo(){
   var confGoal=+document.getElementById('ci-goal-conf').value||0;
   var vidGoal=+document.getElementById('ci-goal-vid').value||0;
   b.status=status;b.goals={confirmed:confGoal,videos:vidGoal};
-  apiPut('/api/brands/'+_campInfoBrandId,{status:status,goals:{confirmed:confGoal,videos:vidGoal},color:b.color,name:b.name});
+  sbSaveBrand(b);
   var platforms=[];
   document.querySelectorAll('#ci-platforms input[type=checkbox]:checked').forEach(function(cb){platforms.push(cb.value);});
   var formats=[];
@@ -3766,7 +3808,7 @@ function _collectCustomGoals(){
 function saveGoals(){
   if(!_goalsBrand)return;
   _goalsBrand.goals={confirmed:+document.getElementById('g-conf').value||0,videos:+document.getElementById('g-vid').value||0};
-  apiPut('/api/brands/'+_goalsBrand.id,{goals:_goalsBrand.goals});
+  sbSaveBrand(_goalsBrand);
   _collectCustomGoals();
   renderAll();closeOv('ov-goals');
 }
@@ -3842,13 +3884,13 @@ function saveBrand(){
   if(_editingBrandId){
     var b=getBrand(_editingBrandId);
     if(b){b.name=name;b.color=newBrandColor;b.goals=goals;b.status=newStatus;}
-    apiPut('/api/brands/'+_editingBrandId,{name:name,color:newBrandColor,goals:goals,status:newStatus});
+    sbSaveBrand(b);
     _nbSaveMeta(_editingBrandId);
     renderAll();closeOv('ov-brand');
   } else {
     const id=name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
     ST.brands.push({id:id,name:name,color:newBrandColor,goals:goals,status:newStatus});
-    apiPost('/api/brands',{id:id,name:name,color:newBrandColor,goals:goals});
+    sbSaveBrand(ST.brands[ST.brands.length-1]);
     _nbSaveMeta(id);
     renderAll();closeOv('ov-brand');
     document.getElementById('nb-name').value='';
@@ -3879,7 +3921,7 @@ function editAppName(){
   lbl.replaceWith(inp);inp.focus();inp.select();
   var done=function(){
     ST.appName=inp.value.trim()||'DigitUly';
-    apiPut('/api/settings',{key:'appName',value:ST.appName});
+    try{localStorage.setItem('kol_appName',ST.appName);}catch(e){}
     const newLbl=document.createElement('div');
     newLbl.id='app-name-label';newLbl.className='sb-app-name';
     newLbl.title='Click to rename';newLbl.textContent=ST.appName;
@@ -4264,13 +4306,13 @@ function onAvatarFileSelected(input) {
   resizeAndEncode(file, maxPx, function(dataUrl) {
     if (_avatarTarget.type === 'site') {
       ST.logoUrl = dataUrl;
-      apiPut('/api/settings', { key: 'logoUrl', value: dataUrl });
+      try{localStorage.setItem('kol_logoUrl',dataUrl);}catch(e){}
       updateSiteLogo();
     } else {
       var m = getMember(_avatarTarget.id);
       if (!m) return;
       m.avatarUrl = dataUrl;
-      apiPut('/api/members/' + m.id, { avatarUrl: dataUrl });
+      sbUpdateMemberAvatar(m.id, dataUrl);
       var profImg = document.getElementById('prof-av-img');
       if (profImg) profImg.src = dataUrl;
       renderAll();
@@ -4315,7 +4357,7 @@ function deleteMember(mid){
   if(!confirm('Remove "'+target.name+'"? This will also delete all their activity logs.'))return;
   ST.members=ST.members.filter(function(m){return m.id!==target.id;});
   delete ST.logs[target.id];
-  apiDel('/api/members/'+target.id);
+  sbDeleteMember(target.id);
   if(!mid){closeOv('ov-profile');}
   if(currentMemberId===target.id){currentMemberId=null;}
   renderAll();
@@ -4380,9 +4422,10 @@ function saveNewCampaignFull(){
   if(!ST.campaigns) ST.campaigns={};
   if(!ST.campaigns[brandId]) ST.campaigns[brandId]=[];
   ST.campaigns[brandId].push({id:id,brandId:brandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,shipmentStatus:''});
-  apiPost('/api/campaigns',{id:id,brandId:brandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples});
+  var _nc1=ST.campaigns[brandId][ST.campaigns[brandId].length-1];
+  sbSaveCampaign(_nc1,brandId);
   var b=getBrand(brandId);
-  if(b){b.goals={confirmed:gConf,videos:gVid};apiPut('/api/brands/'+brandId,{goals:b.goals});}
+  if(b){b.goals={confirmed:gConf,videos:gVid};sbSaveBrand(b);}
   renderAll();
   closeOv('ov-new-campaign');
 }
@@ -4408,7 +4451,8 @@ function saveNewCampaign(){
   if(!ST.campaigns) ST.campaigns={};
   if(!ST.campaigns[_addCampBrandId]) ST.campaigns[_addCampBrandId]=[];
   ST.campaigns[_addCampBrandId].push({id:id,name:name,brandId:_addCampBrandId,period:period,startDate:startDate,endDate:endDate,samples:samples});
-  apiPost('/api/campaigns',{id:id,brandId:_addCampBrandId,name:name,period:period,startDate:startDate,endDate:endDate,samples:samples});
+  var _nc2=ST.campaigns[_addCampBrandId][ST.campaigns[_addCampBrandId].length-1];
+  sbSaveCampaign(_nc2,_addCampBrandId);
   renderAll();
   if(_activeBrandId===_addCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-add-campaign');
@@ -4455,8 +4499,7 @@ function saveEditCampaign(){
   const shipmentStatus=+(document.getElementById('ec-shipment-status').value)||0;
   const camps=(ST.campaigns&&ST.campaigns[_editCampBrandId])||[];
   const c=camps.find(function(x){return x.id===_editCampId;});
-  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.shipmentStatus=shipmentStatus;}
-  apiPut('/api/campaigns/'+_editCampId,{name:name,period:period,startDate:startDate,endDate:endDate,samples:samples,shipmentStatus:shipmentStatus});
+  if(c){c.name=name;c.period=period;c.startDate=startDate;c.endDate=endDate;c.samples=samples;c.shipmentStatus=shipmentStatus;sbSaveCampaign(c,_editCampBrandId);}
   renderAll();
   if(_activeBrandId===_editCampBrandId) renderBrandDetail(_activeBrandId);
   closeOv('ov-edit-campaign');
@@ -4467,7 +4510,7 @@ function deleteCampaign(campId,brandId){
   if(ST.campaigns&&ST.campaigns[brandId]){
     ST.campaigns[brandId]=ST.campaigns[brandId].filter(function(c){return c.id!==campId;});
   }
-  apiDel('/api/campaigns/'+campId);
+  sbDeleteCampaign(campId);
   renderCampaigns();
   if(_activeBrandId===brandId) renderBrandDetail(_activeBrandId);
 }
