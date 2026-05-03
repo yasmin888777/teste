@@ -8793,5 +8793,21 @@ initSupabase();
   </div>
 </div>
 
+<script>
+/* ── Auto-reload when Render deploys a new version ── */
+(function(){
+  var _ver=null;
+  function chk(){
+    fetch('/api/build-version',{cache:'no-store'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(_ver===null){_ver=d.v;return;}
+        if(_ver!==d.v){window.location.reload();}
+      }).catch(function(){});
+  }
+  setTimeout(chk,8000);
+  setInterval(chk,20000);
+})();
+</script>
 </body>
 </html>

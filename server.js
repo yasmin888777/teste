@@ -1,5 +1,5 @@
 require('dotenv').config();
-// build: 2026-04-22
+// build: 2026-05-03
 const express = require('express');
 const { neon } = require('@neondatabase/serverless');
 const path = require('path');
@@ -18,10 +18,21 @@ function safeDate(d) {
   return m ? m[0] : null;
 }
 
+// Build version — changes on every deploy (uses git commit or startup time)
+const BUILD_VERSION = process.env.RENDER_GIT_COMMIT || Date.now().toString();
+app.get('/api/build-version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ v: BUILD_VERSION });
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-store');
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
   }
 }));
 
