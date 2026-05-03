@@ -1975,7 +1975,7 @@ async function sbDeleteCampaign(campId) {
 }
 async function sbSaveLink(link, isNew) {
   if(!_workspaceId) return;
-  var payload = { workspace_id:_workspaceId, title:link.title, url:link.url||null, category:link.category||null, year:link.year||null, notes:link.notes||null };
+  var payload = { workspace_id:_workspaceId, title:link.title, url:link.url||null, category:link.category||null, year:link.year||null, notes:link.notes||null, brand_id:link.brand_id||null, campaign:link.campaign||null, quarter:link.quarter||null };
   if(isNew) {
     var { data } = await supa.from('links').insert(payload).select().single();
     if(data) link.id = data.id;
@@ -1986,6 +1986,22 @@ async function sbSaveLink(link, isNew) {
 async function sbDeleteLink(linkId) {
   if(!_workspaceId) return;
   await supa.from('links').delete().eq('id',linkId);
+}
+async function sbSaveSched(entry, brandId) {
+  if(!_workspaceId) return;
+  var payload = { workspace_id:_workspaceId, brand_id:brandId, kol_id:entry.kolId,
+    kol_name:entry.kolName, platform:entry.platform, deliverable:entry.deliverable,
+    scheduled_date:entry.date, scheduled_time:entry.time||null, status:entry.status||'scheduled' };
+  if(entry.id && entry.id.includes('-')) {
+    await supa.from('kol_schedules').update(payload).eq('id',entry.id);
+  } else {
+    var {data} = await supa.from('kol_schedules').insert(payload).select().single();
+    if(data) entry.id = data.id;
+  }
+}
+async function sbDeleteSched(entryId) {
+  if(!_workspaceId || !entryId || !entryId.includes('-')) return;
+  await supa.from('kol_schedules').delete().eq('id',entryId);
 }
 
 /* ── Inicializar: checar sessão existente ── */
@@ -4139,6 +4155,14 @@ function deleteBrand(){
   if(!isAdmin()) return;
   var b=getBrand(_editingBrandId);
   if(!b||!confirm('Delete "'+b.name+'"? This will also remove all logs and documents for this brand. This cannot be undone.')) return;
+  // Delete via Supabase directly
+  (async function(){
+    await supa.from('brands').delete().eq('id',_editingBrandId);
+    ST.brands=ST.brands.filter(function(x){return x.id!==_editingBrandId;});
+    closeOv('ov-brand');
+    renderAll();
+  })();
+  if(false){ // legacy Neon stub (disabled)
   fetch('/api/brands/'+_editingBrandId,{method:'DELETE',headers:authHeaders()})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -4148,6 +4172,7 @@ function deleteBrand(){
         renderAll();
       } else { alert(d.error||'Error deleting brand'); }
     });
+  } // end if(false)
 }
 
 /* ══════════════════════════════════════════════
@@ -4608,15 +4633,19 @@ function deleteMember(mid){
 ══════════════════════════════════════════════ */
 function toggleBrandStatus(brandId, currentStatus){
   var newStatus=currentStatus==='ongoing'?'finished':'ongoing';
-  fetch('/api/brands/'+brandId+'/status',{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:newStatus})})
+  var b=getBrand(brandId);
+  if(b){ b.status=newStatus; sbSaveBrand(b); renderCampaigns(); }
+  if(false){ // legacy Neon stub (disabled)
+    fetch('/api/brands/'+brandId+'/status',{method:'PATCH',headers:authHeaders(),body:JSON.stringify({status:newStatus})})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.ok){
-        var b=getBrand(brandId);
-        if(b) b.status=newStatus;
+        var b2=getBrand(brandId);
+        if(b2) b2.status=newStatus;
         renderCampaigns();
       }
     });
+  } // end if(false)
 }
 
 /* ── New Campaign Modal (campaigns page) ── */
@@ -5846,6 +5875,7 @@ function saveKolModal(){
   var idx=kols.findIndex(function(k){return k.id===id;});
   if(idx>=0)kols[idx]=kol;else kols.push(kol);
   setKolRegistry(bid,kols);
+  sbSaveKol(kol,bid).then(function(){ setKolRegistry(bid,kols); }); // persist to Supabase; update id after insert
   renderPublicationCalendarInPlace(bid);
   renderSidebar();
   navTo('kols-registry',null);
@@ -5854,6 +5884,7 @@ function deleteKolFromRegistry(bid,kolId){
   if(!confirm('Remove this KOL?')) return;
   var kols=getKolRegistry(bid).filter(function(k){return k.id!==kolId;});
   setKolRegistry(bid,kols);
+  sbDeleteKol(kolId); // persist to Supabase
   var entries=getPubScheduleV2(bid).filter(function(e){return e.kolId!==kolId;});
   setPubScheduleV2(bid,entries);
   renderPublicationCalendarInPlace(bid);
@@ -5884,14 +5915,17 @@ function savePubSchedModal(){
   var kol=kols.find(function(k){return k.id===kolId;});
   if(!kol)return;
   var entries=getPubScheduleV2(bid);
-  entries.push({id:'sc_'+Date.now(),kolId:kol.id,kolName:kol.name,platform:kol.platform,deliverable:kol.deliverable,date:date,time:time,status:'scheduled'});
+  var newEntry={id:'sc_'+Date.now(),kolId:kol.id,kolName:kol.name,platform:kol.platform,deliverable:kol.deliverable,date:date,time:time,status:'scheduled'};
+  entries.push(newEntry);
   setPubScheduleV2(bid,entries);
+  sbSaveSched(newEntry,bid); // persist to Supabase
   closeOv('ov-pub-sched');
   renderPublicationCalendarInPlace(bid);
 }
 function removePubSchedEntry(bid,entryId){
   var entries=getPubScheduleV2(bid).filter(function(e){return e.id!==entryId;});
   setPubScheduleV2(bid,entries);
+  sbDeleteSched(entryId); // persist to Supabase
   renderPublicationCalendarInPlace(bid);
 }
 function pubWeekNav(bid,delta){
@@ -7236,11 +7270,11 @@ function renderLinks(){
   var el=document.getElementById('links-content');
   if(!el) return;
   el.innerHTML='<div style="color:var(--text-s);font-size:12px;padding:20px">Loading...</div>';
-  fetch('/api/admin/links',{headers:authHeaders()})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d.ok){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading</div>';return;}
-      _adminLinks=d.links||[];
+  // Load from Supabase
+  supa.from('links').select('*').eq('workspace_id',_workspaceId).then(function(res){
+    if(res.error){el.innerHTML='<div style="color:#f87171;font-size:12px">Error loading</div>';return;}
+    ST.links=(res.data||[]).map(function(l){return {id:l.id,title:l.title,url:l.url,category:l.category,year:l.year,notes:l.notes,brand_id:l.brand_id,campaign:l.campaign,quarter:l.quarter};});
+    _adminLinks=ST.links;
 
       // Apply year filter
       var yearFilter=document.getElementById('links-year-filter');
@@ -7305,8 +7339,7 @@ function renderLinks(){
         html+='</div>';
       });
       el.innerHTML=html;
-    })
-    .catch(function(){el.innerHTML='<div style="color:#f87171;font-size:12px">Connection error</div>';});
+  });
 }
 
 function linkCardHTML(l){
@@ -7393,23 +7426,17 @@ function saveLink(){
   var errEl=document.getElementById('nl-err');
   if(!title){errEl.textContent='Title is required';return;}
   if(url&&!/^https?:\/\//.test(url)) url='https://'+url;
-  var body={title:title,url:url||null,category:cat,notes:notes,brandId:brandId,quarter:quarter,year:year?parseInt(year):null,campaign:campaign};
-  var method=_editingLinkId?'PUT':'POST';
-  var endpoint=_editingLinkId?'/api/admin/links/'+_editingLinkId:'/api/admin/links';
-  fetch(endpoint,{method:method,headers:authHeaders(),body:JSON.stringify(body)})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){closeOv('ov-add-link');renderLinks();}
-      else{errEl.textContent=d.error||'Error saving';}
-    })
-    .catch(function(){errEl.textContent='Connection error';});
+  var linkObj={title:title,url:url||null,category:cat,notes:notes,brand_id:brandId,quarter:quarter,year:year?parseInt(year):null,campaign:campaign};
+  var isNew=!_editingLinkId;
+  if(!isNew) linkObj.id=_editingLinkId;
+  sbSaveLink(linkObj,isNew).then(function(){
+    closeOv('ov-add-link');renderLinks();
+  }).catch(function(){errEl.textContent='Error saving';});
 }
 
 function deleteLink(id){
   if(!confirm('Remove this note?')) return;
-  fetch('/api/admin/links/'+id,{method:'DELETE',headers:authHeaders()})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok) renderLinks();});
+  sbDeleteLink(id).then(function(){renderLinks();});
 }
 
 /* ══════════════════════════════════════════════
