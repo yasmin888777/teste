@@ -1790,13 +1790,26 @@ async function loadAllFromSupabase() {
   ST._adminOnlyMemberIds = _adminOnlyMemberIds;
 
   // ── Brands ──
-  ST.brands = (brandsRes.data||[]).map(b=>({
-    id: b.id, name: b.name, color: b.color||'#3b7ef8', logo: b.logo_url,
-    status: b.status||'ongoing',
-    goalConfirmed: b.goal_confirmed||0, goalVideos: b.goal_videos||0,
-    goals: { confirmed: b.goal_confirmed||0, videos: b.goal_videos||0 },
-    notes: b.notes||''
-  }));
+  ST.brands = (brandsRes.data||[]).map(b=>{
+    // notes field may contain embedded JSON with _meta and _ov
+    var notesRaw = b.notes||'';
+    var notesText = notesRaw;
+    var embeddedMeta = null, embeddedOv = null;
+    try {
+      var parsed = JSON.parse(notesRaw);
+      if(parsed && parsed._meta) { embeddedMeta = parsed._meta; embeddedOv = parsed._ov||{}; notesText = parsed.text||''; }
+    } catch(e) {}
+    // Restore meta to localStorage if found in Supabase
+    if(embeddedMeta) { setBrandMeta(b.id, embeddedMeta); }
+    if(embeddedOv && Object.keys(embeddedOv).length) { setSummaryOverride(b.id, embeddedOv); }
+    return {
+      id: b.id, name: b.name, color: b.color||'#3b7ef8', logo: b.logo_url,
+      status: b.status||'ongoing',
+      goalConfirmed: b.goal_confirmed||0, goalVideos: b.goal_videos||0,
+      goals: { confirmed: b.goal_confirmed||0, videos: b.goal_videos||0 },
+      notes: notesText
+    };
+  });
 
   // ── Members — exclude pure admin accounts ──
   ST.members = (membersRes.data||[]).filter(function(m){
@@ -1805,7 +1818,8 @@ async function loadAllFromSupabase() {
   }).map(m=>({
     id: m.id, name: m.name, role: m.role||'support',
     avatarUrl: m.avatar_url||'', avatar_url: m.avatar_url||'', avatar: m.avatar_url||'',
-    brands: m.brands||[], roles: m.roles||{}
+    brands: m.brands||[], roles: m.roles||{},
+    // roles is a JSONB column: { brandId: 'owner'|'support'|... }
   }));
 
   // ── Campaigns → ST.campaigns[brandId] ──
@@ -1890,10 +1904,20 @@ async function loadAllFromSupabase() {
 }
 
 /* ── Wrappers para salvar no Supabase E no localStorage ── */
+async function sbSaveBrandFull(brandData) {
+  // Saves brand including meta (platforms/formats) and summary overrides embedded in notes JSON
+  var meta = brandData._meta || getBrandMeta(brandData.id) || {};
+  var ov = brandData._summaryOv || getSummaryOverride(brandData.id) || {};
+  var notesPayload = JSON.stringify({ _meta: meta, _ov: ov, text: brandData.notes||'' });
+  brandData._notesPayload = notesPayload;
+  return sbSaveBrand(brandData);
+}
 async function sbSaveBrand(brandData) {
   if(!_workspaceId) return null;
   var _bg=brandData.goals||{};
-  var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:_bg.confirmed||brandData.goalConfirmed||0, goal_videos:_bg.videos||brandData.goalVideos||0, status:brandData.status||'active', notes:brandData.notes||'' };
+  // Embed meta+overrides in notes if available
+  var notesVal = brandData._notesPayload || brandData.notes || '';
+  var payload = { workspace_id:_workspaceId, name:brandData.name, color:brandData.color||'#3b7ef8', goal_confirmed:_bg.confirmed||brandData.goalConfirmed||0, goal_videos:_bg.videos||brandData.goalVideos||0, status:brandData.status||'ongoing', notes:notesVal };
   if(brandData.id && brandData.id.includes('-')) {
     var {error:uErr} = await supa.from('brands').update(payload).eq('id',brandData.id);
     if(uErr){ console.error('sbSaveBrand update error:', uErr.message); return uErr; }
@@ -1971,13 +1995,15 @@ async function sbDeleteLog(memberId, brandId, date) {
 }
 async function sbSaveMember(m, isNew) {
   if(!_workspaceId) return;
-  var payload = { workspace_id:_workspaceId, name:m.name, role:m.role||'support', avatar_url:m.avatarUrl||m.avatar_url||null, brands:m.brands||[] };
+  var payload = { workspace_id:_workspaceId, name:m.name, role:m.role||'support', avatar_url:m.avatarUrl||m.avatar_url||null, brands:m.brands||[], roles:m.roles||{} };
   if(isNew) {
-    var { data } = await supa.from('team_members').insert(payload).select().single();
+    var { data, error } = await supa.from('team_members').insert(payload).select().single();
     if(data) m.id = data.id;
+    if(error) { showToast('Erro ao salvar membro: '+error.message,'#f87171'); return; }
     await supa.from('workspace_members').insert({ workspace_id:_workspaceId, user_id:m.userId||null, role:'member', name:m.name });
   } else {
-    await supa.from('team_members').update(payload).eq('id',m.id);
+    var { error:uErr } = await supa.from('team_members').update(payload).eq('id',m.id);
+    if(uErr) showToast('Erro ao salvar membro: '+uErr.message,'#f87171');
   }
 }
 async function sbDeleteMember(memberId) {
@@ -3414,13 +3440,17 @@ function saveCampInfo(){
   var confGoal=+document.getElementById('ci-goal-conf').value||0;
   var vidGoal=+document.getElementById('ci-goal-vid').value||0;
   b.status=status;b.goals={confirmed:confGoal,videos:vidGoal};
-  sbSaveBrand(b);
+
+  // Platforms & formats — store in brand.meta (serialised into 'notes' column as JSON prefix)
   var platforms=[];
   document.querySelectorAll('#ci-platforms input[type=checkbox]:checked').forEach(function(cb){platforms.push(cb.value);});
   var formats=[];
   document.querySelectorAll('#ci-formats input[type=checkbox]:checked').forEach(function(cb){formats.push(cb.value);});
   var meta=getBrandMeta(_campInfoBrandId);meta.platforms=platforms;meta.formats=formats;
   setBrandMeta(_campInfoBrandId,meta);
+  b._meta=meta; // attach to brand obj so sbSaveBrand can persist it
+
+  // Summary overrides
   var co=document.getElementById('ci-ov-contacted').value.trim();
   var cf=document.getElementById('ci-ov-confirmed').value.trim();
   var sh=document.getElementById('ci-ov-shipped').value.trim();
@@ -3430,8 +3460,10 @@ function saveCampInfo(){
   if(cf!=='')obj.confirmed=+cf;
   if(sh!=='')obj.shipped=+sh;
   if(pu!=='')obj.published=+pu;
-  if(Object.keys(obj).length)setSummaryOverride(_campInfoBrandId,obj);
-  else clearSummaryOverride(_campInfoBrandId);
+  if(Object.keys(obj).length){ setSummaryOverride(_campInfoBrandId,obj); b._summaryOv=obj; }
+  else { clearSummaryOverride(_campInfoBrandId); b._summaryOv={}; }
+
+  sbSaveBrandFull(b); // saves brand + meta + overrides
   closeOv('ov-camp-info');
   renderAll();
   if(currentPage==='brand'&&_activeBrandId===_campInfoBrandId)renderBrandDetail(_activeBrandId);
