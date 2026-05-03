@@ -966,6 +966,7 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text)}
         </div>
       </div>
       <div id="campaign-cards"></div>
+      <div id="camp-progress-wrap"></div>
     </div>
 
     <!-- ── BRAND DETAIL ── -->
@@ -3449,6 +3450,37 @@ function renderCampaigns(){
   el.innerHTML='<div style="display:flex;flex-direction:column;gap:20px">'+brands.map(function(b,i){return campaignCardHTML(b,i);}).join('')+'</div>';
   initGoalBoxDrag();
   initSumBlockDrag();
+  // render campaign progress section below
+  var cpWrap=document.getElementById('camp-progress-wrap');
+  if(cpWrap){
+    var allBrands=ST.brands;
+    if(!allBrands.length){cpWrap.innerHTML='';return;}
+    var days7=[];for(var _i=6;_i>=0;_i--){var _d=new Date();_d.setDate(_d.getDate()-_i);days7.push(_d.toISOString().split('T')[0]);}
+    var cpHtml='<div class="sec" style="margin-top:28px"><div class="sec-t">Campaign Progress</div><div class="sec-s">confirmed KOLs vs goal per brand</div></div>'+
+    '<div class="g3">'+allBrands.map(function(b){
+      var totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
+      var weekC=ST.members.reduce(function(s,m){return s+getLogsInRange(m.id,b.id,days7).reduce(function(ss,l){return ss+(+l.kols_contacted||0);},0);},0);
+      var weekCo=ST.members.reduce(function(s,m){return s+getLogsInRange(m.id,b.id,days7).reduce(function(ss,l){return ss+(+l.confirmed||0);},0);},0);
+      var gCo=b.goals&&b.goals.confirmed?+b.goals.confirmed:0;
+      var pct=gCo>0?Math.min(Math.round(totCo/gCo*100),100):0;
+      var pColor=pct>=100?'var(--green)':pct>=60?'var(--primary)':'var(--amber)';
+      return '<div class="card" style="border-top:3px solid '+b.color+'">'+
+        '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">'+
+          '<span style="width:10px;height:10px;border-radius:50%;background:'+b.color+';flex-shrink:0;display:inline-block"></span>'+
+          '<span style="font-size:13px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+b.name+'</span>'+
+          '<span class="badge '+(b.status||'ongoing')+'">'+((b.status||'ongoing')==='ongoing'?'Ongoing':'Finished')+'</span>'+
+        '</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
+          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:17px;font-weight:800;color:var(--primary)">'+weekC+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Contacted this week</div></div>'+
+          '<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:17px;font-weight:800;color:var(--green)">'+weekCo+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Confirmed this week</div></div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--text-m);margin-bottom:5px">Total confirmed: <strong>'+totCo+'</strong> / <strong>'+(gCo||'—')+'</strong></div>'+
+        '<div style="height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;background:'+pColor+';border-radius:4px;width:'+pct+'%;transition:width .4s"></div></div>'+
+        '<div style="font-size:10px;color:var(--text-s);margin-top:4px;font-weight:600">'+pct+'% of goal</div>'+
+      '</div>';
+    }).join('')+'</div>';
+    cpWrap.innerHTML=cpHtml;
+  }
 }
 function campaignCardHTML(b,i){
   var _ov=getSummaryOverride(b.id)||{};
@@ -7129,76 +7161,161 @@ function ovBg(id,e){if(e.target.id===id)closeOv(id);}
 /* ══════════════════════════════════════════════
    WEEKLY REPORT
 ══════════════════════════════════════════════ */
+var _reportView='weekly'; // 'weekly' | 'monthly' | 'annual'
+
+function _reportDays(){
+  var n=_reportView==='weekly'?7:_reportView==='monthly'?30:365;
+  var days=[];
+  for(var i=n-1;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+  return days;
+}
+
+function setReportView(v){
+  _reportView=v;
+  renderWeeklyReport();
+}
+
 function renderWeeklyReport(){
   var el=document.getElementById('report-content');if(!el)return;
-  // Build last 7 days
-  var days=[];
-  for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+  var days=_reportDays();
   var startLabel=fmtDate(days[0]);
-  var endLabel=fmtDate(days[6]);
+  var endLabel=fmtDate(days[days.length-1]);
+  var totalDays=days.length;
 
+  var viewLabel=_reportView==='weekly'?'Weekly':_reportView==='monthly'?'Monthly':'Annual';
+  var dlLabel='⬇ Download '+viewLabel+' Report';
+
+  var periodSubtitle=startLabel+' — '+endLabel;
+
+  // ── header ──
   var html='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'+
     '<div>'+
-      '<div style="font-size:20px;font-weight:800">Weekly Report</div>'+
-      '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+startLabel+' — '+endLabel+'</div>'+
+      '<div style="font-size:20px;font-weight:800">'+viewLabel+' Report</div>'+
+      '<div style="font-size:12px;color:var(--text-s);margin-top:3px">'+periodSubtitle+'</div>'+
     '</div>'+
-    '<button onclick="exportDashboard()" style="padding:9px 20px;background:var(--primary);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700">⬇ Download PDF</button>'+
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
+      '<div style="display:flex;background:var(--bg);border-radius:9px;border:1.5px solid var(--border);overflow:hidden">'+
+        ['weekly','monthly','annual'].map(function(v){
+          var lbl=v==='weekly'?'Weekly':v==='monthly'?'Monthly':'Annual';
+          var active=_reportView===v;
+          return '<button onclick="setReportView(\''+v+'\')" style="padding:7px 14px;border:none;cursor:pointer;font-size:11px;font-weight:'+(active?'700':'500')+';background:'+(active?'var(--primary)':'transparent')+';color:'+(active?'#fff':'var(--text-m)')+';transition:all .15s">'+lbl+'</button>';
+        }).join('')+
+      '</div>'+
+      '<button onclick="exportDashboard()" style="padding:9px 18px;background:var(--primary);color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700">'+dlLabel+'</button>'+
+    '</div>'+
   '</div>';
 
-  // Team summary table
-  html+='<div class="card mb16"><div class="sec"><div class="sec-t">Team Performance This Week</div></div>'+
-  '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-  '<thead><tr>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Member</th>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Days Active</th>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Sourced</th>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Contacted</th>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Follow-ups</th>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Confirmed</th>'+
-    '<th style="background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)">Videos</th>'+
-  '</tr></thead><tbody>'+
-  ST.members.filter(function(m){var u=_allUsers.find(function(u){return u.member_id===m.id;});return !u||(u.role!=='admin');}).map(function(m){
+  // ── Team Performance table ──
+  var thStyle='background:var(--bg);padding:8px 12px;text-align:center;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-m);border-bottom:2px solid var(--border)';
+  html+='<div class="card mb16">'+
+    '<div class="sec"><div class="sec-t">Team Performance This '+viewLabel+'</div></div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr>'+
+      '<th style="'+thStyle+';text-align:left">Member</th>'+
+      '<th style="'+thStyle+'">Days Active</th>'+
+      '<th style="'+thStyle+'">Researched</th>'+
+      '<th style="'+thStyle+'">Contacted</th>'+
+      '<th style="'+thStyle+'">Follow-ups</th>'+
+      '<th style="'+thStyle+'">Confirmed</th>'+
+      '<th style="'+thStyle+'">Videos Published</th>'+
+    '</tr></thead><tbody>';
+
+  var _memberStats=[];
+  ST.members.forEach(function(m){
     var daysActive=days.filter(function(d){return ST.brands.some(function(b){return getLogs(m.id).some(function(l){return l.brandId===b.id&&l.date===d;});});}).length;
     var s=0,c=0,fu=0,co=0,v=0;
     ST.brands.forEach(function(b){var logs=getLogsInRange(m.id,b.id,days);logs.forEach(function(l){s+=(+l.kols_sourced||0);c+=(+l.kols_contacted||0);fu+=(+l.kols_followedup||0);co+=(+l.confirmed||0);v+=(+l.vids_published||0);});});
+    _memberStats.push({m:m,daysActive:daysActive,s:s,c:c,fu:fu,co:co,v:v});
     var avUrl=avatarUrl(m);
-    return '<tr onclick="openMemberDetail(\''+m.id+'\')" style="cursor:pointer" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">'+
-      '<td style="padding:9px 12px;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div class="mem-av-img av-sm">'+
-        (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'"/>':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+
-      '</div><strong>'+m.name+'</strong></div></td>'+
-      '<td style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border)"><span style="font-weight:700;color:'+(daysActive>=5?'var(--green)':daysActive>=3?'var(--amber)':'var(--pink)')+'">'+daysActive+'/7</span></td>'+
-      '<td style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border)">'+s+'</td>'+
-      '<td style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);font-weight:'+(c>0?'700':'400')+';color:'+(c>0?'var(--primary)':'var(--text-s)')+'">'+c+'</td>'+
-      '<td style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border)">'+fu+'</td>'+
-      '<td style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border);font-weight:'+(co>0?'700':'400')+';color:'+(co>0?'var(--green)':'var(--text-s)')+'">'+co+'</td>'+
-      '<td style="padding:9px 12px;text-align:center;border-bottom:1px solid var(--border)">'+v+'</td>'+
+    var tdB='padding:9px 12px;text-align:center;border-bottom:1px solid var(--border)';
+    html+='<tr onclick="openMemberDetail(\''+m.id+'\')" style="cursor:pointer" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'\'">'+
+      '<td style="padding:9px 12px;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px">'+
+        '<div class="mem-av-img av-sm">'+(avUrl?'<img src="'+avUrl+'" alt="'+m.name+'"/>':'<span style="font-size:9px;font-weight:700">'+ini(m.name)+'</span>')+'</div>'+
+        '<strong>'+m.name+'</strong>'+
+      '</div></td>'+
+      '<td style="'+tdB+'"><span style="font-weight:700;color:'+(daysActive>=Math.round(totalDays*.7)?'var(--green)':daysActive>=Math.round(totalDays*.4)?'var(--amber)':'var(--pink)')+'">'+daysActive+'/'+totalDays+'</span></td>'+
+      '<td style="'+tdB+'">'+s+'</td>'+
+      '<td style="'+tdB+';font-weight:'+(c>0?'700':'400')+';color:'+(c>0?'var(--primary)':'var(--text-s)')+'">'+c+'</td>'+
+      '<td style="'+tdB+'">'+fu+'</td>'+
+      '<td style="'+tdB+';font-weight:'+(co>0?'700':'400')+';color:'+(co>0?'var(--green)':'var(--text-s)')+'">'+co+'</td>'+
+      '<td style="'+tdB+'">'+v+'</td>'+
     '</tr>';
-  }).join('')+'</tbody></table></div></div>';
+  });
 
-  // Brand progress cards
-  html+='<div class="sec"><div class="sec-t">Campaign Progress</div></div><div class="g3 mb16">'+
-  ST.brands.map(function(b){
-    var totCo=ST.members.reduce(function(s,m){return s+sumM(m.id,b.id,'confirmed');},0);
-    var weekC=ST.members.reduce(function(s,m){return s+getLogsInRange(m.id,b.id,days).reduce(function(ss,l){return ss+(+l.kols_contacted||0);},0);},0);
-    var weekCo=ST.members.reduce(function(s,m){return s+getLogsInRange(m.id,b.id,days).reduce(function(ss,l){return ss+(+l.confirmed||0);},0);},0);
-    var gCo=b.goals&&b.goals.confirmed?+b.goals.confirmed:0;
-    var pct=gCo>0?Math.min(Math.round(totCo/gCo*100),100):0;
-    return '<div class="card" style="border-top:3px solid '+b.color+'">'+
-      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">'+
-        '<span style="font-size:13px;font-weight:700">'+b.name+'</span>'+
-        '<span class="badge ongoing" style="margin-left:auto">Ongoing</span>'+
-      '</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">'+
-        '<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:18px;font-weight:800;color:var(--primary)">'+weekC+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.08em;margin-top:2px">Contacted this week</div></div>'+
-        '<div style="background:var(--bg);border-radius:8px;padding:10px 12px"><div style="font-size:18px;font-weight:800;color:var(--green)">'+weekCo+'</div><div style="font-size:9px;color:var(--text-s);text-transform:uppercase;letter-spacing:.08em;margin-top:2px">Confirmed this week</div></div>'+
-      '</div>'+
-      '<div style="font-size:11px;color:var(--text-m);margin-bottom:4px">Total confirmed: <strong>'+totCo+'</strong> / '+(gCo||'—')+'</div>'+
-      '<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;background:'+b.color+';border-radius:3px;width:'+pct+'%"></div></div>'+
-      '<div style="font-size:10px;color:var(--text-s);margin-top:4px">'+pct+'% of goal</div>'+
-    '</div>';
-  }).join('')+'</div>';
+  html+='</tbody></table></div></div>';
+
+  // ── Pie charts ──
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">'+
+    _pieChartCard('pie-outreach','Total Outreach per Member')+
+    _pieChartCard('pie-followups','Total Follow-ups per Member')+
+    _pieChartCard('pie-videos','Videos Published per Member')+
+  '</div>';
 
   el.innerHTML=html;
+
+  // draw pie charts after DOM update
+  var _PIE_COLORS=['#3b7ef8','#10b981','#f59e0b','#e879a0','#8b5cf6','#06b6d4','#f97316'];
+  setTimeout(function(){
+    var labels=_memberStats.map(function(x){return x.m.name;});
+    _drawPie('pie-outreach', labels, _memberStats.map(function(x){return x.c;}), _PIE_COLORS);
+    _drawPie('pie-followups', labels, _memberStats.map(function(x){return x.fu;}), _PIE_COLORS);
+    _drawPie('pie-videos', labels, _memberStats.map(function(x){return x.v;}), _PIE_COLORS);
+  }, 60);
+}
+
+function _pieChartCard(canvasId, title){
+  return '<div class="card" style="padding:18px">'+
+    '<div style="font-size:12px;font-weight:700;margin-bottom:12px;text-align:center">'+title+'</div>'+
+    '<div style="position:relative;height:180px;display:flex;align-items:center;justify-content:center">'+
+      '<canvas id="'+canvasId+'" style="max-width:180px;max-height:180px"></canvas>'+
+    '</div>'+
+    '<div id="'+canvasId+'-legend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:10px"></div>'+
+  '</div>';
+}
+
+var _pieChartInstances={};
+function _drawPie(canvasId, labels, data, colors){
+  var canvas=document.getElementById(canvasId);
+  if(!canvas||typeof Chart==='undefined')return;
+  var total=data.reduce(function(a,b){return a+b;},0);
+  // destroy previous instance
+  if(_pieChartInstances[canvasId]){try{_pieChartInstances[canvasId].destroy();}catch(e){}}
+  if(total===0){
+    // show empty state
+    var ctx=canvas.getContext('2d');
+    canvas.width=180;canvas.height=180;
+    ctx.fillStyle='var(--border)';
+    ctx.beginPath();ctx.arc(90,90,80,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='var(--text-s)';
+    ctx.font='11px Inter, sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('No data',90,95);
+    document.getElementById(canvasId+'-legend').innerHTML='<span style="color:var(--text-s)">No data yet</span>';
+    return;
+  }
+  _pieChartInstances[canvasId]=new Chart(canvas,{
+    type:'doughnut',
+    data:{
+      labels:labels,
+      datasets:[{data:data,backgroundColor:colors.slice(0,labels.length),borderWidth:2,borderColor:'var(--card)'}]
+    },
+    options:{
+      responsive:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){var val=ctx.parsed;var pct=total>0?Math.round(val/total*100):0;return ctx.label+': '+val+' ('+pct+'%)';}}}
+      },
+      cutout:'55%'
+    }
+  });
+  // custom legend
+  var legendEl=document.getElementById(canvasId+'-legend');
+  if(legendEl){
+    legendEl.innerHTML=labels.map(function(lbl,i){
+      var pct=total>0?Math.round(data[i]/total*100):0;
+      return '<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:'+colors[i%colors.length]+';flex-shrink:0;display:inline-block"></span>'+lbl+' <strong>'+pct+'%</strong></span>';
+    }).join('');
+  }
 }
 
 /* ══════════════════════════════════════════════
