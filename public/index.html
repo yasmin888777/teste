@@ -2198,21 +2198,20 @@ let currentMemberId=null, memberChart=null;
 let currentUser=null; // { id, email, role, memberId }
 var _allUsers=[]; // populated for admins: [{id, email, role, member_id, has_password}]
 
-function loadAdminData(){
-  if(!isAdmin()) return;
-  fetch('/api/admin/users',{headers:authHeaders()})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){
-        _allUsers=d.users;
-        renderSidebar();
-        renderMembers();
-        if(currentMemberId) renderMemberPage(currentMemberId);
-        // Re-render home + trend now that user roles are known (fixes pure-admin filtering)
-        if(currentPage==='admin-home') renderAdminHome();
-        if(currentPage==='admin-team'){renderAdminTeam();drawTrend();}
-      }
+async function loadAdminData(){
+  if(!isAdmin()||!_workspaceId) return;
+  var {data:wsm}=await supa.from('workspace_members').select('user_id,role,name').eq('workspace_id',_workspaceId);
+  if(wsm){
+    _allUsers=wsm.map(function(u){
+      var m=ST.members.find(function(m){return m.name===u.name;});
+      return {id:u.user_id,user_id:u.user_id,email:'',role:u.role,member_id:m?m.id:null,has_password:true};
     });
+  }
+  renderSidebar();
+  renderMembers();
+  if(currentMemberId) renderMemberPage(currentMemberId);
+  if(currentPage==='admin-home') renderAdminHome();
+  if(currentPage==='admin-team'){renderAdminTeam();drawTrend();}
 }
 
 /* ══════════════════════════════════════════════
@@ -3141,25 +3140,34 @@ function openProfile(mid){
   if(isAdmin() && userSection){
     userSection.style.display='';
     document.getElementById('prof-user-msg').textContent='';
-    // load user linked to this member
-    fetch('/api/admin/users',{headers:authHeaders()})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(!d.ok) return;
-        var u=d.users.find(function(u){return u.member_id===profileMember.id;});
-        var infoEl=document.getElementById('prof-user-info');
-        var emailEl=document.getElementById('prof-user-email');
-        var roleEl=document.getElementById('prof-user-role');
-        userSection._userId=u?u.id:null;
-        if(u){
-          infoEl.innerHTML='<span style="color:var(--green)">✓ Account linked</span> · '+(u.has_password?'Password set':'<span style="color:var(--amber)">No password yet</span>');
-          emailEl.value=u.email||'';
-          roleEl.value=u.role||'member';
-        } else {
-          infoEl.innerHTML='<span style="color:var(--amber)">⚠ No login account</span>';
-          emailEl.value='';roleEl.value='member';
+    // load user linked to this member from _allUsers (loaded via Supabase workspace_members)
+    (async function(){
+      // refresh from Supabase in case _allUsers is stale
+      if(_workspaceId){
+        var {data:wsm}=await supa.from('workspace_members').select('user_id,role,name').eq('workspace_id',_workspaceId);
+        if(wsm){
+          _allUsers=wsm.map(function(u){
+            var mm=ST.members.find(function(m){return m.name===u.name;});
+            return {id:u.user_id,user_id:u.user_id,email:'',role:u.role,member_id:mm?mm.id:null,has_password:true};
+          });
         }
-      });
+      }
+      var u=_allUsers.find(function(u){return u.member_id===profileMember.id;});
+      var infoEl=document.getElementById('prof-user-info');
+      var emailEl=document.getElementById('prof-user-email');
+      var roleEl=document.getElementById('prof-user-role');
+      if(!infoEl||!emailEl||!roleEl) return;
+      userSection._userId=u?u.user_id:null;
+      if(u){
+        infoEl.innerHTML='<span style="color:var(--green)">✓ Conta vinculada</span> · Role: <strong>'+u.role+'</strong>';
+        emailEl.value='';emailEl.placeholder='Novo email (deixe em branco para manter)';
+        roleEl.value=u.role||'member';
+      } else {
+        infoEl.innerHTML='<span style="color:var(--amber)">⚠ Sem conta de login — preencha para criar</span>';
+        emailEl.value='';emailEl.placeholder='Email da nova conta';
+        roleEl.value='member';
+      }
+    })();
   } else if(userSection){
     userSection.style.display='none';
   }
@@ -3176,23 +3184,53 @@ function saveProfile(){
   sbSaveMember(profileMember,false);
   renderAll();closeOv('ov-profile');
 }
-function saveProfileUser(){
+async function saveProfileUser(){
   var userSection=document.getElementById('prof-user-section');
   var uid=userSection._userId;
-  if(!uid){document.getElementById('prof-user-msg').innerHTML='<span style="color:#f87171">No account linked to this member</span>';return;}
   var email=document.getElementById('prof-user-email').value.trim();
   var pwd=document.getElementById('prof-user-pwd').value;
   var role=document.getElementById('prof-user-role').value;
   var msg=document.getElementById('prof-user-msg');
-  var body={role:role};
-  if(email) body.email=email;
-  if(pwd) body.newPassword=pwd;
-  fetch('/api/admin/users/'+uid,{method:'PUT',headers:authHeaders(),body:JSON.stringify(body)})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){msg.style.color='var(--green)';msg.textContent='Saved!';}
-      else{msg.style.color='#f87171';msg.textContent=d.error||'Error';}
+  msg.textContent='Salvando...';msg.style.color='var(--text-s)';
+
+  if(!uid){
+    // CREATE new account
+    if(!email){msg.style.color='#f87171';msg.textContent='Email obrigatório para criar conta.';return;}
+    if(!pwd||pwd.length<6){msg.style.color='#f87171';msg.textContent='Senha mínima: 6 caracteres.';return;}
+    // Use raw fetch to avoid replacing current admin session
+    var signupRes=await fetch(SUPA_URL+'/auth/v1/signup',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,password:pwd})
     });
+    var signupData=await signupRes.json();
+    if(!signupData.id){
+      msg.style.color='#f87171';
+      msg.textContent=signupData.msg||signupData.error_description||signupData.message||'Erro ao criar conta.';
+      return;
+    }
+    var newUserId=signupData.id;
+    // Insert into workspace_members
+    var {error:insErr}=await supa.from('workspace_members').insert({
+      workspace_id:_workspaceId, user_id:newUserId, role:role, name:profileMember.name
+    });
+    if(insErr){msg.style.color='#f87171';msg.textContent='Conta criada mas erro ao vincular: '+insErr.message;return;}
+    userSection._userId=newUserId;
+    _allUsers.push({id:newUserId,user_id:newUserId,email:email,role:role,member_id:profileMember.id,has_password:true});
+    var infoEl=document.getElementById('prof-user-info');
+    if(infoEl) infoEl.innerHTML='<span style="color:var(--green)">✓ Conta criada e vinculada</span> · Role: <strong>'+role+'</strong>';
+    msg.style.color='var(--green)';msg.textContent='Conta criada com sucesso! Um email de confirmação foi enviado.';
+  } else {
+    // UPDATE existing account role (email/password changes require Supabase dashboard)
+    var {error:updErr}=await supa.from('workspace_members').update({role:role}).eq('user_id',uid).eq('workspace_id',_workspaceId);
+    if(updErr){msg.style.color='#f87171';msg.textContent='Erro: '+updErr.message;return;}
+    var u=_allUsers.find(function(u){return u.user_id===uid;});
+    if(u) u.role=role;
+    msg.style.color='var(--green)';msg.textContent='Role atualizado!';
+    if(email||pwd) {
+      msg.textContent+=' (Para alterar email/senha, use o painel Supabase.)';
+    }
+  }
 }
 
 /* ══════════════════════════════════════════════
