@@ -2004,6 +2004,8 @@ async function _onAuthSuccess(user) {
   renderSidebar();
   updateAccountUI();
   renderAll();
+  // Carregar _allUsers para admin (não bloqueia, roda em paralelo)
+  loadAdminData();
 }
 
 async function authLogout() {
@@ -6946,6 +6948,7 @@ function _renderCampProgressCards(){
   }).join('')+'</div>';
 }
 function renderAdminHome(){
+  try{
   var el=document.getElementById('admin-home-content');
   if(!el)return;
   var T=_i18n[_lang];
@@ -7023,6 +7026,7 @@ function renderAdminHome(){
     _renderCampProgressCards();
 
   setTimeout(function(){drawTrend();},60);
+  }catch(e){console.error('renderAdminHome error:',e);}
 }
 
 function renderMemberHome(){
