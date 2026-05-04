@@ -265,6 +265,36 @@ input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);line-
 .sb-footer-gear{padding:4px;border-radius:6px;color:var(--sidebar-muted);font-size:14px;cursor:pointer}
 .sb-footer-gear:hover{color:var(--primary);background:var(--primary-d)}
 
+/* ── Sidebar collapsed (icon-only) mode ── */
+.sidebar.collapsed{width:60px!important;overflow-x:hidden}
+.sidebar.collapsed .sb-title,
+.sidebar.collapsed #sb-mobile-close,
+.sidebar.collapsed .sb-sep,
+.sidebar.collapsed .sb-item span,
+.sidebar.collapsed .sb-footer-info,
+.sidebar.collapsed .sb-footer-gear,
+.sidebar.collapsed #dark-lbl,
+.sidebar.collapsed .sb-app-sub,
+.sidebar.collapsed .sb-mem-hero,
+.sidebar.collapsed .sb-log-pill span,
+.sidebar.collapsed .sb-nav-member-items,
+.sidebar.collapsed #sb-nav-admin-items,
+.sidebar.collapsed #sb-nav-member-items
+{display:none!important}
+.sidebar.collapsed .sb-header{padding:14px 10px;justify-content:center}
+.sidebar.collapsed .sb-logo{margin:0 auto}
+.sidebar.collapsed #sb-collapse-btn{margin-left:0}
+.sidebar.collapsed .sb-nav{padding:0 6px}
+.sidebar.collapsed .sb-item{padding:10px;justify-content:center;gap:0}
+.sidebar.collapsed .sb-item svg{width:18px;height:18px;opacity:.7}
+.sidebar.collapsed .sb-item:hover svg,.sidebar.collapsed .sb-item.active svg{opacity:1}
+.sidebar.collapsed .sb-footer{padding:8px;justify-content:center;gap:0;margin:4px 6px 8px}
+.sidebar.collapsed .sb-footer-av{width:28px;height:28px;font-size:11px}
+.sidebar.collapsed #dark-toggle{padding:8px;justify-content:center}
+.sidebar.collapsed #dark-icon{font-size:16px}
+.sidebar.collapsed .sb-log-pill{width:calc(100% - 16px);margin:10px 8px 4px;padding:10px;justify-content:center}
+.sidebar.collapsed .sb-log-pill-ico{margin:0}
+
 /* ══════════ MAIN ══════════ */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
@@ -1003,6 +1033,9 @@ html.dark .skeleton{
   <div class="sb-header" id="sb-main-header">
     <div class="sb-logo" id="sb-icon" onclick="triggerAvatarUpload('site',null)" title="Clique para trocar a logo" style="cursor:pointer;overflow:hidden">IH</div>
     <span class="sb-title" id="app-name-label" onclick="location.reload()" title="Refresh">Influencer Hub</span>
+    <button id="sb-collapse-btn" onclick="toggleSidebarCollapse()" title="Recolher menu" style="padding:4px 6px;border-radius:6px;color:var(--sidebar-muted);background:transparent;border:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;transition:all .15s" onmouseover="this.style.color='var(--sidebar-text)';this.style.background='var(--primary-d)'" onmouseout="this.style.color='var(--sidebar-muted)';this.style.background='transparent'">
+      <svg id="sb-collapse-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M11 19l-7-7 7-7M18 19l-7-7 7-7"/></svg>
+    </button>
     <button class="sb-close-btn" onclick="closeSidebar()" id="sb-mobile-close">✕</button>
   </div>
 
@@ -1052,18 +1085,6 @@ html.dark .skeleton{
       </svg>
       <span id="sbi-campaigns-lbl">Campanhas</span>
     </div>
-    <div class="sb-item" id="sbi-all-brands" onclick="navTo('all-brands',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
-      </svg>
-      <span id="sbi-all-brands-lbl">Marcas</span>
-    </div>
-    <div class="sb-item" id="sbi-kols" onclick="navTo('kols-registry',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-      <span id="sbi-kols-lbl">Influenciadores</span>
-    </div>
     <!-- Links/Docs — admin only -->
     <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1073,13 +1094,9 @@ html.dark .skeleton{
     </div>
   </nav>
 
-  <!-- Listas dinâmicas (brands, kols, team) — mantidas -->
+  <!-- Listas dinâmicas (team) — brands e KOLs removidos do menu -->
   <nav class="sb-nav" id="sb-nav-admin-items"></nav>
   <nav class="sb-nav" id="sb-nav-member-items"></nav>
-  <div class="sb-sep" id="sb-brands-sep">Brands</div>
-  <div class="sb-list" id="sb-brands-list"></div>
-  <div class="sb-sep" id="sb-kols-sep">KOLs</div>
-  <div class="sb-list" id="sb-kols-list"></div>
 
   <div style="flex:1"></div>
   <div style="padding:4px 8px 0">
@@ -5164,6 +5181,27 @@ function closeSidebar(){
   document.getElementById('sidebar').classList.remove('mob-open');
   document.getElementById('sb-overlay').classList.remove('open');
 }
+function toggleSidebarCollapse(){
+  var sb=document.getElementById('sidebar');
+  var ico=document.getElementById('sb-collapse-ico');
+  var collapsed=sb.classList.toggle('collapsed');
+  localStorage.setItem('sb-collapsed',collapsed?'1':'0');
+  // flip arrow direction
+  if(ico){
+    ico.innerHTML=collapsed
+      ?'<path d="M13 5l7 7-7 7M6 5l7 7-7 7"/>'
+      :'<path d="M11 19l-7-7 7-7M18 19l-7-7 7-7"/>';
+  }
+}
+// Restore collapsed state on load
+(function(){
+  if(localStorage.getItem('sb-collapsed')==='1'){
+    var sb=document.getElementById('sidebar');
+    var ico=document.getElementById('sb-collapse-ico');
+    if(sb){sb.classList.add('collapsed');}
+    if(ico){ico.innerHTML='<path d="M13 5l7 7-7 7M6 5l7 7-7 7"/>';}
+  }
+})();
 
 /* ══════════════════════════════════════════════
    DELETE MEMBER
