@@ -987,7 +987,7 @@ html.dark .skeleton{
 <!-- ══════════════════════════════════════════════
      TELA DE LOGIN / CADASTRO
 ══════════════════════════════════════════════ -->
-<div id="auth-screen" style="display:none;position:fixed;inset:0;background:#f5f5f7;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased">
+<div id="auth-screen" style="display:none;position:fixed;inset:0;background:#f5f5f7;z-index:9999;align-items:center;justify-content:center;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased">
   <div style="width:100%;max-width:400px;padding:24px">
 
     <!-- Logo -->
@@ -1019,6 +1019,11 @@ html.dark .skeleton{
   </div>
 </div>
 
+<div id="app-loading" style="display:flex;position:fixed;inset:0;background:#f5f5f7;z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:'Inter',sans-serif">
+  <div style="width:40px;height:40px;border-radius:12px;background:var(--primary,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff">IH</div>
+  <div style="width:32px;height:3px;border-radius:4px;background:#e5e7eb;overflow:hidden"><div style="height:100%;width:40%;background:#4f46e5;border-radius:4px;animation:_ldbar 1s ease-in-out infinite alternate"></div></div>
+  <style>@keyframes _ldbar{from{transform:translateX(-60%)}to{transform:translateX(160%)}}</style>
+</div>
 <div class="shell" id="app-shell" style="display:none">
 
 <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
@@ -1979,11 +1984,16 @@ async function _onAuthSuccess(user) {
     name: wsName
   };
 
-  // Navegar para página correta
+  // Navegar para página correta (restaura última página visitada)
   var _savedNav = null;
   try { var _ns = localStorage.getItem('dg_nav'); if(_ns) _savedNav = JSON.parse(_ns); } catch(e){}
-  if(_savedNav && _savedNav.page && _savedNav.page !== 'brand' && _savedNav.page !== 'member') {
-    navTo(_savedNav.page, document.getElementById('sbi-'+_savedNav.page) || null);
+  var _sp = _savedNav && _savedNav.page;
+  if(_sp === 'member' && _savedNav.memberId && getMember(_savedNav.memberId)) {
+    openMemberDetail(_savedNav.memberId);
+  } else if(_sp === 'brand' && _savedNav.brandId && getBrand(_savedNav.brandId)) {
+    openBrandDetail(_savedNav.brandId);
+  } else if(_sp && _sp !== 'brand' && _sp !== 'member') {
+    navTo(_sp, document.getElementById('sbi-'+_sp) || null);
   } else if(isAdmin()) {
     navTo('admin-home', document.getElementById('sbi-admin-home'));
   } else {
@@ -2000,6 +2010,7 @@ async function authLogout() {
   await supa.auth.signOut();
   _workspaceId = null; _currentUser = null; currentUser = null;
   localStorage.removeItem('dg_nav');
+  document.getElementById('app-loading').style.display = 'none';
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('auth-email').value = '';
@@ -2296,6 +2307,7 @@ async function sbDeleteSched(entryId) {
 /* ── Inicializar: checar sessão existente ── */
 async function initSupabase() {
   var { data:{ session } } = await supa.auth.getSession();
+  document.getElementById('app-loading').style.display = 'none';
   if(session) {
     await _onAuthSuccess(session.user);
   } else {
