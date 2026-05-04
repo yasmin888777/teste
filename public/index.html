@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>DigitUly — KOL Team Dashboard</title>
+<title>KOL Team Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='Inter,Arial,sans-serif' font-size='14' font-weight='800' fill='white'>KOL</text></svg>"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2393,7 +2394,7 @@ async function loadState(){
     // Auth via Supabase — initSupabase() já cuida disso
     // Esta função agora só faz a navegação inicial após dados carregados
     updateSiteLogo();
-    document.title='DigitUly — KOL Team Dashboard';
+    document.title='KOL Team Dashboard';
     loadAdminData();
     // Restore last nav state if available
     var _savedNav=null;
