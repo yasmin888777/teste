@@ -3235,69 +3235,142 @@ function renderMemberPage(mid){
     '</div>';
   }).join('');
 
-  var html=
-    kpiBlocks+
+  // ── Attendance widget inline for left column ──────────────────────────
+  var attendHTML = (function(){
+    var now=new Date();
+    var year=now.getFullYear(),month=now.getMonth(),todayD=now.getDate();
+    var daysInMonth=new Date(year,month+1,0).getDate();
+    var monthStr=(month+1<10?'0'+(month+1):''+(month+1));
+    var worked=0,off=0,holidays=0,dots='';
+    for(var d=1;d<=daysInMonth;d++){
+      var ds=year+'-'+monthStr+'-'+(d<10?'0'+d:''+d);
+      var dow=new Date(year,month,d).getDay();
+      var isWeekend=dow===0||dow===6;
+      var isFuture=d>todayD;
+      var hasLog=getLogs(mid).some(function(l){return l.date===ds;});
+      var color,onclick='',tip;
+      if(isFuture){color='#e5e7eb';tip=ds;}
+      else if(isWeekend){
+        var st=getDayStatus(mid,ds);var info=dayStatusInfo(st,false,true);color=info.color;tip=ds+' — Weekend';
+        onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\',false,this,true)"';
+      } else {
+        var st=getDayStatus(mid,ds);var info=dayStatusInfo(st,hasLog);color=info.color;tip=ds+' — '+info.label;
+        onclick=' onclick="cycleDayStatus(\''+mid+'\',\''+ds+'\','+(hasLog?'true':'false')+',this,false)"';
+        if(info.label.startsWith('Worked'))worked++;
+        else if(info.label==='Holiday')holidays++;
+        else if(info.label==='Day off')off++;
+      }
+      dots+='<div style="width:10px;height:10px;border-radius:50%;background:'+color+';cursor:'+(isFuture?'default':'pointer')+';flex-shrink:0"'+onclick+' title="'+tip+'"></div>';
+    }
+    var total=worked+holidays+off;
+    var rate=total>0?Math.round((worked/total)*100):0;
+    return '<div style="margin-bottom:16px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<span style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s)">Attendance</span>'+
+        '<span style="font-size:11px;font-weight:700;color:var(--primary)">'+rate+'% Rate</span>'+
+      '</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">'+dots+'</div>'+
+      '<div style="display:flex;gap:12px">'+
+        '<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div><span style="font-size:9px;font-weight:600;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em">Active</span></div>'+
+        '<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#fbbf24"></div><span style="font-size:9px;font-weight:600;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em">Holiday</span></div>'+
+        '<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#d1d5db;border:1px solid #e5e7eb"></div><span style="font-size:9px;font-weight:600;color:var(--text-s);text-transform:uppercase;letter-spacing:.06em">Day off</span></div>'+
+      '</div>'+
+    '</div>';
+  })();
 
-    // ── Profile card + Attendance + Brands ──────────────────────────────
-    '<div class="mp-hero" style="align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:16px">'+
-      // Left: avatar + info + buttons
-      '<div style="display:flex;align-items:flex-start;gap:16px;flex:1;min-width:260px">'+
-        '<div class="mp-av-wrap">'+
-          '<div class="mp-av" onclick="triggerAvatarUpload(\'member\',\''+mid+'\')" title="Trocar foto">'+
-            (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:20px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:20px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
-            '<div class="mp-av-icon">&#128247;</div>'+
+  var html=
+    // ── Two-column layout ────────────────────────────────────────────────
+    '<div style="display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start">'+
+
+      // ── LEFT COLUMN: profile + attendance + actions + brands ─────────
+      '<div class="card" style="padding:20px;display:flex;flex-direction:column;gap:0;position:sticky;top:16px">'+
+
+        // Avatar
+        '<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">'+
+          '<div class="mp-av-wrap" style="margin-bottom:10px">'+
+            '<div class="mp-av" onclick="triggerAvatarUpload(\'member\',\''+mid+'\')" title="Trocar foto">'+
+              (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:20px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:20px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
+              '<div class="mp-av-icon">&#128247;</div>'+
+            '</div>'+
+            '<div class="mp-av-hint">click to<br>change photo</div>'+
           '</div>'+
-          '<div class="mp-av-hint">click to<br>change photo</div>'+
-        '</div>'+
-        '<div class="mp-mid" style="flex:1">'+
-          '<div class="mp-name-row" style="display:flex;align-items:center;gap:6px">'+
-            '<div class="mp-name" onclick="startEditMpName(\''+mid+'\',this)" title="Click to rename">'+m.name+'</div>'+
+          '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'+
+            '<div class="mp-name" onclick="startEditMpName(\''+mid+'\',this)" title="Click to rename" style="font-size:17px">'+m.name+'</div>'+
             (isAdminMember?'<span style="font-size:13px;color:var(--amber)" title="Admin">★</span>':'')+
           '</div>'+
-          '<div style="font-size:10px;color:var(--text-s);margin-bottom:4px">'+roleLabel+'</div>'+
-          (streak>0?'<div class="mp-streak" style="margin-bottom:8px">&#128293; '+streak+' day streak</div>':'')+
-          '<div style="font-size:11px;color:var(--text-m);margin-bottom:2px">'+
-            'Total projects: <strong style="color:var(--text)">'+totalProjects+'</strong>'+
-            (ownerCount?' &nbsp;·&nbsp; <strong style="color:var(--primary)">'+ownerCount+'</strong> owner':'')+
-            (supportCount?' &nbsp;·&nbsp; <strong style="color:var(--amber)">'+supportCount+'</strong> support':'')+
-          '</div>'+
-          '<div class="mp-cfg-btns" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">'+
-            (canEdit(mid)?'<button onclick="openLog(\''+mid+'\')" style="font-size:12px;padding:7px 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:5px">&#43; Log Activity</button>':'')+
-            '<button onclick="openReportHistory(\''+mid+'\')" style="font-size:12px;padding:7px 14px;border-radius:8px;background:var(--bg);color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:5px">&#128196; Report History</button>'+
-            (isAdmin()?'<button class="sec-btn" onclick="openProfile(\''+mid+'\')">&#9881; Edit Roles</button>':'')+
+          '<div style="font-size:10px;color:var(--text-s);margin-bottom:6px">'+roleLabel+'</div>'+
+          (streak>0?'<div class="mp-streak">&#128293; '+streak+' day streak</div>':'')+
+        '</div>'+
+
+        // Total projects summary
+        '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">'+
+          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:6px">Total Projects</div>'+
+          '<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px">'+totalProjects+'</div>'+
+          '<div style="font-size:11px;color:var(--text-m)">'+
+            (ownerCount?'<span style="color:var(--primary);font-weight:700">'+ownerCount+'</span> owner':'')+(ownerCount&&supportCount?' &nbsp;·&nbsp; ':'')+
+            (supportCount?'<span style="color:var(--amber);font-weight:700">'+supportCount+'</span> support':'')+
           '</div>'+
         '</div>'+
-      '</div>'+
-      // Middle: Attendance
-      memberAttendWidget(mid)+
-      // Right: Assigned brands
-      '<div class="mp-right" style="min-width:180px">'+
-        '<div class="mp-proj-lbl">Assigned Brands</div>'+
-        '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">'+brandListHTML+'</div>'+
-      '</div>'+
-    '</div>'+
 
-    // ── Performance Analytics chart ──────────────────────────────────────
-    '<div class="mp-chart-card mb16">'+
-      '<div class="sec" style="margin-bottom:12px">'+
+        // Attendance
+        attendHTML+
+
+        // Actions
+        '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">'+
+          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px">Actions</div>'+
+          '<div style="display:flex;flex-direction:column;gap:6px">'+
+            (canEdit(mid)?'<button onclick="openLog(\''+mid+'\')" style="width:100%;padding:9px 14px;border-radius:var(--radius-pill);background:var(--primary);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 2px 8px rgba(79,70,229,.25)">&#43; Log Activity</button>':'')+
+            '<button onclick="openReportHistory(\''+mid+'\')" style="width:100%;padding:8px 14px;border-radius:var(--radius);background:transparent;color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px">&#128196; Reports</button>'+
+            (isAdmin()?'<button onclick="openProfile(\''+mid+'\')" style="width:100%;padding:8px 14px;border-radius:var(--radius);background:transparent;color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px">&#9881; Roles</button>':'')+
+          '</div>'+
+        '</div>'+
+
+        // Assigned Brands
         '<div>'+
-          '<div class="sec-t" style="font-size:13px">Performance Analytics</div>'+
-          '<div style="font-size:10px;color:var(--text-s);margin-top:1px">Visualizando dados para o período '+
-            (timeView==='daily'?'Today':timeView==='weekly'?'Weekly':timeView==='total'?'All Time':'Monthly')+
-          '</div>'+
+          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px">Assigned Brands</div>'+
+          '<div style="display:flex;flex-direction:column;gap:5px">'+brandListHTML+'</div>'+
         '</div>'+
-        '<select id="mp-month-sel" onchange="drawMemberChart(currentMemberId)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;background:#fff;cursor:pointer;color:var(--text)">'+
-          buildMonthOptions()+
-        '</select>'+
+
       '</div>'+
-      '<div class="mp-chart-wrap"><canvas id="mp-chart"></canvas></div>'+
-    '</div>'+
 
-    // ── Brand KPI summary cards ──────────────────────────────────────────
-    (brandCards?'<div class="mp-row2">'+brandCards+'</div>':'')+
+      // ── RIGHT COLUMN: tabs + KPIs + chart + tables ───────────────────
+      '<div>'+
 
-    // ── Per-brand campaign metric tables ────────────────────────────────
-    weekHTML;
+        // Time view tabs + Download PDF
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px">'+
+          '<div class="tb-view" style="background:#f3f4f6;padding:3px;border-radius:var(--radius);display:flex;gap:2px">'+
+            '<button class="tb-vbtn'+(timeView==='daily'?' active':'')+'" onclick="setTimeView(\'daily\',this)">Today</button>'+
+            '<button class="tb-vbtn'+(timeView==='weekly'?' active':'')+'" onclick="setTimeView(\'weekly\',this)">Weekly</button>'+
+            '<button class="tb-vbtn'+(timeView==='monthly'?' active':'')+'" onclick="setTimeView(\'monthly\',this)">Monthly</button>'+
+            '<button class="tb-vbtn'+(timeView==='total'?' active':'')+'" onclick="setTimeView(\'total\',this)">Total</button>'+
+          '</div>'+
+          '<button onclick="exportDashboard()" class="tb-export-btn">&#11015; Download PDF Report</button>'+
+        '</div>'+
+
+        // KPI blocks
+        kpiBlocks+
+
+        // Performance Analytics chart
+        '<div class="mp-chart-card mb16">'+
+          '<div class="sec" style="margin-bottom:12px">'+
+            '<div>'+
+              '<div class="sec-t" style="font-size:13px">Performance Analytics</div>'+
+              '<div style="font-size:10px;color:var(--text-s);margin-top:1px">Viewing data for the period: '+
+                (timeView==='daily'?'Today':timeView==='weekly'?'Weekly':timeView==='total'?'All Time':'Monthly')+
+              '</div>'+
+            '</div>'+
+            '<select id="mp-month-sel" onchange="drawMemberChart(currentMemberId)" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:11px;background:#fff;cursor:pointer;color:var(--text)">'+
+              buildMonthOptions()+
+            '</select>'+
+          '</div>'+
+          '<div class="mp-chart-wrap"><canvas id="mp-chart"></canvas></div>'+
+        '</div>'+
+
+        // Per-brand campaign metric tables
+        weekHTML+
+
+      '</div>'+
+    '</div>';
 
   document.getElementById('mp-content').innerHTML=html;
   setTimeout(function(){drawMemberChart(mid);},50);
