@@ -3250,17 +3250,16 @@ function renderMemberPage(mid){
       '</div>'+
     '</div>';
 
-  // ── Assigned brands list ───────────────────────────────────────────────
-  var brandListHTML=ST.brands.filter(function(b){return b.status!=='finished';}).map(function(b){
-    var on=m.brands.includes(b.id);
+  // ── Assigned brands list — only brands the member is currently in ─────
+  var brandListHTML=ST.brands.filter(function(b){return m.brands.includes(b.id)&&b.status!=='finished';}).map(function(b){
     var role=(m.roles&&m.roles[b.id])||'';
-    return '<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;'+
-      'background:'+(on?b.color+'18':'#f8f9fb')+';border:1.5px solid '+(on?b.color+'55':'#e5e7eb')+';'+
+    return '<div style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;'+
+      'background:'+b.color+'18;border:1.5px solid '+b.color+'55;'+
       (isAdmin()?'cursor:pointer':'')+'" '+
-      (isAdmin()?'onclick="mpToggleBrand(\''+mid+'\',\''+b.id+'\')" title="'+(on?'Remove':'Add')+' '+b.name+'"':'')+'>'+
+      (isAdmin()?'onclick="mpToggleBrand(\''+mid+'\',\''+b.id+'\')" title="Remove '+b.name+'"':'')+'>'+
       '<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>'+
-      '<span style="font-size:11px;font-weight:700;color:'+(on?b.color:'var(--text-s)')+';flex:1">'+b.name+'</span>'+
-      (role&&on?'<span style="font-size:8px;font-weight:700;padding:1px 6px;border-radius:10px;background:'+b.color+'22;color:'+b.color+'">'+role+'</span>':'')+
+      '<span style="font-size:12px;font-weight:700;color:'+b.color+';flex:1">'+b.name+'</span>'+
+      (role?'<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;background:'+b.color+'22;color:'+b.color+'">'+role+'</span>':'')+
     '</div>';
   }).join('');
 
@@ -3293,7 +3292,7 @@ function renderMemberPage(mid){
     }
     var total=worked+holidays+off;
     var rate=total>0?Math.round((worked/total)*100):0;
-    return '<div style="margin-bottom:16px">'+
+    return '<div>'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
         '<span style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s)">Attendance</span>'+
         '<span style="font-size:11px;font-weight:700;color:var(--primary)">'+rate+'% Rate</span>'+
@@ -3321,7 +3320,6 @@ function renderMemberPage(mid){
               (avUrl?'<img src="'+avUrl+'" alt="'+m.name+'" onerror="this.innerHTML=\'<span style=font-size:20px;font-weight:700;color:var(--primary)>'+ini(m.name)+'</span>\'"/>':'<span style="font-size:20px;font-weight:700;color:var(--primary)">'+ini(m.name)+'</span>')+
               '<div class="mp-av-icon">&#128247;</div>'+
             '</div>'+
-            '<div class="mp-av-hint">click to<br>change photo</div>'+
           '</div>'+
           '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">'+
             '<div class="mp-name" onclick="startEditMpName(\''+mid+'\',this)" title="Click to rename" style="font-size:17px">'+m.name+'</div>'+
@@ -3342,22 +3340,27 @@ function renderMemberPage(mid){
         '</div>'+
 
         // Attendance
-        attendHTML+
+        '<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">'+attendHTML+'</div>'+
 
         // Actions
-        '<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">'+
-          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px">Actions</div>'+
-          '<div style="display:flex;flex-direction:column;gap:6px">'+
-            (canEdit(mid)?'<button onclick="openLog(\''+mid+'\')" style="width:100%;padding:9px 14px;border-radius:var(--radius-pill);background:var(--primary);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 2px 8px rgba(79,70,229,.25)">&#43; Log Activity</button>':'')+
-            '<button onclick="openReportHistory(\''+mid+'\')" style="width:100%;padding:8px 14px;border-radius:var(--radius);background:transparent;color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px">&#128196; Reports</button>'+
-            (isAdmin()?'<button onclick="openProfile(\''+mid+'\')" style="width:100%;padding:8px 14px;border-radius:var(--radius);background:transparent;color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px">&#9881; Roles</button>':'')+
+        '<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">'+
+          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Actions</div>'+
+          '<div style="display:flex;flex-direction:column;gap:8px">'+
+            '<button onclick="openLog(\''+mid+'\')" style="width:100%;padding:10px 14px;border-radius:var(--radius-pill);background:var(--primary);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 2px 8px rgba(79,70,229,.25)">&#43; Log Activity</button>'+
+            '<button onclick="openReportHistory(\''+mid+'\')" style="width:100%;padding:9px 14px;border-radius:var(--radius);background:transparent;color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px">&#128196; Reports</button>'+
+            (isAdmin()?'<button onclick="openProfile(\''+mid+'\')" style="width:100%;padding:9px 14px;border-radius:var(--radius);background:transparent;color:var(--text-m);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:500;display:flex;align-items:center;gap:7px">&#9881; Roles</button>':'')+
           '</div>'+
         '</div>'+
 
         // Assigned Brands
         '<div>'+
-          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:8px">Assigned Brands</div>'+
-          '<div style="display:flex;flex-direction:column;gap:5px">'+brandListHTML+'</div>'+
+          '<div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-s);margin-bottom:10px">Assigned Brands</div>'+
+          '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">'+brandListHTML+'</div>'+
+          (isAdmin()?
+            '<div id="mp-add-brand-row-'+mid+'" style="margin-top:4px">'+
+              '<button onclick="mpShowAddBrand(\''+mid+'\')" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px dashed var(--border);background:transparent;color:var(--text-s);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor=\'var(--primary)\';this.style.color=\'var(--primary)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--text-s)\'">&#43; Associate Brand</button>'+
+            '</div>'
+          :'')+
         '</div>'+
 
       '</div>'+
@@ -3561,6 +3564,30 @@ function startEditMpName(mid,el){
   inp.onkeydown=function(e){if(e.key==='Enter')inp.blur();if(e.key==='Escape'){inp.value=m.name;inp.blur();}};
 }
 
+function mpShowAddBrand(mid){
+  var m=getMember(mid);if(!m)return;
+  var unassigned=ST.brands.filter(function(b){return !m.brands.includes(b.id)&&b.status!=='finished';});
+  var row=document.getElementById('mp-add-brand-row-'+mid);
+  if(!row)return;
+  if(!unassigned.length){row.innerHTML='<div style="font-size:11px;color:var(--text-s);padding:6px 0">All brands already assigned.</div>';return;}
+  row.innerHTML=
+    '<div style="display:flex;gap:6px;align-items:center">'+
+      '<select id="mp-brand-sel-'+mid+'" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:12px;background:var(--bg);color:var(--text);cursor:pointer">'+
+        unassigned.map(function(b){return '<option value="'+b.id+'">'+b.name+'</option>';}).join('')+
+      '</select>'+
+      '<button onclick="mpAddBrand(\''+mid+'\')" style="padding:7px 14px;border-radius:8px;background:var(--primary);color:#fff;border:none;font-size:12px;font-weight:600;cursor:pointer">Add</button>'+
+      '<button onclick="renderMemberPage(\''+mid+'\')" style="padding:7px 10px;border-radius:8px;background:transparent;border:1px solid var(--border);font-size:12px;color:var(--text-s);cursor:pointer">✕</button>'+
+    '</div>';
+}
+function mpAddBrand(mid){
+  var sel=document.getElementById('mp-brand-sel-'+mid);if(!sel)return;
+  var bid=sel.value;if(!bid)return;
+  var m=getMember(mid);if(!m)return;
+  if(!m.brands.includes(bid))m.brands.push(bid);
+  sbSaveMember(m,false);
+  renderSidebar();
+  renderMemberPage(mid);
+}
 function mpToggleBrand(mid,bid){
   var m=getMember(mid);if(!m)return;
   if(m.brands.includes(bid)){m.brands=m.brands.filter(function(x){return x!==bid;});}
