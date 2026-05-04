@@ -2841,35 +2841,33 @@ function renderSidebar(){
     }
   }
 
-  var _abActive=currentPage==='all-brands';
-  document.getElementById('sb-brands-list').innerHTML=
-    '<div class="sb-pill'+(_abActive?' sb-pill-active':'')+'" onclick="navTo(\'all-brands\',null)" style="font-weight:600">'+
-      '<div class="sb-dot2" style="background:var(--primary)"></div>'+
-      '<span>All Brands</span>'+
-    '</div>'+
-    ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).slice().sort(function(a,b){
-      // Solohour (Panama) always above Solohour (Guatemala)
-      var an=a.name.toLowerCase(),bn=b.name.toLowerCase();
-      if(an.includes('solohour')&&bn.includes('solohour')){
-        var aPan=an.includes('panam'),bPan=bn.includes('panam');
-        if(aPan&&!bPan) return -1;
-        if(!aPan&&bPan) return 1;
-      }
-      return a.name.localeCompare(b.name);
-    }).map(b=>
-      '<div class="sb-pill'+(b.id===_activeBrandId&&currentPage==='brand'?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
-        '<div class="sb-dot2" style="background:'+(b.color||'var(--primary)')+'"></div>'+
-        '<span>'+b.name+'</span>'+
-      '</div>').join('');
+  // Brands list (element removido do sidebar HTML — ignorar se não existir)
+  var _sbBrandsList=document.getElementById('sb-brands-list');
+  if(_sbBrandsList){
+    var _abActive=currentPage==='all-brands';
+    _sbBrandsList.innerHTML=
+      '<div class="sb-pill'+(_abActive?' sb-pill-active':'')+'" onclick="navTo(\'all-brands\',null)" style="font-weight:600">'+
+        '<div class="sb-dot2" style="background:var(--primary)"></div><span>All Brands</span>'+
+      '</div>'+
+      ST.brands.filter(function(b){return (b.status||'ongoing')==='ongoing';}).slice().sort(function(a,b){
+        var an=a.name.toLowerCase(),bn=b.name.toLowerCase();
+        if(an.includes('solohour')&&bn.includes('solohour')){var aPan=an.includes('panam'),bPan=bn.includes('panam');if(aPan&&!bPan)return -1;if(!aPan&&bPan)return 1;}
+        return a.name.localeCompare(b.name);
+      }).map(b=>'<div class="sb-pill'+(b.id===_activeBrandId&&currentPage==='brand'?' sb-pill-active':'')+'" data-bid="'+b.id+'" onclick="openBrandDetail(\''+b.id+'\')">'+
+        '<div class="sb-dot2" style="background:'+(b.color||'var(--primary)')+'"></div><span>'+b.name+'</span></div>').join('');
+  }
 
-  // KOLs section — count across all brands
-  var _allKolsCount=ST.brands.reduce(function(s,b){return s+getKolRegistry(b.id).length;},0);
-  var _kolsActive=currentPage==='kols-registry';
-  document.getElementById('sb-kols-list').innerHTML=
-    '<div class="sb-pill'+(_kolsActive?' sb-pill-active':'')+'" onclick="navTo(\'kols-registry\',null)" style="font-weight:600;justify-content:space-between">'+
-      '<div style="display:flex;align-items:center;gap:8px"><div class="sb-dot2" style="background:var(--primary)"></div><span>All KOLs</span></div>'+
-      (_allKolsCount?'<span style="font-size:9px;font-weight:700;background:rgba(255,255,255,.15);border-radius:10px;padding:1px 6px">'+_allKolsCount+'</span>':'')+
-    '</div>';
+  // KOLs list (element removido do sidebar HTML — ignorar se não existir)
+  var _sbKolsList=document.getElementById('sb-kols-list');
+  if(_sbKolsList){
+    var _allKolsCount=ST.brands.reduce(function(s,b){return s+getKolRegistry(b.id).length;},0);
+    var _kolsActive=currentPage==='kols-registry';
+    _sbKolsList.innerHTML=
+      '<div class="sb-pill'+(_kolsActive?' sb-pill-active':'')+'" onclick="navTo(\'kols-registry\',null)" style="font-weight:600;justify-content:space-between">'+
+        '<div style="display:flex;align-items:center;gap:8px"><div class="sb-dot2" style="background:var(--primary)"></div><span>All KOLs</span></div>'+
+        (_allKolsCount?'<span style="font-size:9px;font-weight:700;background:rgba(255,255,255,.15);border-radius:10px;padding:1px 6px">'+_allKolsCount+'</span>':'')+
+      '</div>';
+  }
 
   var sbTeamListEl=document.getElementById('sb-team-list');
   if(sbTeamListEl){
