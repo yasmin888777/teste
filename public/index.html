@@ -65,12 +65,12 @@
   --th:   56px;
 
   /* ── 8px spacing scale ── */
-  --sp-1: 4px;
-  --sp-2: 8px;
-  --sp-3: 16px;
-  --sp-4: 24px;
-  --sp-5: 32px;
-  --sp-6: 48px;
+  --sp-1: 6px;
+  --sp-2: 10px;
+  --sp-3: 20px;
+  --sp-4: 28px;
+  --sp-5: 40px;
+  --sp-6: 56px;
 
   /* ── Typography ── */
   --lh:         1.6;
@@ -106,9 +106,9 @@ html.dark{
   --pink-d:#1f0d17;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:var(--lh);letter-spacing:var(--ls-body)}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:15px;line-height:var(--lh);letter-spacing:var(--ls-body)}
 button{cursor:pointer;border:none;background:none;font-family:inherit;color:inherit;transition:var(--ease)}
-input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);line-height:var(--lh)}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--text);line-height:var(--lh)}
 
 /* ══════════ SHELL ══════════ */
 .shell{display:flex;height:100vh;overflow:hidden}
@@ -362,7 +362,6 @@ html.dark .tb-vbtn:hover{background:rgba(255,255,255,.1)}
 
 /* ══════════ CONTENT ══════════ */
 .content{flex:1;overflow-y:auto;padding:var(--sp-4) var(--sp-4) 60px}
-.page.active{max-width:1280px;margin:0 auto;width:100%}
 
 /* ══════════ KPI CARDS ══════════ */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-4);margin-bottom:var(--sp-5)}
