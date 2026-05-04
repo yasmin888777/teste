@@ -8179,47 +8179,110 @@ function renderWeeklyReport(){
 
   html+='</tbody></table></div></div>';
 
-  // ── Member Bar Charts ──
-  var _BAR_COLORS=['#6366f1','#10b981','#f59e0b','#e879a0','#06b6d4','#f97316','#8b5cf6'];
-  function _memberBarCard(title, icon, values){
-    var total=values.reduce(function(a,b){return a+b.v;},0);
-    var max=Math.max.apply(null,values.map(function(x){return x.v;}))||1;
-    var rows=values.map(function(x,i){
-      var pct=Math.round(x.v/max*100);
-      var share=total>0?Math.round(x.v/total*100):0;
-      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
-        '<div style="width:28px;height:28px;border-radius:50%;background:'+_BAR_COLORS[i%_BAR_COLORS.length]+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-          '<span style="width:10px;height:10px;border-radius:50%;background:'+_BAR_COLORS[i%_BAR_COLORS.length]+';display:inline-block"></span>'+
-        '</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
-            '<span style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px">'+x.name+'</span>'+
-            '<span style="font-size:12px;font-weight:700;color:'+_BAR_COLORS[i%_BAR_COLORS.length]+';white-space:nowrap">'+x.v+(total>0?' <span style="font-size:10px;font-weight:400;color:var(--text-s)">('+share+'%)</span>':'')+'</span>'+
-          '</div>'+
-          '<div style="height:7px;background:var(--bg);border-radius:99px;overflow:hidden">'+
-            '<div style="height:100%;width:'+pct+'%;background:'+_BAR_COLORS[i%_BAR_COLORS.length]+';border-radius:99px;transition:width .4s ease"></div>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    }).join('');
-    var empty=total===0?'<div style="text-align:center;padding:24px 0;color:var(--text-s);font-size:12px">Sem dados ainda</div>':'';
-    return '<div class="card" style="padding:20px 22px">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+
-        '<span style="font-size:18px">'+icon+'</span>'+
-        '<span style="font-size:13px;font-weight:700;color:var(--text)">'+title+'</span>'+
-        '<span style="margin-left:auto;font-size:11px;font-weight:600;color:var(--text-s);background:var(--bg);border-radius:99px;padding:2px 10px">Total: '+total+'</span>'+
+  // ── Donut Charts ──
+  var _DONUT_COLORS=['#6366f1','#06b6d4','#f59e0b','#e879a0','#10b981','#f97316','#8b5cf6'];
+  function _donutChartCard(canvasId, title){
+    return '<div class="card" style="padding:22px 20px;display:flex;flex-direction:column;align-items:center">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center;letter-spacing:-.01em">'+title+'</div>'+
+      '<div style="position:relative;width:170px;height:170px;flex-shrink:0">'+
+        '<canvas id="'+canvasId+'" width="170" height="170"></canvas>'+
+        '<div id="'+canvasId+'-center" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none"></div>'+
       '</div>'+
-      (empty||rows)+
+      '<div id="'+canvasId+'-legend" style="margin-top:16px;width:100%;display:flex;flex-direction:column;gap:7px"></div>'+
     '</div>';
   }
-  var _barData=_memberStats.map(function(x,i){return {name:x.m.name,outreach:x.c,followups:x.fu,videos:x.v};});
+
   html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">'+
-    _memberBarCard('Outreach por Membro','📤',_barData.map(function(x){return {name:x.name,v:x.outreach};})) +
-    _memberBarCard('Follow-ups por Membro','🔁',_barData.map(function(x){return {name:x.name,v:x.followups};})) +
-    _memberBarCard('Vídeos Publicados','🎬',_barData.map(function(x){return {name:x.name,v:x.videos};})) +
+    _donutChartCard('pie-outreach','Outreach por Membro')+
+    _donutChartCard('pie-followups','Follow-ups por Membro')+
+    _donutChartCard('pie-videos','Vídeos Publicados')+
   '</div>';
 
   el.innerHTML=html;
+
+  // draw donuts after DOM update
+  setTimeout(function(){
+    var labels=_memberStats.map(function(x){return x.m.name;});
+    _drawDonut('pie-outreach', labels, _memberStats.map(function(x){return x.c;}), _DONUT_COLORS);
+    _drawDonut('pie-followups', labels, _memberStats.map(function(x){return x.fu;}), _DONUT_COLORS);
+    _drawDonut('pie-videos', labels, _memberStats.map(function(x){return x.v;}), _DONUT_COLORS);
+  }, 60);
+}
+
+var _donutInstances={};
+function _drawDonut(canvasId, labels, data, colors){
+  var canvas=document.getElementById(canvasId);
+  if(!canvas||typeof Chart==='undefined')return;
+  var total=data.reduce(function(a,b){return a+b;},0);
+  if(_donutInstances[canvasId]){try{_donutInstances[canvasId].destroy();}catch(e){}}
+
+  var centerEl=document.getElementById(canvasId+'-center');
+  var legendEl=document.getElementById(canvasId+'-legend');
+
+  if(total===0){
+    // Clean empty state — draw a light gray ring manually
+    var ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,170,170);
+    ctx.beginPath();ctx.arc(85,85,72,0,Math.PI*2);
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=18;ctx.stroke();
+    if(centerEl)centerEl.innerHTML='<span style="font-size:11px;color:#9ca3af;font-weight:500">Sem dados</span>';
+    if(legendEl)legendEl.innerHTML='';
+    return;
+  }
+
+  _donutInstances[canvasId]=new Chart(canvas,{
+    type:'doughnut',
+    data:{
+      labels:labels,
+      datasets:[{
+        data:data,
+        backgroundColor:colors.slice(0,labels.length),
+        borderWidth:3,
+        borderColor:'#ffffff',
+        hoverOffset:6
+      }]
+    },
+    options:{
+      responsive:false,
+      animation:{animateRotate:true,duration:600},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#1e1b4b',
+          titleColor:'#e0e7ff',
+          bodyColor:'#c7d2fe',
+          padding:10,
+          cornerRadius:8,
+          callbacks:{label:function(ctx){
+            var val=ctx.parsed;
+            var pct=total>0?Math.round(val/total*100):0;
+            return ' '+ctx.label+': '+val+' ('+pct+'%)';
+          }}
+        }
+      },
+      cutout:'62%'
+    }
+  });
+
+  // Center label: total
+  if(centerEl){
+    centerEl.innerHTML=
+      '<span style="font-size:22px;font-weight:800;color:#1e1b4b;line-height:1">'+total+'</span>'+
+      '<span style="font-size:10px;color:#9ca3af;margin-top:2px;font-weight:500">total</span>';
+  }
+
+  // Custom legend with progress-bar style
+  if(legendEl){
+    legendEl.innerHTML=labels.map(function(lbl,i){
+      var pct=total>0?Math.round(data[i]/total*100):0;
+      return '<div style="display:flex;align-items:center;gap:8px">'+
+        '<span style="width:10px;height:10px;border-radius:50%;background:'+colors[i%colors.length]+';flex-shrink:0;display:inline-block"></span>'+
+        '<span style="font-size:12px;color:#374151;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+lbl+'</span>'+
+        '<span style="font-size:12px;font-weight:700;color:'+colors[i%colors.length]+'">'+data[i]+'</span>'+
+        '<span style="font-size:11px;color:#9ca3af;min-width:30px;text-align:right">'+pct+'%</span>'+
+      '</div>';
+    }).join('');
+  }
 }
 
 
