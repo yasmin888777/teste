@@ -1968,7 +1968,7 @@ async function _onAuthSuccess(user) {
   if(ahc) ahc.innerHTML = skeletonKpiRow() + '<div class="g2">' + skeletonCard(4,160) + skeletonCard(4,160) + '</div>' + skeletonCard(3,200);
 
   // Load all data first so ST.members is populated
-  await loadAllFromSupabase();
+  try { await loadAllFromSupabase(); } catch(e){ console.error('loadAllFromSupabase failed:',e); }
 
   // Find matching team_member by name (case-insensitive)
   var matchedMember = ST.members.find(function(m){
@@ -2621,19 +2621,21 @@ function navTo(page,el,brandId){
   if(_tbView) _tbView.style.display=_noperiod.includes(page)?'none':'';
   var _tbExport=document.querySelector('.tb-btn.export');
   if(_tbExport) _tbExport.style.display=(page==='admin-home'||page==='member-home')?'none':'';
-  if(page==='overview') drawTrend();
-  if(page==='digest') renderDigest();
-  if(page==='campaigns') renderCampaigns();
-  if(page==='members') renderMembers();
-  if(page==='admin-home') renderAdminHome();
-  if(page==='admin-team'){renderAdminTeam();drawTrend();}
-  if(page==='member-home') renderMemberHome();
-  if(page==='links') renderLinks();
-  if(page==='brand') renderBrandDetail(_activeBrandId);
-  if(page==='report') renderWeeklyReport();
-  if(page==='settings') renderSettings();
-  if(page==='all-brands') renderAllBrands();
-  if(page==='kols-registry') renderKolsRegistry();
+  try{
+    if(page==='overview') drawTrend();
+    if(page==='digest') renderDigest();
+    if(page==='campaigns') renderCampaigns();
+    if(page==='members') renderMembers();
+    if(page==='admin-home') renderAdminHome();
+    if(page==='admin-team'){renderAdminTeam();drawTrend();}
+    if(page==='member-home') renderMemberHome();
+    if(page==='links') renderLinks();
+    if(page==='brand') renderBrandDetail(_activeBrandId);
+    if(page==='report') renderWeeklyReport();
+    if(page==='settings') renderSettings();
+    if(page==='all-brands') renderAllBrands();
+    if(page==='kols-registry') renderKolsRegistry();
+  }catch(e){console.error('navTo render error ['+page+']:',e);}
   saveNavState();
 }
 function openBrandDetail(brandId){
@@ -2662,16 +2664,16 @@ function setTimeView(v,el){
    RENDER ALL
 ══════════════════════════════════════════════ */
 function renderAll(){
-  _initLang();
-  renderSidebar();
-  renderKPIs();
-  renderConvTable();
-  renderBrandProgress();
-  renderMembers();
-  renderCampaigns();
-  if(currentPage==='overview'||currentPage==='admin-team'||currentPage==='admin-home') drawTrend();
-  if(currentPage==='admin-home') renderAdminHome();
-  if(currentPage==='admin-team') renderAdminTeam();
+  try{_initLang();}catch(e){}
+  try{renderSidebar();}catch(e){}
+  try{renderKPIs();}catch(e){}
+  try{renderConvTable();}catch(e){}
+  try{renderBrandProgress();}catch(e){}
+  try{renderMembers();}catch(e){}
+  try{renderCampaigns();}catch(e){}
+  try{if(currentPage==='overview'||currentPage==='admin-team'||currentPage==='admin-home') drawTrend();}catch(e){}
+  try{if(currentPage==='admin-home') renderAdminHome();}catch(e){console.error('renderAdminHome:',e);}
+  try{if(currentPage==='admin-team') renderAdminTeam();}catch(e){}
   if(currentPage==='digest') renderDigest();
   if(currentMemberId && document.getElementById('page-member').classList.contains('active')) renderMemberPage(currentMemberId);
   if(currentPage==='brand'&&_activeBrandId) renderBrandDetail(_activeBrandId);
