@@ -1085,6 +1085,18 @@ html.dark .skeleton{
       </svg>
       <span id="sbi-campaigns-lbl">Campanhas</span>
     </div>
+    <div class="sb-item" id="sbi-all-brands" onclick="navTo('all-brands',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/>
+      </svg>
+      <span id="sbi-all-brands-lbl">Marcas</span>
+    </div>
+    <div class="sb-item" id="sbi-kols" onclick="navTo('kols-registry',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span id="sbi-kols-lbl">Influenciadores</span>
+    </div>
     <!-- Links/Docs — admin only -->
     <div class="sb-item" id="sbi-links" onclick="navTo('links',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1094,9 +1106,11 @@ html.dark .skeleton{
     </div>
   </nav>
 
-  <!-- Listas dinâmicas (team) — brands e KOLs removidos do menu -->
+  <!-- Listas dinâmicas -->
   <nav class="sb-nav" id="sb-nav-admin-items"></nav>
   <nav class="sb-nav" id="sb-nav-member-items"></nav>
+  <div class="sb-sep" id="sb-brands-sep">Brands</div>
+  <div class="sb-list" id="sb-brands-list"></div>
 
   <div style="flex:1"></div>
   <div style="padding:4px 8px 0">
