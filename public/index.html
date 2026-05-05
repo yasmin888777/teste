@@ -2496,12 +2496,25 @@ function todayM(mid,bid,key){
   const e=getLogs(mid).find(l=>l.date===todayStr()&&l.brandId===bid);
   return e?(+e[key]||0):0;
 }
-function addLog(mid,entry){
+var _LOG_NUM_KEYS=['kols_sourced','kols_contacted','kols_replied','kols_followedup','prelim_agree','confirmed','vids_published','scripts_reviewed'];
+function addLog(mid,entry,replace){
   if(!ST.logs[mid]) ST.logs[mid]=[];
-  ST.logs[mid]=ST.logs[mid].filter(l=>!(l.date===entry.date&&l.brandId===entry.brandId));
-  ST.logs[mid].push(entry);
-  ST.logs[mid].sort((a,b)=>b.date.localeCompare(a.date));
-  sbSaveLog(mid, entry.brandId, entry.date, entry);
+  var idx=ST.logs[mid].findIndex(function(l){return l.date===entry.date&&l.brandId===entry.brandId;});
+  if(idx>=0 && !replace){
+    // Accumulate: sum numerics, concat arrays, append texts
+    var ex=ST.logs[mid][idx];
+    _LOG_NUM_KEYS.forEach(function(k){ex[k]=(+ex[k]||0)+(+entry[k]||0);});
+    ex.vids_data=(ex.vids_data||[]).concat(entry.vids_data||[]);
+    ex.scripts_data=(ex.scripts_data||[]).concat(entry.scripts_data||[]);
+    if(entry.note) ex.note=ex.note?(ex.note+'\n'+entry.note):entry.note;
+    if(entry.hasIssues){ex.hasIssues=true;ex.issuesText=ex.issuesText?(ex.issuesText+'\n'+entry.issuesText):entry.issuesText;}
+    sbSaveLog(mid,ex.brandId,ex.date,ex);
+  } else {
+    if(idx>=0) ST.logs[mid].splice(idx,1); // replace mode: remove old first
+    ST.logs[mid].push(entry);
+    ST.logs[mid].sort(function(a,b){return b.date.localeCompare(a.date);});
+    sbSaveLog(mid,entry.brandId,entry.date,entry);
+  }
 }
 function delLog(mid,date,bid){
   if(!ST.logs[mid]) return;
@@ -2593,6 +2606,7 @@ function initDark(){
 }
 let currentPage='overview', timeView='daily';
 let logMember=null, logBrand=null, trendChart=null;
+var _logEditMode=false; // true = admin editing existing entry (replace); false = new report (accumulate)
 let newBrandColor='#3b7ef8';
 let profileMember=null;
 let currentMemberId=null, memberChart=null;
@@ -4520,6 +4534,7 @@ function openLog(mid){
   document.getElementById('log-no-lbl').textContent=T.no||'No';
   document.getElementById('log-notes-lbl').textContent='📝 '+(T.drNotes||'Notes (optional)');
   document.getElementById('log-save-lbl').textContent=T.saveReport||'Salvar Relatório';
+  _logEditMode=false; // new submission — will accumulate
   // reset issues radio
   var noR=document.getElementById('log-issues-no');if(noR)noR.checked=true;
   var issD=document.getElementById('log-issues-detail');if(issD)issD.style.display='none';
@@ -4625,18 +4640,37 @@ function logUpdateScriptSlots(n){
 function prefillLog(){
   var T=_i18n[_lang];
   var date=document.getElementById('log-date').value;
-  var e=logBrand?getLogs(logMember.id).find(function(l){return l.date===date&&l.brandId===logBrand.id;})||{}:{};
+  var existing=logBrand?getLogs(logMember.id).find(function(l){return l.date===date&&l.brandId===logBrand.id;})||null:null;
+  var e=(_logEditMode&&existing)?existing:{}; // edit mode: prefill; add mode: start empty
+  // "Today so far" banner (only in add mode, only if there's already data today)
+  var todayBanner='';
+  if(!_logEditMode&&existing){
+    var T2=_i18n[_lang];
+    var sumParts=_LOG_NUM_KEYS.filter(function(k){return existing[k]>0;}).map(function(k){
+      var mt=METRICS.find(function(m){return m.key===k;})||{icon:'',labelEn:k};
+      return mt.icon+' <strong>'+existing[k]+'</strong> '+_metricLabel(mt);
+    });
+    if(sumParts.length){
+      todayBanner='<div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#5b21b6">'+
+        '<div style="font-weight:700;margin-bottom:4px">📊 '+(T2.todaySoFar||'Hoje até agora')+'</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+sumParts.map(function(p){return '<span style="background:#f5f3ff;padding:2px 8px;border-radius:6px">'+p+'</span>';}).join('')+'</div>'+
+      '</div>';
+    }
+  }
+  var campWrap=document.getElementById('log-campaign-wrap');
+  if(campWrap) campWrap.setAttribute('data-banner',todayBanner);
   var brandCamps=(ST.campaigns&&logBrand&&ST.campaigns[logBrand.id])||[];
   var campWrap=document.getElementById('log-campaign-wrap');
   if(campWrap){
-    campWrap.innerHTML=brandCamps.length?
+    var _banner=campWrap.getAttribute('data-banner')||'';
+    campWrap.innerHTML=_banner+(brandCamps.length?
       '<div class="ff full" style="margin-bottom:14px">'+
         '<label class="ff-lbl">🎯 '+(T.drCampaign||'Campaign (optional)')+'</label>'+
         '<select class="ff-inp" id="log-campaign">'+
           '<option value="">— '+(T.drNoCampaign||'No campaign')+'—</option>'+
           brandCamps.map(function(c){return '<option value="'+c.id+'"'+(e.campaignId===c.id?' selected':'')+'>'+c.name+'</option>';}).join('')+
         '</select>'+
-      '</div>':'';
+      '</div>':'');
   }
   // Ordered metric rows
   var DR_METRICS=[
@@ -4763,8 +4797,10 @@ async function saveLog(){
   var btn=document.getElementById('log-save-btn');
   if(lbl)lbl.textContent=T.saving||'Salvando...';
   btn.disabled=true;
-  addLog(logMember.id,entry);
-  var err=await sbSaveLog(logMember.id,logBrand.id,date,entry);
+  addLog(logMember.id,entry,_logEditMode); // replace if editing, accumulate if new
+  // get the final merged entry for Supabase sync
+  var finalEntry=getLogs(logMember.id).find(function(l){return l.date===date&&l.brandId===logBrand.id;})||entry;
+  var err=await sbSaveLog(logMember.id,logBrand.id,date,finalEntry);
   btn.disabled=false;
   if(err){showToast('Erro ao salvar: '+err.message,'#f87171');if(lbl)lbl.textContent=T.saveReport||'Salvar Relatório';}
   else{
@@ -4785,6 +4821,7 @@ function closeNotePanel(){
   document.getElementById('note-panel-backdrop').style.display='none';
 }
 function editLogEntry(date){
+  _logEditMode=true; // editing existing — will replace, not accumulate
   document.getElementById('log-date').value=date;
   prefillLog();
   var modal=document.querySelector('#ov-log .modal');
@@ -6279,6 +6316,7 @@ var _i18n={
     drIssues:'Problemas hoje',drNotes:'Notas (opcional)',
     drSelectDate:'Selecione uma data',
     saveReport:'Salvar Relatório',saving:'Salvando...',saved:'Salvo! ✓',
+    todaySoFar:'Hoje até agora',
     roleOwner:'OWNER',roleSupport:'SUPPORT',
   },
   en:{
@@ -6375,6 +6413,7 @@ var _i18n={
     drIssues:'Issues Today',drNotes:'Notes (optional)',
     drSelectDate:'Please select a date',
     saveReport:'Save Report',saving:'Saving...',saved:'Saved! ✓',
+    todaySoFar:'Today so far',
     roleOwner:'OWNER',roleSupport:'SUPPORT',
   }
 };
