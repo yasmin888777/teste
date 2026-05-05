@@ -4584,7 +4584,8 @@ function logUpdateVideoSlots(n){
     div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:8px';
     var vi=i;
     div.innerHTML=
-      '<div style="font-size:11px;font-weight:700;color:var(--text-s);margin-bottom:8px;letter-spacing:.05em">VIDEO '+(vi+1)+'</div>'+
+      '<div style="font-size:11px;font-weight:700;color:var(--text-s);margin-bottom:8px;letter-spacing:.05em">🎬 VIDEO '+(vi+1)+'</div>'+
+      '<input type="text" class="log-vid-kol" placeholder="👤 Nome do KOL" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;margin-bottom:8px">'+
       '<div style="display:flex;gap:8px;margin-bottom:8px">'+
         '<select style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)" class="log-vid-platform">'+
           PLATFORM_OPTS.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('')+
@@ -4603,6 +4604,22 @@ function logUpdateVideoSlots(n){
   }
   // remove extra slots
   var all=container.querySelectorAll('.log-vid-slot');
+  for(var j=n;j<all.length;j++) all[j].remove();
+}
+function logUpdateScriptSlots(n){
+  n=Math.max(0,Math.min(50,parseInt(n)||0));
+  var container=document.getElementById('log-script-slots');
+  if(!container)return;
+  var current=container.querySelectorAll('.log-script-slot').length;
+  for(var i=current;i<n;i++){
+    var div=document.createElement('div');
+    div.className='log-script-slot';
+    div.style.cssText='background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:8px;display:flex;align-items:center;gap:8px';
+    div.innerHTML='<span style="font-size:13px;font-weight:700;color:var(--text-s);flex-shrink:0">📝 '+(i+1)+'</span>'+
+      '<input type="text" class="log-script-kol" placeholder="Nome do KOL" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);outline:none">';
+    container.appendChild(div);
+  }
+  var all=container.querySelectorAll('.log-script-slot');
   for(var j=n;j<all.length;j++) all[j].remove();
 }
 function prefillLog(){
@@ -4635,16 +4652,17 @@ function prefillLog(){
   var PLATFORM_OPTS=['Instagram','TikTok','YouTube','Twitter/X','Facebook','Outro'];
   document.getElementById('log-form').innerHTML=DR_METRICS.map(function(mt){
     var isVid=mt.key==='vids_published';
-    var vidSlots='';
+    var isScript=mt.key==='scripts_reviewed';
+    var extraSlots='';
     if(isVid){
       var savedVids=e.vids_data||[];
       var nSlots=e[mt.key]||0;
       var slotRows='';
       for(var vi=0;vi<nSlots;vi++){
         var sv=savedVids[vi]||{};
-        var hasR=sv.hasRepost?'checked':'';
         slotRows+='<div class="log-vid-slot" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:8px">'+
-          '<div style="font-size:11px;font-weight:700;color:var(--text-s);margin-bottom:8px;letter-spacing:.05em">VIDEO '+(vi+1)+'</div>'+
+          '<div style="font-size:11px;font-weight:700;color:var(--text-s);margin-bottom:8px;letter-spacing:.05em">🎬 VIDEO '+(vi+1)+'</div>'+
+          '<input type="text" class="log-vid-kol" placeholder="👤 Nome do KOL" value="'+(sv.kolName||'')+'" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);outline:none;box-sizing:border-box;margin-bottom:8px">'+
           '<div style="display:flex;gap:8px;margin-bottom:8px">'+
             '<select style="flex:1;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text)" class="log-vid-platform">'+
               PLATFORM_OPTS.map(function(p){return '<option value="'+p+'"'+(sv.platform===p?' selected':'')+'>'+p+'</option>';}).join('')+
@@ -4661,7 +4679,20 @@ function prefillLog(){
           '</div>'+
         '</div>';
       }
-      vidSlots='<div id="log-vid-slots">'+slotRows+'</div>';
+      extraSlots='<div id="log-vid-slots">'+slotRows+'</div>';
+    }
+    if(isScript){
+      var savedScripts=e.scripts_data||[];
+      var nSc=e[mt.key]||0;
+      var scRows='';
+      for(var si=0;si<nSc;si++){
+        var ss=savedScripts[si]||{};
+        scRows+='<div class="log-script-slot" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-top:8px;display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:13px;font-weight:700;color:var(--text-s);flex-shrink:0">📝 '+(si+1)+'</span>'+
+          '<input type="text" class="log-script-kol" placeholder="Nome do KOL" value="'+(ss.kolName||'')+'" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg);color:var(--text);outline:none">'+
+        '</div>';
+      }
+      extraSlots='<div id="log-script-slots">'+scRows+'</div>';
     }
     return '<div>'+
       '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px">'+
@@ -4672,9 +4703,10 @@ function prefillLog(){
         '</div>'+
         '<input type="number" min="0" id="li-'+mt.key+'" placeholder="0" value="'+(e[mt.key]!==undefined?e[mt.key]:'')+'"'+
           (isVid?' oninput="logUpdateVideoSlots(this.value)"':'')+
+          (isScript?' oninput="logUpdateScriptSlots(this.value)"':'')+
           ' style="width:64px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;text-align:center;color:var(--text);background:var(--card);outline:none;-moz-appearance:textfield">'+
       '</div>'+
-      vidSlots+
+      extraSlots+
     '</div>';
   }).join('');
   document.getElementById('log-note').value=e.note||'';
@@ -4699,23 +4731,30 @@ async function saveLog(){
   var issuesText=hasIssues?(document.getElementById('log-issues-text').value||''):'';
   // collect video slots
   var vidSlots=document.querySelectorAll('.log-vid-slot');
-  var vids_data=Array.prototype.map.call(vidSlots,function(slot,vi){
+  var vids_data=Array.prototype.map.call(vidSlots,function(slot){
+    var kolEl=slot.querySelector('.log-vid-kol');
     var platform=slot.querySelector('.log-vid-platform');
     var link=slot.querySelector('.log-vid-link');
     var repostYes=slot.querySelector('input[value="sim"]');
     var repostLink=slot.querySelector('.log-repost-link');
     var hasRepost=repostYes&&repostYes.checked;
     return {
+      kolName:kolEl?kolEl.value.trim():'',
       platform:platform?platform.value:'Instagram',
       link:link?link.value.trim():'',
       hasRepost:hasRepost,
       repostLink:hasRepost&&repostLink?repostLink.value.trim():''
     };
   });
+  var scriptSlots=document.querySelectorAll('.log-script-slot');
+  var scripts_data=Array.prototype.map.call(scriptSlots,function(slot){
+    var kolEl=slot.querySelector('.log-script-kol');
+    return {kolName:kolEl?kolEl.value.trim():''};
+  });
   var entry={date:date,brandId:logBrand.id,campaignId:campaignId,
     note:document.getElementById('log-note').value,
     hasIssues:hasIssues,issuesText:issuesText,
-    vids_data:vids_data};
+    vids_data:vids_data,scripts_data:scripts_data};
   ['kols_sourced','kols_contacted','kols_replied','kols_followedup','prelim_agree','confirmed','vids_published','scripts_reviewed'].forEach(function(key){
     var el=document.getElementById('li-'+key);
     entry[key]=el?+(el.value)||0:0;
@@ -4760,11 +4799,21 @@ function renderLogHistory(){
     var escapedNote=(e.note||'').replace(/'/g,"\\'").replace(/\n/g,'\\n');
     var dateLabel=fmtDateFull(e.date);
     var rowClick=isAdmin()?' onclick="editLogEntry(\''+e.date+'\')" style="cursor:pointer" title="Click to edit this entry"':'';
+    // KOL names from videos
+    var vidKols=(e.vids_data||[]).map(function(v,i){
+      return v.kolName?'<span style="display:inline-flex;align-items:center;gap:3px;background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600;margin:1px">🎬 '+escHtml(v.kolName)+'</span>':'';
+    }).join('');
+    // KOL names from scripts
+    var scriptKols=(e.scripts_data||[]).map(function(s){
+      return s.kolName?'<span style="display:inline-flex;align-items:center;gap:3px;background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600;margin:1px">📝 '+escHtml(s.kolName)+'</span>':'';
+    }).join('');
+    var kolTags=vidKols+scriptKols;
     return '<tr'+rowClick+'>'+
       '<td class="tip-host" style="font-weight:500;white-space:nowrap">'+
         fmtDate(e.date)+'<div class="tip">'+dateLabel+'</div>'+
       '</td>'+
       METRICS.map(function(m){return '<td>'+(e[m.key]||0)+'</td>';}).join('')+
+      '<td style="min-width:140px">'+(kolTags||'')+'</td>'+
       '<td class="note-cell" onclick="event.stopPropagation();openNotePanel(\''+escapedNote+'\',\''+dateLabel+'\')" style="cursor:pointer;color:var(--primary)" title="Click to read full note">'+(e.note?'&#128196; '+e.note.slice(0,18)+(e.note.length>18?'…':''):'')+'</td>'+
       '<td><button class="del-btn" onclick="event.stopPropagation();doDelLog(\''+e.date+'\',\''+b.id+'\')">&#10005;</button></td>'+
     '</tr>';
@@ -4772,7 +4821,7 @@ function renderLogHistory(){
   document.getElementById('log-history').innerHTML=
     '<div class="hist-hd">History — '+b.name+(isAdmin()?'<span style="font-size:10px;color:var(--text-s);font-weight:400;margin-left:8px">click row to edit</span>':'')+'</div>'+
     '<div style="overflow-x:auto"><table class="hist-tbl">'+
-      '<thead><tr><th>Date</th>'+METRICS.map(function(m){return '<th title="'+_metricLabel(m)+'">'+m.icon+'</th>';}).join('')+'<th>Note</th><th></th></tr></thead>'+
+      '<thead><tr><th>Date</th>'+METRICS.map(function(m){return '<th title="'+_metricLabel(m)+'">'+m.icon+'</th>';}).join('')+'<th>KOLs</th><th>Note</th><th></th></tr></thead>'+
       '<tbody>'+rows+'</tbody>'+
     '</table></div>';
 }
