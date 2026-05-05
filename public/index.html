@@ -8970,25 +8970,49 @@ function renderReportHistory(){
     var dayBadges=METRICS.filter(function(m){return dayTotals[m.key]>0;}).map(function(m){
       return '<span style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;color:var(--text)">'+m.icon+' '+dayTotals[m.key]+'</span>';
     }).join('');
+    var cardId='rhcard-'+date.replace(/-/g,'');
+    var canEdit=isAdmin();
 
-    return '<div style="margin-bottom:14px;border:1px solid '+(isToday?'#c4b5fd':'var(--border)')+';border-radius:12px;overflow:hidden'+(isToday?';box-shadow:0 0 0 2px #ede9fe':'')+'">' +
+    return '<div id="'+cardId+'" style="margin-bottom:14px;border:1px solid '+(isToday?'#c4b5fd':'var(--border)')+';border-radius:12px;overflow:hidden'+(isToday?';box-shadow:0 0 0 2px #ede9fe':'')+'">' +
+      // ── card header ──
       '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border)">'+
         '<div style="display:flex;align-items:center;gap:8px">'+
           '<span style="font-size:13px;font-weight:800;color:var(--text)">'+fmtDate(date)+'</span>'+
           '<span style="font-size:10px;color:var(--text-s);text-transform:uppercase;font-weight:600">'+dow+'</span>'+
-          (isToday?'<span style="font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:1px 8px">hoje</span>':'')+
+          (isToday?'<span style="font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:1px 8px">'+(T.today||'hoje')+'</span>':'')+
         '</div>'+
-        (dayBadges?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+dayBadges+'</div>':'')+
+        '<div style="display:flex;align-items:center;gap:6px">'+
+          (dayBadges?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+dayBadges+'</div>':'')+
+          (canEdit?'<button onclick="_rhToggleActions(\''+cardId+'\')" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text-s);font-size:11px;font-weight:600;cursor:pointer;line-height:1.5">⋯</button>':'')+
+        '</div>'+
       '</div>'+
+      // ── action bar (hidden by default) ──
+      '<div id="'+cardId+'-actions" style="display:none;padding:8px 14px;background:#f9f5ff;border-bottom:1px solid #e9d5ff;display:none">'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+          entries.map(function(l){
+            var b=getBrand(l.brandId);
+            return '<span style="display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 10px">'+
+              (b?'<span style="width:8px;height:8px;border-radius:50%;background:'+b.color+';flex-shrink:0;display:inline-block"></span>':'')+
+              '<span style="font-size:11px;font-weight:600;color:var(--text)">'+(b?b.name:'?')+'</span>'+
+              '<button onclick="_rhEdit(\''+mid+'\',\''+l.brandId+'\',\''+date+'\')" style="padding:2px 8px;border-radius:5px;border:1px solid #ddd6fe;background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;cursor:pointer">✏️</button>'+
+              '<button onclick="_rhDel(\''+mid+'\',\''+l.brandId+'\',\''+date+'\')" style="padding:2px 8px;border-radius:5px;border:1px solid #fecaca;background:#fee2e2;color:#b91c1c;font-size:10px;font-weight:700;cursor:pointer">🗑️</button>'+
+            '</span>';
+          }).join('')+
+        '</div>'+
+      '</div>'+
+      // ── entries ──
       entries.map(function(l){
         var b=getBrand(l.brandId);
         // metric badges
         var metricRow=METRICS.filter(function(m){return l[m.key]>0;}).map(function(m){
           return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-m)">'+m.icon+' <strong>'+l[m.key]+'</strong> '+_metricLabel(m)+'</span>';
         }).join('<span style="color:var(--border);margin:0 4px">·</span>');
-        // KOL tags
+        // KOL tags — video (with link + repost link), script
         var vidKols=(l.vids_data||[]).filter(function(v){return v.kolName;}).map(function(v){
-          return '<span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600">🎬 '+escHtml(v.kolName)+(v.link?'<a href="'+escHtml(v.link)+'" target="_blank" style="margin-left:4px;color:#7c3aed;text-decoration:none" onclick="event.stopPropagation()">↗</a>':'')+'</span>';
+          var links='';
+          if(v.link) links+='<a href="'+escHtml(v.link)+'" target="_blank" title="Vídeo" style="margin-left:3px;color:#7c3aed;text-decoration:none;font-size:10px" onclick="event.stopPropagation()">↗</a>';
+          if(v.hasRepost&&v.repostLink) links+='<a href="'+escHtml(v.repostLink)+'" target="_blank" title="Repost" style="margin-left:2px;color:#a78bfa;text-decoration:none;font-size:10px" onclick="event.stopPropagation()">🔁↗</a>';
+          return '<span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600">🎬 '+escHtml(v.kolName)+links+'</span>';
         }).join('');
         var scriptKols=(l.scripts_data||[]).filter(function(s){return s.kolName;}).map(function(s){
           return '<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600">📝 '+escHtml(s.kolName)+'</span>';
@@ -8996,17 +9020,11 @@ function renderReportHistory(){
         var kolTags=vidKols+scriptKols;
         // issues
         var issuesBadge=l.hasIssues?'<span style="background:#fee2e2;color:#b91c1c;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:700">⚠️ '+(l.issuesText?escHtml(l.issuesText.slice(0,50)):'Issues')+'</span>':'';
-        // action buttons
-        var editBtn=isAdmin()?'<button onclick="_rhEdit(\''+mid+'\',\''+l.brandId+'\',\''+date+'\')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">✏️ '+(T.edit||'Editar')+'</button>':'';
-        var delBtn='<button onclick="_rhDel(\''+mid+'\',\''+l.brandId+'\',\''+date+'\')" style="padding:4px 10px;border-radius:6px;border:1px solid #fee2e2;background:#fff0f0;color:#b91c1c;font-size:11px;font-weight:600;cursor:pointer">🗑️ '+(T.delete||'Apagar')+'</button>';
 
         return '<div style="padding:11px 14px;border-bottom:1px solid var(--border)">'+
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-            '<div style="display:flex;align-items:center;gap:6px">'+
-              (b?'<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>':'')+
-              '<span style="font-size:12px;font-weight:700;color:var(--text)">'+(b?b.name:'?')+'</span>'+
-            '</div>'+
-            '<div style="display:flex;gap:5px">'+editBtn+delBtn+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+
+            (b?'<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>':'')+
+            '<span style="font-size:12px;font-weight:700;color:var(--text)">'+(b?b.name:'?')+'</span>'+
           '</div>'+
           (metricRow?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'+metricRow+'</div>':'')+
           (kolTags?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">'+kolTags+'</div>':'')+
@@ -9048,6 +9066,14 @@ function _rhDel(mid,bid,date){
   delLog(mid,date,bid);
   renderReportHistory();
   renderAll();
+}
+function _rhToggleActions(cardId){
+  var bar=document.getElementById(cardId+'-actions');
+  if(!bar)return;
+  var open=bar.style.display==='flex';
+  bar.style.display=open?'none':'flex';
+  var btn=document.querySelector('#'+cardId+' button[onclick*="_rhToggleActions"]');
+  if(btn){btn.style.background=open?'var(--card)':'#ede9fe';btn.style.color=open?'var(--text-s)':'#6d28d9';btn.style.borderColor=open?'var(--border)':'#c4b5fd';}
 }
 
 
