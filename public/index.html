@@ -4829,43 +4829,67 @@ function editLogEntry(date){
 }
 function renderLogHistory(){
   if(!logMember||!logBrand){document.getElementById('log-history').innerHTML='';return;}
-  const entries=getLogs(logMember.id).filter(function(l){return l.brandId===logBrand.id;}).slice(0,10);
-  if(!entries.length){document.getElementById('log-history').innerHTML='';return;}
-  const b=logBrand;
-  const rows=entries.map(function(e){
-    var escapedNote=(e.note||'').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+  var entries=getLogs(logMember.id).filter(function(l){return l.brandId===logBrand.id;}).slice(0,20);
+  if(!entries.length){document.getElementById('log-history').innerHTML='<div style="padding:12px 0;text-align:center;font-size:12px;color:var(--text-s)">Nenhum registro ainda.</div>';return;}
+  var b=logBrand;
+  var T=_i18n[_lang];
+  var cards=entries.map(function(e){
     var dateLabel=fmtDateFull(e.date);
-    var rowClick=isAdmin()?' onclick="editLogEntry(\''+e.date+'\')" style="cursor:pointer" title="Click to edit this entry"':'';
-    // KOL names from videos
-    var vidKols=(e.vids_data||[]).map(function(v,i){
-      return v.kolName?'<span style="display:inline-flex;align-items:center;gap:3px;background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600;margin:1px">🎬 '+escHtml(v.kolName)+'</span>':'';
+    var isToday=e.date===todayStr();
+    // Numeric summary
+    var metricBadges=METRICS.filter(function(m){return e[m.key]>0;}).map(function(m){
+      return '<span style="display:inline-flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;color:var(--text)">'+m.icon+' '+e[m.key]+'</span>';
     }).join('');
-    // KOL names from scripts
-    var scriptKols=(e.scripts_data||[]).map(function(s){
-      return s.kolName?'<span style="display:inline-flex;align-items:center;gap:3px;background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600;margin:1px">📝 '+escHtml(s.kolName)+'</span>':'';
+    // KOL tags
+    var vidKols=(e.vids_data||[]).filter(function(v){return v.kolName;}).map(function(v){
+      return '<span style="display:inline-flex;align-items:center;gap:3px;background:#ede9fe;color:#6d28d9;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600">🎬 '+escHtml(v.kolName)+'</span>';
+    }).join('');
+    var scriptKols=(e.scripts_data||[]).filter(function(s){return s.kolName;}).map(function(s){
+      return '<span style="display:inline-flex;align-items:center;gap:3px;background:#d1fae5;color:#065f46;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600">📝 '+escHtml(s.kolName)+'</span>';
     }).join('');
     var kolTags=vidKols+scriptKols;
-    return '<tr'+rowClick+'>'+
-      '<td class="tip-host" style="font-weight:500;white-space:nowrap">'+
-        fmtDate(e.date)+'<div class="tip">'+dateLabel+'</div>'+
-      '</td>'+
-      METRICS.map(function(m){return '<td>'+(e[m.key]||0)+'</td>';}).join('')+
-      '<td style="min-width:140px">'+(kolTags||'')+'</td>'+
-      '<td class="note-cell" onclick="event.stopPropagation();openNotePanel(\''+escapedNote+'\',\''+dateLabel+'\')" style="cursor:pointer;color:var(--primary)" title="Click to read full note">'+(e.note?'&#128196; '+e.note.slice(0,18)+(e.note.length>18?'…':''):'')+'</td>'+
-      '<td><button class="del-btn" onclick="event.stopPropagation();doDelLog(\''+e.date+'\',\''+b.id+'\')">&#10005;</button></td>'+
-    '</tr>';
+    // Issues badge
+    var issuesBadge=e.hasIssues?'<span style="background:#fee2e2;color:#b91c1c;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700">⚠️ Issues</span>':'';
+    // Note preview
+    var notePreview=e.note?'<div style="font-size:11px;color:var(--text-s);margin-top:6px;font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px">📝 '+escHtml(e.note.slice(0,60))+(e.note.length>60?'…':'')+'</div>':'';
+    // Action buttons (always visible)
+    var editBtn=isAdmin()?'<button onclick="event.stopPropagation();_histEdit(\''+e.date+'\')" title="Editar" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background=\'var(--primary-d)\'" onmouseout="this.style.background=\'var(--bg)\'">✏️ '+(T.edit||'Editar')+'</button>':'';
+    var delBtn='<button onclick="event.stopPropagation();_histDel(\''+e.date+'\',\''+b.id+'\')" title="Apagar" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;border:1px solid #fee2e2;background:#fff0f0;color:#b91c1c;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s" onmouseover="this.style.background=\'#fee2e2\'" onmouseout="this.style.background=\'#fff0f0\'">🗑️ '+(T.delete||'Apagar')+'</button>';
+    return '<div style="background:var(--card);border:1px solid '+(isToday?'#c4b5fd':'var(--border)')+';border-radius:12px;padding:12px 14px;margin-bottom:8px'+(isToday?';box-shadow:0 0 0 2px #ede9fe':'')+'">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'+
+        '<div>'+
+          '<span style="font-size:13px;font-weight:700;color:var(--text)">'+dateLabel+'</span>'+
+          (isToday?' <span style="font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:2px 8px">hoje</span>':'')+
+        '</div>'+
+        '<div style="display:flex;gap:6px;flex-shrink:0">'+editBtn+delBtn+'</div>'+
+      '</div>'+
+      (metricBadges?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'+metricBadges+'</div>':'')+
+      (kolTags?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'+kolTags+'</div>':'')+
+      (issuesBadge?'<div style="margin-bottom:4px">'+issuesBadge+(e.issuesText?' <span style="font-size:10px;color:#b91c1c">'+escHtml(e.issuesText.slice(0,60))+'</span>':'')+'</div>':'')+
+      notePreview+
+    '</div>';
   }).join('');
+
   document.getElementById('log-history').innerHTML=
-    '<div class="hist-hd">History — '+b.name+(isAdmin()?'<span style="font-size:10px;color:var(--text-s);font-weight:400;margin-left:8px">click row to edit</span>':'')+'</div>'+
-    '<div style="overflow-x:auto"><table class="hist-tbl">'+
-      '<thead><tr><th>Date</th>'+METRICS.map(function(m){return '<th title="'+_metricLabel(m)+'">'+m.icon+'</th>';}).join('')+'<th>KOLs</th><th>Note</th><th></th></tr></thead>'+
-      '<tbody>'+rows+'</tbody>'+
-    '</table></div>';
+    '<div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">'+
+      '<div style="font-size:12px;font-weight:700;color:var(--text-s);letter-spacing:.06em;margin-bottom:10px">📋 '+(T.reportHistory||'HISTÓRICO DE REPORTS')+' — '+escHtml(b.name)+'</div>'+
+      cards+
+    '</div>';
 }
-function doDelLog(date,bid){
+function _histEdit(date){
+  editLogEntry(date);
+  var modal=document.querySelector('#ov-log .modal');
+  if(modal) modal.scrollTop=0;
+}
+function _histDel(date,bid){
   if(!logMember)return;
-  delLog(logMember.id,date,bid);renderLogHistory();renderAll();
+  var T=_i18n[_lang];
+  if(!confirm((T.confirmDeleteReport||'Apagar o registro de')+' '+fmtDateFull(date)+'?')) return;
+  delLog(logMember.id,date,bid);
+  renderLogHistory();
+  renderAll();
 }
+function doDelLog(date,bid){ _histDel(date,bid); }
 
 /* ══════════════════════════════════════════════
    SIDEBAR MEMBER DETAIL
@@ -6317,6 +6341,8 @@ var _i18n={
     drSelectDate:'Selecione uma data',
     saveReport:'Salvar Relatório',saving:'Salvando...',saved:'Salvo! ✓',
     todaySoFar:'Hoje até agora',
+    reportHistory:'HISTÓRICO DE REPORTS',edit:'Editar',delete:'Apagar',
+    confirmDeleteReport:'Apagar o registro de',
     roleOwner:'OWNER',roleSupport:'SUPPORT',
   },
   en:{
@@ -6414,6 +6440,8 @@ var _i18n={
     drSelectDate:'Please select a date',
     saveReport:'Save Report',saving:'Saving...',saved:'Saved! ✓',
     todaySoFar:'Today so far',
+    reportHistory:'REPORT HISTORY',edit:'Edit',delete:'Delete',
+    confirmDeleteReport:'Delete report for',
     roleOwner:'OWNER',roleSupport:'SUPPORT',
   }
 };
