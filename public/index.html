@@ -6320,9 +6320,13 @@ function kolColor(kol,idx){return _CARD_COLORS[idx%_CARD_COLORS.length];}
 function openAddKolModal(bid,editId){
   _pubCurrentBid=bid;
   _kolFormEditId=editId||null;
-  // Render the form into the page and navigate to it
-  _renderKolFormPage(bid,editId);
-  navTo('kol-form',null);
+  try{
+    _renderKolFormPage(bid,editId);
+    navTo('kol-form',null);
+  }catch(e){
+    console.error('[openAddKolModal] erro ao renderizar formulário:',e);
+    showToast('Erro ao abrir formulário: '+e.message,'#f87171');
+  }
 }
 var _kolFormEditId=null;
 function _renderKolFormPage(bid,editId){
@@ -6527,8 +6531,15 @@ function _renderKolFormPage(bid,editId){
   // Section 5: Associação
   (function(){
     var brandOpts=ST.brands.map(function(b){return '<option value="'+b.id+'"'+(k&&k.assocBrandId===b.id?' selected':'')+'>'+escHtml(b.name)+'</option>';}).join('');
-    var assocBid=k&&k.assocBrandId?k.assocBrandId:(ST.brands[0]?ST.brands[0].id:'');
-    var campOpts=(ST.campaigns||[]).filter(function(c){return !assocBid||c.brandId===assocBid;}).map(function(c){return '<option value="'+c.id+'"'+(k&&k.assocCampaignId===c.id?' selected':'')+'>'+escHtml(c.name)+'</option>';}).join('');
+    var assocBid=k&&k.assocBrandId?k.assocBrandId:'';
+    // ST.campaigns is {brandId:[...]} — flatten to array
+    var allCamps=[];
+    if(ST.campaigns&&typeof ST.campaigns==='object'){
+      Object.keys(ST.campaigns).forEach(function(bId){
+        (ST.campaigns[bId]||[]).forEach(function(c){allCamps.push(c);});
+      });
+    }
+    var campOpts=allCamps.filter(function(c){return !assocBid||c.brandId===assocBid||c.brand_id===assocBid;}).map(function(c){return '<option value="'+c.id+'"'+(k&&k.assocCampaignId===c.id?' selected':'')+'>'+escHtml(c.name)+'</option>';}).join('');
     return '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:28px">'+
       '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)">🔗 Associação</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
@@ -6575,7 +6586,13 @@ function kolUpdateAssocCampaigns(){
   var bid=document.getElementById('pub-kol-assoc-brand').value;
   var sel=document.getElementById('pub-kol-assoc-campaign');
   if(!sel)return;
-  var camps=(ST.campaigns||[]).filter(function(c){return !bid||c.brandId===bid;});
+  var allCamps=[];
+  if(ST.campaigns&&typeof ST.campaigns==='object'){
+    Object.keys(ST.campaigns).forEach(function(bId){
+      (ST.campaigns[bId]||[]).forEach(function(c){allCamps.push(c);});
+    });
+  }
+  var camps=allCamps.filter(function(c){return !bid||c.brandId===bid||c.brand_id===bid;});
   sel.innerHTML='<option value="">— Nenhuma —</option>'+camps.map(function(c){return '<option value="'+c.id+'">'+escHtml(c.name)+'</option>';}).join('');
 }
 function saveKolModal(){
@@ -6584,7 +6601,7 @@ function saveKolModal(){
   var id=eid||('kol_'+Date.now());
   var name=document.getElementById('pub-kol-name').value.trim();
   if(!name){alert('Nome é obrigatório');return;}
-  var _v=function(id){var el=document.getElementById(id);return el?el.value.trim():'';}
+  var _v=function(elId){var el=document.getElementById(elId);return el?el.value.trim():'';}
   var kol={id:id,name:name,
     instagram:_v('pub-kol-instagram'),
     igUrl:_v('pub-kol-ig-url'),
