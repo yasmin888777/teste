@@ -2372,6 +2372,7 @@ const METRICS = [
   {key:'prelim_agree',    labelKey:'drPrelim',        labelEn:'New preliminary collabs reached',icon:'⏳'},
   {key:'confirmed',       labelKey:'drConfirmed',     labelEn:'New confirmed collabs',         icon:'🤝'},
   {key:'vids_published',  labelKey:'drVideos',        labelEn:'New published videos',          icon:'🎬'},
+  {key:'scripts_reviewed',labelKey:'drScripts',       labelEn:'Scripts reviewed today',        icon:'📝'},
 ];
 function _metricLabel(mt){return (_i18n&&_lang&&_i18n[_lang]&&_i18n[_lang][mt.labelKey])||mt.labelEn;}
 
@@ -4629,6 +4630,7 @@ function prefillLog(){
     {key:'prelim_agree',    icon:'⏳', label: T.drPrelim||'New preliminary collabs reached', tip: T.drPrelimTip||'Novos KOLs pendentes para confirmar a parceria'},
     {key:'confirmed',       icon:'🤝', label: T.drConfirmed||'New confirmed collabs',    tip: T.drConfirmedTip||'Novas parcerias confirmadas'},
     {key:'vids_published',  icon:'🎬', label: T.drVideos||'New published videos',        tip: T.drVideosTip||'Vídeos publicados no período'},
+    {key:'scripts_reviewed',icon:'📝', label: T.drScripts||'Roteiros corrigidos hoje',   tip: T.drScriptsTip||'Número de roteiros revisados e corrigidos hoje'},
   ];
   var PLATFORM_OPTS=['Instagram','TikTok','YouTube','Twitter/X','Facebook','Outro'];
   document.getElementById('log-form').innerHTML=DR_METRICS.map(function(mt){
@@ -4714,7 +4716,7 @@ async function saveLog(){
     note:document.getElementById('log-note').value,
     hasIssues:hasIssues,issuesText:issuesText,
     vids_data:vids_data};
-  ['kols_sourced','kols_contacted','kols_replied','kols_followedup','prelim_agree','confirmed','vids_published'].forEach(function(key){
+  ['kols_sourced','kols_contacted','kols_replied','kols_followedup','prelim_agree','confirmed','vids_published','scripts_reviewed'].forEach(function(key){
     var el=document.getElementById('li-'+key);
     entry[key]=el?+(el.value)||0:0;
   });
@@ -6224,6 +6226,7 @@ var _i18n={
     drPrelim:'Novas colaborações preliminares',drPrelimTip:'Novos KOLs pendentes para confirmar a parceria',
     drConfirmed:'Novas colaborações confirmadas',drConfirmedTip:'Novas parcerias confirmadas',
     drVideos:'Novos vídeos publicados',drVideosTip:'Vídeos publicados no período',
+    drScripts:'Roteiros corrigidos hoje',drScriptsTip:'Número de roteiros revisados e corrigidos hoje',
     drIssues:'Problemas hoje',drNotes:'Notas (opcional)',
     drSelectDate:'Selecione uma data',
     saveReport:'Salvar Relatório',saving:'Salvando...',saved:'Salvo! ✓',
@@ -6319,6 +6322,7 @@ var _i18n={
     drPrelim:'New preliminary collabs reached',drPrelimTip:'New KOLs pending partnership confirmation',
     drConfirmed:'New confirmed collabs',drConfirmedTip:'New confirmed partnerships',
     drVideos:'New published videos',drVideosTip:'Videos published in the period',
+    drScripts:'Scripts reviewed today',drScriptsTip:'Number of scripts reviewed and corrected today',
     drIssues:'Issues Today',drNotes:'Notes (optional)',
     drSelectDate:'Please select a date',
     saveReport:'Save Report',saving:'Saving...',saved:'Saved! ✓',
