@@ -8959,45 +8959,95 @@ function renderReportHistory(){
   allLogs.forEach(function(l){if(!byDate[l.date])byDate[l.date]=[];byDate[l.date].push(l);});
   var dates=Object.keys(byDate).sort(function(a,b){return b.localeCompare(a);});
 
+  var T=_i18n[_lang];
   var html=dates.map(function(date){
     var entries=byDate[date];
-    var dayS=0,dayC=0,dayFu=0,dayCo=0,dayV=0;
-    entries.forEach(function(l){dayS+=(+l.kols_sourced||0);dayC+=(+l.kols_contacted||0);dayFu+=(+l.kols_followedup||0);dayCo+=(+l.confirmed||0);dayV+=(+l.vids_published||0);});
-    var dow=new Date(date+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'});
-    return '<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--bg);border-bottom:1px solid var(--border)">'+
-        '<div>'+
-          '<span style="font-size:13px;font-weight:700;color:var(--text)">'+fmtDate(date)+'</span>'+
-          '<span style="font-size:10px;color:var(--text-s);margin-left:6px">'+dow+'</span>'+
+    var isToday=date===todayStr();
+    var dow=new Date(date+'T12:00:00').toLocaleDateString(_lang==='pt'?'pt-BR':'en-US',{weekday:'short'});
+    // day-level totals
+    var dayTotals={};
+    _LOG_NUM_KEYS.forEach(function(k){dayTotals[k]=entries.reduce(function(s,l){return s+(+l[k]||0);},0);});
+    var dayBadges=METRICS.filter(function(m){return dayTotals[m.key]>0;}).map(function(m){
+      return '<span style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;color:var(--text)">'+m.icon+' '+dayTotals[m.key]+'</span>';
+    }).join('');
+
+    return '<div style="margin-bottom:14px;border:1px solid '+(isToday?'#c4b5fd':'var(--border)')+';border-radius:12px;overflow:hidden'+(isToday?';box-shadow:0 0 0 2px #ede9fe':'')+'">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border)">'+
+        '<div style="display:flex;align-items:center;gap:8px">'+
+          '<span style="font-size:13px;font-weight:800;color:var(--text)">'+fmtDate(date)+'</span>'+
+          '<span style="font-size:10px;color:var(--text-s);text-transform:uppercase;font-weight:600">'+dow+'</span>'+
+          (isToday?'<span style="font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:1px 8px">hoje</span>':'')+
         '</div>'+
-        '<div style="display:flex;gap:10px;font-size:11px">'+
-          (dayC?'<span style="color:#e879a0;font-weight:700">'+dayC+' contacted</span>':'')+
-          (dayCo?'<span style="color:#10b981;font-weight:700">'+dayCo+' confirmed</span>':'')+
-        '</div>'+
+        (dayBadges?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+dayBadges+'</div>':'')+
       '</div>'+
       entries.map(function(l){
         var b=getBrand(l.brandId);
-        return '<div style="padding:9px 14px;border-bottom:1px solid var(--border);last-child:border-none">'+
+        // metric badges
+        var metricRow=METRICS.filter(function(m){return l[m.key]>0;}).map(function(m){
+          return '<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--text-m)">'+m.icon+' <strong>'+l[m.key]+'</strong> '+_metricLabel(m)+'</span>';
+        }).join('<span style="color:var(--border);margin:0 4px">·</span>');
+        // KOL tags
+        var vidKols=(l.vids_data||[]).filter(function(v){return v.kolName;}).map(function(v){
+          return '<span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600">🎬 '+escHtml(v.kolName)+(v.link?'<a href="'+escHtml(v.link)+'" target="_blank" style="margin-left:4px;color:#7c3aed;text-decoration:none" onclick="event.stopPropagation()">↗</a>':'')+'</span>';
+        }).join('');
+        var scriptKols=(l.scripts_data||[]).filter(function(s){return s.kolName;}).map(function(s){
+          return '<span style="background:#d1fae5;color:#065f46;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:600">📝 '+escHtml(s.kolName)+'</span>';
+        }).join('');
+        var kolTags=vidKols+scriptKols;
+        // issues
+        var issuesBadge=l.hasIssues?'<span style="background:#fee2e2;color:#b91c1c;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:700">⚠️ '+(l.issuesText?escHtml(l.issuesText.slice(0,50)):'Issues')+'</span>':'';
+        // action buttons
+        var editBtn=isAdmin()?'<button onclick="_rhEdit(\''+mid+'\',\''+l.brandId+'\',\''+date+'\')" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer">✏️ '+(T.edit||'Editar')+'</button>':'';
+        var delBtn='<button onclick="_rhDel(\''+mid+'\',\''+l.brandId+'\',\''+date+'\')" style="padding:4px 10px;border-radius:6px;border:1px solid #fee2e2;background:#fff0f0;color:#b91c1c;font-size:11px;font-weight:600;cursor:pointer">🗑️ '+(T.delete||'Apagar')+'</button>';
+
+        return '<div style="padding:11px 14px;border-bottom:1px solid var(--border)">'+
           '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
             '<div style="display:flex;align-items:center;gap:6px">'+
-              (b?'<div style="width:7px;height:7px;border-radius:50%;background:'+b.color+'"></div>':'')+
-              '<span style="font-size:12px;font-weight:600;color:var(--text)">'+(b?b.name:'Unknown')+'</span>'+
+              (b?'<div style="width:8px;height:8px;border-radius:50%;background:'+b.color+';flex-shrink:0"></div>':'')+
+              '<span style="font-size:12px;font-weight:700;color:var(--text)">'+(b?b.name:'?')+'</span>'+
             '</div>'+
+            '<div style="display:flex;gap:5px">'+editBtn+delBtn+'</div>'+
           '</div>'+
-          '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-m)">'+
-            ((+l.kols_sourced||0)?'<span>🔍 <strong>'+(+l.kols_sourced)+'</strong> sourced</span>':'')+
-            ((+l.kols_contacted||0)?'<span style="color:#e879a0">📞 <strong>'+(+l.kols_contacted)+'</strong> contacted</span>':'')+
-            ((+l.kols_followedup||0)?'<span>🔄 <strong>'+(+l.kols_followedup)+'</strong> follow-ups</span>':'')+
-            ((+l.confirmed||0)?'<span style="color:#10b981">🤝 <strong>'+(+l.confirmed)+'</strong> confirmed</span>':'')+
-            ((+l.vids_published||0)?'<span>🎬 <strong>'+(+l.vids_published)+'</strong> videos</span>':'')+
-          '</div>'+
-          (l.note?'<div style="margin-top:6px;font-size:11px;color:var(--text-s);font-style:italic;background:var(--bg);padding:6px 10px;border-radius:6px;border-left:3px solid var(--border)">'+l.note+'</div>':'')+
+          (metricRow?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'+metricRow+'</div>':'')+
+          (kolTags?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">'+kolTags+'</div>':'')+
+          (issuesBadge?'<div style="margin-bottom:5px">'+issuesBadge+'</div>':'')+
+          (l.note?'<div style="font-size:11px;color:var(--text-s);font-style:italic;background:var(--bg);padding:5px 9px;border-radius:6px;border-left:3px solid var(--border)">'+escHtml(l.note)+'</div>':'')+
         '</div>';
       }).join('')+
     '</div>';
   }).join('');
 
   el.innerHTML=html;
+}
+function _rhEdit(mid,bid,date){
+  // Open the daily report modal pre-loaded for this member/brand/date in edit mode
+  logMember=getMember(mid);if(!logMember)return;
+  logBrand=getBrand(bid);if(!logBrand)return;
+  _logEditMode=true;
+  var avUrl=avatarUrl(logMember);
+  document.getElementById('log-av-img').src=avUrl;
+  document.getElementById('log-name').textContent=logMember.name;
+  var T=_i18n[_lang];
+  document.getElementById('log-modal-sub').textContent=T.dailyReportSub||'Daily Report';
+  document.getElementById('log-date-lbl').textContent='📅 '+(T.drDate||'Date');
+  document.getElementById('log-issues-lbl').textContent='⚠️ '+(T.drIssues||'Issues Today');
+  document.getElementById('log-yes-lbl').textContent=T.yes||'Yes';
+  document.getElementById('log-no-lbl').textContent=T.no||'No';
+  document.getElementById('log-notes-lbl').textContent='📝 '+(T.drNotes||'Notes (optional)');
+  document.getElementById('log-save-lbl').textContent=T.saveReport||'Salvar Relatório';
+  _renderBrandBlocks();
+  document.getElementById('log-date').value=date;
+  prefillLog();
+  document.getElementById('log-date').onchange=function(){prefillLog();};
+  renderLogHistory();
+  openOv('ov-log');
+}
+function _rhDel(mid,bid,date){
+  var T=_i18n[_lang];
+  if(!confirm((T.confirmDeleteReport||'Apagar o registro de')+' '+fmtDateFull(date)+'?')) return;
+  delLog(mid,date,bid);
+  renderReportHistory();
+  renderAll();
 }
 
 
